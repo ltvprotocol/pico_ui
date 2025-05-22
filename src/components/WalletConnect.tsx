@@ -4,19 +4,35 @@ import { ethers } from 'ethers';
 const GME_ADDRESS = '0xe2a7f267124ac3e4131f27b9159c78c521a44f3c';
 const WETH_ADDRESS = '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14';
 
+// Add Sepolia network constants
+const SEPOLIA_CHAIN_ID = '0xaa36a7'; // 11155111 in hex
+const SEPOLIA_NETWORK = {
+  chainId: SEPOLIA_CHAIN_ID,
+  chainName: 'Sepolia',
+  nativeCurrency: {
+    name: 'SepoliaETH',
+    symbol: 'SEP',
+    decimals: 18
+  },
+  rpcUrls: ['https://rpc.sepolia.org'],
+  blockExplorerUrls: ['https://sepolia.etherscan.io']
+};
+
 interface WalletConnectProps {
   onConnect?: (address: string | null) => void;
   onWethBalance?: (balance: ethers.BigNumber) => void;
   onEthBalance?: (balance: string) => void;
+  onNetworkChange?: (isSepolia: boolean) => void;
 }
 
-export default function WalletConnect({ onConnect, onWethBalance, onEthBalance }: WalletConnectProps) {
+export default function WalletConnect({ onConnect, onWethBalance, onEthBalance, onNetworkChange }: WalletConnectProps) {
   const [address, setAddress] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [gmeBalance, setGmeBalance] = useState<string>('0');
   const [wethBalance, setWethBalance] = useState<string>('0');
   const [ethBalance, setEthBalance] = useState<string>('0');
+  const [isSepolia, setIsSepolia] = useState(false);
 
   const getBalances = async (address: string) => {
     try {
@@ -127,8 +143,48 @@ export default function WalletConnect({ onConnect, onWethBalance, onEthBalance }
     }
   };
 
+  const checkNetwork = async () => {
+    if (!window.ethereum) return;
+
+    try {
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const network = await provider.getNetwork();
+      const isSepoliaNetwork = network.chainId === 11155111;
+      setIsSepolia(isSepoliaNetwork);
+      onNetworkChange?.(isSepoliaNetwork);
+    } catch (err) {
+      console.error('Error checking network:', err);
+      setIsSepolia(false);
+      onNetworkChange?.(false);
+    }
+  };
+
+  const switchToSepolia = async () => {
+    if (!window.ethereum) return;
+
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: SEPOLIA_CHAIN_ID }],
+      });
+    } catch (switchError: any) {
+      // This error code indicates that the chain has not been added to MetaMask.
+      if (switchError.code === 4902) {
+        try {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [SEPOLIA_NETWORK],
+          });
+        } catch (addError) {
+          console.error('Error adding Sepolia network:', addError);
+        }
+      }
+    }
+  };
+
   useEffect(() => {
     checkConnection();
+    checkNetwork();
 
     // Listen for account changes
     if (window.ethereum) {
@@ -156,11 +212,19 @@ export default function WalletConnect({ onConnect, onWethBalance, onEthBalance }
           setEthBalance('0');
         }
       });
+
+      // Listen for network changes
+      window.ethereum.on('chainChanged', (chainId: string) => {
+        setIsSepolia(chainId === SEPOLIA_CHAIN_ID);
+        // Reload the page when network changes
+        window.location.reload();
+      });
     }
 
     return () => {
       if (window.ethereum) {
         window.ethereum.removeListener('accountsChanged', () => {});
+        window.ethereum.removeListener('chainChanged', () => {});
       }
     };
   }, []);
@@ -200,53 +264,91 @@ export default function WalletConnect({ onConnect, onWethBalance, onEthBalance }
           </button>
         </div>
       ) : (
-        <div>
-          <div className="items-center justify-between bg-gray-50 p-3 rounded-md">
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center">
-                <div className="h-2 w-2 bg-green-500 rounded-full mr-2"></div>
-                <span className="text-xs text-gray-500">Connected Wallet</span>
-              </div>
-              <button
-                onClick={disconnectWallet}
-                className="text-sm text-gray-500 hover:text-gray-700"
-              >
-                Disconnect
-              </button>
+          <div>
+            {!isSepolia ? ( 
+            <div className="mb-6">
+            <div className="text-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                Switch to Sepolia
+              </h2>
+              <p className="text-sm text-gray-600 mb-4">
+                You are currently connected to the wrong network. Please switch to the Sepolia network.
+              </p>
             </div>
-          </div>
-          <div className="flex items-center justify-between bg-gray-50 p-3 rounded-md mt-4">
-            <div className="flex flex-col">
-              <div>
-                <h3 className="text-lg font-medium text-gray-900">Wallet Address:</h3>
-              </div>
-              <div>
-                <span className="hidden sm:block text-sm text-gray-700 break-all">
-                  {address}
-                </span>
-                <span className="block sm:hidden text-sm text-gray-700 break-all">
-                  {address ? `${address.slice(0, 6)}...${address.slice(-12)}` : ''}
-                </span>
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-yellow-700">
+                    Please connect to the Sepolia test network to continue. Your wallet is currently on a different network.
+                  </p>
+                </div>
               </div>
             </div>
+            <button
+              onClick={switchToSepolia}
+              disabled={loading}
+              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+            >
+              Switch to Sepolia
+            </button>
           </div>
+          ) : (
+            <div>
+              <div>
+                <div className="items-center justify-between bg-gray-50 p-3 rounded-md">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center">
+                      <div className="h-2 w-2 bg-green-500 rounded-full mr-2"></div>
+                      <span className="text-xs text-gray-500">Connected Wallet</span>
+                    </div>
+                    <button
+                      onClick={disconnectWallet}
+                      className="text-sm text-gray-500 hover:text-gray-700"
+                    >
+                      Disconnect
+                    </button>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between bg-gray-50 p-3 rounded-md mt-4">
+                  <div className="flex flex-col">
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900">Wallet Address:</h3>
+                    </div>
+                    <div>
+                      <span className="hidden sm:block text-sm text-gray-700 break-all">
+                        {address}
+                      </span>
+                      <span className="block sm:hidden text-sm text-gray-700 break-all">
+                        {address ? `${address.slice(0, 6)}...${address.slice(-12)}` : ''}
+                      </span>
+                    </div>
+                  </div>
+                </div>
 
-          <div className="flex items-center justify-between bg-gray-50 p-3 rounded-md mt-4">
-            <div className="flex flex-col">
-              <div className="mt-2 space-y-1">
-                <h3 className="text-lg font-medium text-gray-900">Balances:</h3>
-                <span className="text-sm text-gray-600">
-                  ETH Balance: {parseFloat(ethBalance).toFixed(4)} ETH
-                </span>
-                <span className="text-sm text-gray-600 block">
-                  WETH Balance: {parseFloat(wethBalance).toFixed(4)} WETH
-                </span>
-                <span className="text-sm text-gray-600 block">
-                  GME Balance: {parseFloat(gmeBalance).toFixed(4)} GME
-                </span>
+                <div className="flex items-center justify-between bg-gray-50 p-3 rounded-md mt-4">
+                  <div className="flex flex-col">
+                    <div className="mt-2 space-y-1">
+                      <h3 className="text-lg font-medium text-gray-900">Balances:</h3>
+                      <span className="text-sm text-gray-600">
+                        ETH Balance: {parseFloat(ethBalance).toFixed(4)} ETH
+                      </span>
+                      <span className="text-sm text-gray-600 block">
+                        WETH Balance: {parseFloat(wethBalance).toFixed(4)} WETH
+                      </span>
+                      <span className="text-sm text-gray-600 block">
+                        GME Balance: {parseFloat(gmeBalance).toFixed(4)} GME
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       )}
       {error && (

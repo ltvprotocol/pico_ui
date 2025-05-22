@@ -12,6 +12,7 @@ export default function Deposit() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isWalletConnected, setIsWalletConnected] = useState(false);
+  const [isSepolia, setIsSepolia] = useState(false);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [maxAvailableDeposit, setMaxAvailableDeposit] = useState<string>('0');
   const [wethBalance, setWethBalance] = useState<string>('0');
@@ -22,6 +23,10 @@ export default function Deposit() {
   const handleWalletConnect = (address: string | null) => {
     setIsWalletConnected(!!address);
     setWalletAddress(address);
+  };
+
+  const handleNetworkChange = (isSepoliaNetwork: boolean) => {
+    setIsSepolia(isSepoliaNetwork);
   };
 
   const handleVaultInfo = (maxDeposit: ethers.BigNumber) => {
@@ -170,14 +175,15 @@ export default function Deposit() {
         onConnect={handleWalletConnect} 
         onWethBalance={handleWethBalance}
         onEthBalance={handleEthBalance}
+        onNetworkChange={handleNetworkChange}
       />
       <VaultInfo 
-        isConnected={isWalletConnected} 
+        isConnected={isWalletConnected && isSepolia} 
         address={walletAddress} 
         onMaxDeposit={handleVaultInfo}
       />
       
-      {isWalletConnected && (
+      {isWalletConnected && isSepolia && (
         <div className="mt-8 p-6 bg-white rounded-lg shadow-lg">
           <h2 className="text-2xl font-bold mb-6 text-gray-900">Deposit Assets</h2>
           <form onSubmit={handleDeposit} className="space-y-4">

@@ -35,6 +35,12 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
 
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v2
+        with:
+          name: 'github-pages'
+          path: 'dist'
+
   deploy:
     environment:
       name: github-pages

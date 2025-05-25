@@ -54,6 +54,7 @@ export default function VaultInfo({ isConnected, isSepolia, address, onMaxDeposi
       setMaxDeposit('0');
       setMaxRedeem('0');
       onMaxDeposit(ethers.BigNumber.from(0));
+      onMaxRedeem(ethers.BigNumber.from(0));
     } finally {
       setLoading(false);
     }

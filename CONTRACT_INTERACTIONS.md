@@ -95,8 +95,9 @@ const vaultContract = new ethers.Contract(
 
 ```typescript
 // Deposit Process
+const GME_VAULT_ADDRESS = "0xe2a7f267124ac3e4131f27b9159c78c521a44f3c"; // Vault contract address
 const amountWei = ethers.utils.parseUnits(amount, decimals);
-await wethContract.approve(TOKEN_ADDRESS, amountWei);
+await wethContract.approve(GME_VAULT_ADDRESS, amountWei);
 const depositTx = await vaultContract.deposit(amountWei, receiverAddress);
 await depositTx.wait();
 ```

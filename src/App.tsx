@@ -105,7 +105,6 @@ function App() {
                     <Redeem
                       isWalletConnected={isWalletConnected}
                       isSepolia={isSepolia}
-                      walletAddress={walletAddress}
                       vaultMaxRedeem={vaultMaxRedeem}
                       gmeBalance={gmeBalance}
                     />

@@ -7,7 +7,6 @@ const WETH_ADDRESS = '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14';
 interface RedeemProps {
   isWalletConnected: boolean;
   isSepolia: boolean;
-  walletAddress: string | null;
   vaultMaxRedeem: string;
   gmeBalance: string;
 }
@@ -15,7 +14,6 @@ interface RedeemProps {
 export default function Redeem({ 
   isWalletConnected, 
   isSepolia, 
-  walletAddress, 
   vaultMaxRedeem,
   gmeBalance
 }: RedeemProps) {

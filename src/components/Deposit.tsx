@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
-import WalletConnect from './WalletConnect';
-import VaultInfo from './VaultInfo';
 
 const TOKEN_ADDRESS = '0xe2a7f267124ac3e4131f27b9159c78c521a44f3c';
 const WETH_ADDRESS = '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14';
@@ -13,8 +11,6 @@ interface DepositProps {
   vaultMaxDeposit: string;
   ethBalance: string;
   wethBalance: string;
-  handleEthBalance: (balance: string) => void;
-  handleWethBalance: (balance: ethers.BigNumber) => void;
 }
 
 export default function Deposit({
@@ -24,8 +20,6 @@ export default function Deposit({
   vaultMaxDeposit,
   ethBalance,
   wethBalance,
-  handleEthBalance,
-  handleWethBalance,
 }: DepositProps) {
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,18 +27,6 @@ export default function Deposit({
   const [success, setSuccess] = useState<string | null>(null);
   const [maxAvailableDeposit, setMaxAvailableDeposit] = useState<string>('0');
   const [wethDecimals, setWethDecimals] = useState<number>(18);
-
-  const handleWalletConnect = (address: string | null) => {
-    // This function is no longer used in the new version
-  };
-
-  const handleNetworkChange = (isSepoliaNetwork: boolean) => {
-    // This function is no longer used in the new version
-  };
-
-  const handleVaultInfo = (maxDeposit: ethers.BigNumber) => {
-    // This function is no longer used in the new version
-  };
 
   useEffect(() => {
     updateMaxAvailableDeposit(
@@ -90,10 +72,10 @@ export default function Deposit({
       await wrapTx.wait();
       
       // Refresh balances
-      if (handleWethBalance) {
-        const newBalance = await wethContract.balanceOf(walletAddress);
-        handleWethBalance(newBalance);
-      }
+      //if (handleWethBalance) {
+      //  const newBalance = await wethContract.balanceOf(walletAddress);
+      //  handleWethBalance(newBalance);
+      //}
       
       setSuccess('Successfully wrapped ETH to WETH');
     } catch (err) {

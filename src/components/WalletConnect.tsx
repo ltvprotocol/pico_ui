@@ -23,9 +23,10 @@ interface WalletConnectProps {
   onWethBalance?: (balance: ethers.BigNumber) => void;
   onEthBalance?: (balance: string) => void;
   onNetworkChange?: (isSepolia: boolean) => void;
+  onGmeBalance: (balance: ethers.BigNumber) => void;
 }
 
-export default function WalletConnect({ onConnect, onWethBalance, onEthBalance, onNetworkChange }: WalletConnectProps) {
+export default function WalletConnect({ onConnect, onWethBalance, onEthBalance, onNetworkChange, onGmeBalance }: WalletConnectProps) {
   const [address, setAddress] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,6 +81,7 @@ export default function WalletConnect({ onConnect, onWethBalance, onEthBalance, 
       setGmeBalance(formattedGmeBalance);
       setWethBalance(formattedWethBalance);
       onWethBalance?.(wethBalance);
+      onGmeBalance?.(gmeBalance);
     } catch (err) {
       console.error('Error fetching balances:', err);
       setGmeBalance('0');
@@ -87,6 +89,7 @@ export default function WalletConnect({ onConnect, onWethBalance, onEthBalance, 
       setEthBalance('0');
       onWethBalance?.(ethers.BigNumber.from(0));
       onEthBalance?.('0');
+      onGmeBalance?.(ethers.BigNumber.from(0));
     }
   };
 

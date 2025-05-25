@@ -6,39 +6,44 @@ import VaultInfo from './VaultInfo';
 const TOKEN_ADDRESS = '0xe2a7f267124ac3e4131f27b9159c78c521a44f3c';
 const WETH_ADDRESS = '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14';
 
-export default function Deposit() {
+interface DepositProps {
+  isWalletConnected: boolean;
+  isSepolia: boolean;
+  walletAddress: string | null;
+  vaultMaxDeposit: string;
+  ethBalance: string;
+  wethBalance: string;
+  handleEthBalance: (balance: string) => void;
+  handleWethBalance: (balance: ethers.BigNumber) => void;
+}
+
+export default function Deposit({
+  isWalletConnected,
+  isSepolia,
+  walletAddress,
+  vaultMaxDeposit,
+  ethBalance,
+  wethBalance,
+  handleEthBalance,
+  handleWethBalance,
+}: DepositProps) {
   const [amount, setAmount] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [isWalletConnected, setIsWalletConnected] = useState(false);
-  const [isSepolia, setIsSepolia] = useState(false);
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [maxAvailableDeposit, setMaxAvailableDeposit] = useState<string>('0');
-  const [wethBalance, setWethBalance] = useState<string>('0');
-  const [ethBalance, setEthBalance] = useState<string>('0');
-  const [vaultMaxDeposit, setVaultMaxDeposit] = useState<string>('0');
   const [wethDecimals, setWethDecimals] = useState<number>(18);
 
   const handleWalletConnect = (address: string | null) => {
-    setIsWalletConnected(!!address);
-    setWalletAddress(address);
+    // This function is no longer used in the new version
   };
 
   const handleNetworkChange = (isSepoliaNetwork: boolean) => {
-    setIsSepolia(isSepoliaNetwork);
+    // This function is no longer used in the new version
   };
 
   const handleVaultInfo = (maxDeposit: ethers.BigNumber) => {
-    setVaultMaxDeposit(maxDeposit.toHexString());
-  };
-
-  const handleWethBalance = (balance: ethers.BigNumber) => {    
-    setWethBalance(balance.toHexString());
-  };
-
-  const handleEthBalance = (balance: string) => {
-    setEthBalance(balance);
+    // This function is no longer used in the new version
   };
 
   useEffect(() => {
@@ -51,9 +56,8 @@ export default function Deposit() {
   const updateMaxAvailableDeposit = (wethBal: ethers.BigNumber, maxDep: ethers.BigNumber) => {
     const wethAmount = parseFloat(ethers.utils.formatUnits(wethBal, wethDecimals));
     const ethAmount = parseFloat(ethBalance);
-    const totalBalance = wethAmount + ethAmount;
     const maxDepAmount = parseFloat(ethers.utils.formatUnits(maxDep, wethDecimals));
-    const maxAvailable = Math.min(totalBalance, maxDepAmount);
+    const maxAvailable = Math.min(wethAmount + ethAmount, maxDepAmount);
     setMaxAvailableDeposit(maxAvailable.toFixed(4));
   };
 
@@ -170,19 +174,7 @@ export default function Deposit() {
   };
 
   return (
-    <div className="max-w-md mx-auto">
-      <WalletConnect 
-        onConnect={handleWalletConnect} 
-        onWethBalance={handleWethBalance}
-        onEthBalance={handleEthBalance}
-        onNetworkChange={handleNetworkChange}
-      />
-      <VaultInfo 
-        isConnected={isWalletConnected && isSepolia} 
-        address={walletAddress} 
-        onMaxDeposit={handleVaultInfo}
-      />
-      
+    <>
       {isWalletConnected && isSepolia && (
         <div className="mt-8 p-6 bg-white rounded-lg shadow-lg">
           <h2 className="text-2xl font-bold mb-6 text-gray-900">Deposit Assets</h2>
@@ -243,6 +235,6 @@ export default function Deposit() {
           </form>
         </div>
       )}
-    </div>
+    </>
   );
 } 

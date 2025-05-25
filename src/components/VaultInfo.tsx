@@ -5,11 +5,13 @@ const GME_VAULT_ADDRESS = '0xe2a7f267124ac3e4131f27b9159c78c521a44f3c';
 
 interface VaultInfoProps {
   isConnected: boolean;
+  isSepolia: boolean;
   address: string | null;
-  onMaxDeposit?: (maxDeposit: ethers.BigNumber) => void;
+  onMaxDeposit: (balance: ethers.BigNumber) => void;
+  onMaxRedeem: (balance: ethers.BigNumber) => void;
 }
 
-export default function VaultInfo({ isConnected, address, onMaxDeposit }: VaultInfoProps) {
+export default function VaultInfo({ isConnected, isSepolia, address, onMaxDeposit, onMaxRedeem }: VaultInfoProps) {
   const [maxDeposit, setMaxDeposit] = useState<string>('0');
   const [maxRedeem, setMaxRedeem] = useState<string>('0');
   const [loading, setLoading] = useState(false);
@@ -44,13 +46,14 @@ export default function VaultInfo({ isConnected, address, onMaxDeposit }: VaultI
 
       setMaxDeposit(formattedMaxDeposit);
       setMaxRedeem(formattedMaxRedeem);
-      onMaxDeposit?.(maxDepositAmount);
+      onMaxDeposit(maxDepositAmount);
+      onMaxRedeem(maxRedeemAmount);
     } catch (err) {
       console.error('Error fetching vault info:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
       setMaxDeposit('0');
       setMaxRedeem('0');
-      onMaxDeposit?.(ethers.BigNumber.from(0));
+      onMaxDeposit(ethers.BigNumber.from(0));
     } finally {
       setLoading(false);
     }
@@ -65,7 +68,7 @@ export default function VaultInfo({ isConnected, address, onMaxDeposit }: VaultI
     }
   }, [isConnected, address]);
 
-  if (!isConnected) {
+  if (!isConnected || !isSepolia) {
     return null;
   }
 

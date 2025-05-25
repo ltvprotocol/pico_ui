@@ -14,6 +14,7 @@ function App() {
   const [ethBalance, setEthBalance] = useState<string>('0')
   const [wethBalance, setWethBalance] = useState<string>('0')
   const [gmeBalance, setGmeBalance] = useState<string>('0')
+  const [activeTab, setActiveTab] = useState<'deposit' | 'redeem'>('deposit')
 
   const handleWalletConnect = (address: string | null) => {
     setIsWalletConnected(!!address)
@@ -65,22 +66,50 @@ function App() {
                   onMaxDeposit={handleVaultInfo}
                   onMaxRedeem={handleVaultRedeem}
                 />
-                <Deposit
-                  isWalletConnected={isWalletConnected}
-                  isSepolia={isSepolia}
-                  walletAddress={walletAddress}
-                  vaultMaxDeposit={vaultMaxDeposit}
-                  ethBalance={ethBalance}
-                  wethBalance={wethBalance}
-                />
                 <div className="mt-8">
-                  <Redeem
-                    isWalletConnected={isWalletConnected}
-                    isSepolia={isSepolia}
-                    walletAddress={walletAddress}
-                    vaultMaxRedeem={vaultMaxRedeem}
-                    gmeBalance={gmeBalance}
-                  />
+                  {/* Toggle Buttons */}
+                  <div className="flex space-x-4 mb-6">
+                    <button
+                      onClick={() => setActiveTab('deposit')}
+                      className={`flex-1 py-2 px-4 rounded-lg font-medium ${
+                        activeTab === 'deposit'
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Deposit
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('redeem')}
+                      className={`flex-1 py-2 px-4 rounded-lg font-medium ${
+                        activeTab === 'redeem'
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      Redeem
+                    </button>
+                  </div>
+
+                  {/* Content */}
+                  {activeTab === 'deposit' ? (
+                    <Deposit
+                      isWalletConnected={isWalletConnected}
+                      isSepolia={isSepolia}
+                      walletAddress={walletAddress}
+                      vaultMaxDeposit={vaultMaxDeposit}
+                      ethBalance={ethBalance}
+                      wethBalance={wethBalance}
+                    />
+                  ) : (
+                    <Redeem
+                      isWalletConnected={isWalletConnected}
+                      isSepolia={isSepolia}
+                      walletAddress={walletAddress}
+                      vaultMaxRedeem={vaultMaxRedeem}
+                      gmeBalance={gmeBalance}
+                    />
+                  )}
                 </div>
               </div>
             </div>

@@ -103,6 +103,10 @@ export default function Redeem({
     }
   };
 
+  const handleMaxClick = () => {
+    setAmount(maxAvailableRedeem);
+  };
+
   return (
     <>
       {isWalletConnected && isSepolia && (
@@ -127,7 +131,14 @@ export default function Redeem({
                   disabled={!isWalletConnected || loading}
                   max={maxAvailableRedeem}
                 />
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                  <button
+                    type="button"
+                    onClick={handleMaxClick}
+                    className="text-indigo-600 hover:text-indigo-500 text-sm font-medium mr-2"
+                  >
+                    MAX
+                  </button>
                   <span className="text-gray-500 sm:text-sm">GME</span>
                 </div>
               </div>

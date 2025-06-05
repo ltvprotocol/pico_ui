@@ -7,7 +7,9 @@ const WETH_ADDRESS = '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14';
 interface DepositProps {
   isWalletConnected: boolean;
   isSepolia: boolean;
-  walletAddress: string | null;
+  address: string | null;
+  provider: ethers.BrowserProvider | null;
+  signer: ethers.JsonRpcSigner | null;
   vaultMaxDeposit: string;
   ethBalance: string;
   wethBalance: string;
@@ -16,7 +18,9 @@ interface DepositProps {
 export default function Deposit({
   isWalletConnected,
   isSepolia,
-  walletAddress,
+  address,
+  provider,
+  signer,
   vaultMaxDeposit,
   ethBalance,
   wethBalance,
@@ -30,28 +34,26 @@ export default function Deposit({
 
   useEffect(() => {
     updateMaxAvailableDeposit(
-      ethers.BigNumber.from(wethBalance),
-      ethers.BigNumber.from(vaultMaxDeposit)
+      BigInt(wethBalance),
+      BigInt(vaultMaxDeposit)
     );
   }, [wethBalance, vaultMaxDeposit, ethBalance]);
 
-  const updateMaxAvailableDeposit = (wethBal: ethers.BigNumber, maxDep: ethers.BigNumber) => {
-    const wethAmount = parseFloat(ethers.utils.formatUnits(wethBal, wethDecimals));
+  const updateMaxAvailableDeposit = (wethBal: ethers.BigNumberish, maxDep: ethers.BigNumberish) => {
+    const wethAmount = parseFloat(ethers.formatUnits(wethBal, wethDecimals));
     const ethAmount = parseFloat(ethBalance);
-    const maxDepAmount = parseFloat(ethers.utils.formatUnits(maxDep, wethDecimals));
+    const maxDepAmount = parseFloat(ethers.formatUnits(maxDep, wethDecimals));
     const maxAvailable = Math.min(wethAmount + ethAmount, maxDepAmount);
     setMaxAvailableDeposit(maxAvailable.toFixed(4));
   };
 
   const handleWrapEth = async () => {
-    if (!window.ethereum || !walletAddress) return;
+    if (!provider || !address) return;
     
     setLoading(true);
     setError(null);
+
     try {
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const signer = provider.getSigner();
-      
       const wethContract = new ethers.Contract(
         WETH_ADDRESS,
         [
@@ -63,9 +65,9 @@ export default function Deposit({
       );
 
       // Get the amount needed to wrap
-      const wethAmount = ethers.utils.parseUnits(amount, wethDecimals);
-      const currentWeth = ethers.BigNumber.from(wethBalance);
-      const neededWeth = wethAmount.sub(currentWeth);
+      const wethAmount = ethers.parseUnits(amount, wethDecimals);
+      const currentWeth = BigInt(wethBalance);
+      const neededWeth = wethAmount - BigInt(currentWeth);
       
       // Wrap the needed amount
       const wrapTx = await wethContract.deposit({ value: neededWeth });
@@ -73,7 +75,7 @@ export default function Deposit({
       
       // Refresh balances
       //if (handleWethBalance) {
-      //  const newBalance = await wethContract.balanceOf(walletAddress);
+      //  const newBalance = await wethContract.balanceOf(address);
       //  handleWethBalance(newBalance);
       //}
       
@@ -91,18 +93,9 @@ export default function Deposit({
     setError(null);
     setSuccess(null);
 
+    if (!provider || !address) return;
+
     try {
-      if (!window.ethereum) {
-        throw new Error('Please install MetaMask to use this feature');
-      }
-
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const signer = provider.getSigner();
-      
-      // Request account access
-      await window.ethereum.request({ method: 'eth_requestAccounts' });
-
-      // Create contract instances
       const vaultContract = new ethers.Contract(
         TOKEN_ADDRESS,
         [
@@ -125,15 +118,15 @@ export default function Deposit({
       // Get WETH decimals and check balance
       const decimals = await wethContract.decimals();
       setWethDecimals(decimals);
-      const amountWei = ethers.utils.parseUnits(amount, decimals);
-      const currentWethBalance = await wethContract.balanceOf(await signer.getAddress());
+      const amountWei = ethers.parseUnits(amount, decimals);
+      const currentWethBalance = await wethContract.balanceOf(address);
 
       // If not enough WETH, wrap ETH first
-      if (currentWethBalance.lt(amountWei)) {
+      if (currentWethBalance < amountWei) {
         await handleWrapEth();
         // Wait for balance update
-        const newBalance = await wethContract.balanceOf(await signer.getAddress());
-        if (newBalance.lt(amountWei)) {
+        const newBalance = await wethContract.balanceOf(address);
+        if (newBalance < amountWei) {
           throw new Error('Not enough WETH after wrapping');
         }
       }
@@ -143,7 +136,7 @@ export default function Deposit({
       await approveTx.wait();
 
       // Deposit to vault
-      const depositTx = await vaultContract.deposit(amountWei, await signer.getAddress());
+      const depositTx = await vaultContract.deposit(amountWei, address);
       await depositTx.wait();
 
       setAmount('');

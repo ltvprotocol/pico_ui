@@ -9,6 +9,8 @@ function App() {
   const [isWalletConnected, setIsWalletConnected] = useState(false)
   const [isSepolia, setIsSepolia] = useState(false)
   const [walletAddress, setWalletAddress] = useState<string | null>(null)
+  const [ethersProvider, setProvider] = useState<ethers.BrowserProvider | null>(null)
+  const [ethersSigner, setSigner] = useState<ethers.JsonRpcSigner | null>(null)
   const [vaultMaxDeposit, setVaultMaxDeposit] = useState<string>('0')
   const [vaultMaxRedeem, setVaultMaxRedeem] = useState<string>('0')
   const [ethBalance, setEthBalance] = useState<string>('0')
@@ -16,33 +18,39 @@ function App() {
   const [gmeBalance, setGmeBalance] = useState<string>('0')
   const [activeTab, setActiveTab] = useState<'deposit' | 'redeem'>('deposit')
 
-  const handleWalletConnect = (address: string | null) => {
+  const handleWalletConnect = (
+    provider: ethers.BrowserProvider | null,
+    signer: ethers.JsonRpcSigner | null,
+    address: string | null
+  ) => {
     setIsWalletConnected(!!address)
     setWalletAddress(address)
+    setProvider(provider);
+    setSigner(signer);
   }
 
   const handleNetworkChange = (isSepoliaNetwork: boolean) => {
     setIsSepolia(isSepoliaNetwork)
   }
 
-  const handleVaultInfo = (maxDeposit: ethers.BigNumber) => {
-    setVaultMaxDeposit(maxDeposit.toHexString())
+  const handleVaultInfo = (maxDeposit: string) => {
+    setVaultMaxDeposit(maxDeposit)
   }
 
-  const handleVaultRedeem = (balance: ethers.BigNumber) => {
-    setVaultMaxRedeem(balance.toHexString())
+  const handleVaultRedeem = (balance: string) => {
+    setVaultMaxRedeem(balance)
   }
 
   const handleEthBalance = (balance: string) => {
     setEthBalance(balance)
   }
 
-  const handleWethBalance = (balance: ethers.BigNumber) => {
-    setWethBalance(balance.toHexString())
+  const handleWethBalance = (balance: string) => {
+    setWethBalance(balance)
   }
 
-  const handleGmeBalance = (balance: ethers.BigNumber) => {
-    setGmeBalance(balance.toHexString())
+  const handleGmeBalance = (balance: string) => {
+    setGmeBalance(balance)
   }
 
   return (
@@ -63,6 +71,7 @@ function App() {
                   isConnected={isWalletConnected}
                   isSepolia={isSepolia}
                   address={walletAddress}
+                  provider={ethersProvider}
                   onMaxDeposit={handleVaultInfo}
                   onMaxRedeem={handleVaultRedeem}
                 />
@@ -98,7 +107,9 @@ function App() {
                     <Deposit
                       isWalletConnected={isWalletConnected}
                       isSepolia={isSepolia}
-                      walletAddress={walletAddress}
+                      address={walletAddress}
+                      provider={ethersProvider}
+                      signer={ethersSigner}
                       vaultMaxDeposit={vaultMaxDeposit}
                       ethBalance={ethBalance}
                       wethBalance={wethBalance}
@@ -107,6 +118,9 @@ function App() {
                     <Redeem
                       isWalletConnected={isWalletConnected}
                       isSepolia={isSepolia}
+                      address={walletAddress}
+                      provider={ethersProvider}
+                      signer={ethersSigner}
                       vaultMaxRedeem={vaultMaxRedeem}
                       gmeBalance={gmeBalance}
                     />

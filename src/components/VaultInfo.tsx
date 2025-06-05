@@ -7,24 +7,24 @@ interface VaultInfoProps {
   isConnected: boolean;
   isSepolia: boolean;
   address: string | null;
-  onMaxDeposit: (balance: ethers.BigNumber) => void;
-  onMaxRedeem: (balance: ethers.BigNumber) => void;
+  provider: ethers.BrowserProvider | null;
+  onMaxDeposit: (balance: string) => void;
+  onMaxRedeem: (balance: string) => void;
 }
 
-export default function VaultInfo({ isConnected, isSepolia, address, onMaxDeposit, onMaxRedeem }: VaultInfoProps) {
+export default function VaultInfo({ isConnected, isSepolia, address, provider, onMaxDeposit, onMaxRedeem }: VaultInfoProps) {
   const [maxDeposit, setMaxDeposit] = useState<string>('0');
   const [maxRedeem, setMaxRedeem] = useState<string>('0');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const getVaultInfo = async () => {
-    if (!isConnected || !address || !window.ethereum) return;
+    if (!isConnected || !address || !provider) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
       const vaultContract = new ethers.Contract(
         GME_VAULT_ADDRESS,
         [
@@ -41,8 +41,8 @@ export default function VaultInfo({ isConnected, isSepolia, address, onMaxDeposi
         vaultContract.decimals()
       ]);
 
-      const formattedMaxDeposit = ethers.utils.formatUnits(maxDepositAmount, decimals);
-      const formattedMaxRedeem = ethers.utils.formatUnits(maxRedeemAmount, decimals);
+      const formattedMaxDeposit = ethers.formatUnits(maxDepositAmount, decimals);
+      const formattedMaxRedeem = ethers.formatUnits(maxRedeemAmount, decimals);
 
       setMaxDeposit(formattedMaxDeposit);
       setMaxRedeem(formattedMaxRedeem);
@@ -53,8 +53,8 @@ export default function VaultInfo({ isConnected, isSepolia, address, onMaxDeposi
       setError(err instanceof Error ? err.message : 'An error occurred');
       setMaxDeposit('0');
       setMaxRedeem('0');
-      onMaxDeposit(ethers.BigNumber.from(0));
-      onMaxRedeem(ethers.BigNumber.from(0));
+      onMaxDeposit('0');
+      onMaxRedeem('0');
     } finally {
       setLoading(false);
     }

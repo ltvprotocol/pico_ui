@@ -294,7 +294,12 @@ export default function WalletConnect({ onConnect, onWethBalance, onEthBalance, 
                 key={wallet.info.uuid}
                 onClick={() => connectWallet(wallet)}
                 disabled={loading}
-                className="w-full flex justify-center items-center space-x-2 px-4 py-2 border rounded-lg hover:bg-gray-100 transition disabled:opacity-50"
+                className="
+                  w-full flex justify-center items-center space-x-2 px-4 py-2 
+                  border border-blue-300 bg-white dark:bg-white rounded-lg 
+                  hover:bg-blue-50 dark:hover:bg-blue-50 hover:border-blue-600 
+                  transition disabled:opacity-50
+                "
               >
                 <img
                   src={wallet.info.icon}

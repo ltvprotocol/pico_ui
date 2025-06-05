@@ -7,13 +7,19 @@ const WETH_ADDRESS = '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14';
 interface RedeemProps {
   isWalletConnected: boolean;
   isSepolia: boolean;
+  address: string | null;
+  provider: ethers.BrowserProvider | null;
+  signer: ethers.JsonRpcSigner | null;
   vaultMaxRedeem: string;
   gmeBalance: string;
 }
 
 export default function Redeem({ 
   isWalletConnected, 
-  isSepolia, 
+  isSepolia,
+  address,
+  provider,
+  signer,
   vaultMaxRedeem,
   gmeBalance
 }: RedeemProps) {
@@ -26,14 +32,14 @@ export default function Redeem({
 
   useEffect(() => {
     updateMaxAvailableRedeem(
-      ethers.BigNumber.from(gmeBalance),
-      ethers.BigNumber.from(vaultMaxRedeem)
+      BigInt(gmeBalance),
+      BigInt(vaultMaxRedeem)
     );
   }, [gmeBalance, vaultMaxRedeem]);
 
-  const updateMaxAvailableRedeem = (gmeBal: ethers.BigNumber, maxRedeem: ethers.BigNumber) => {
-    const gmeAmount = parseFloat(ethers.utils.formatUnits(gmeBal, wethDecimals));
-    const maxRedeemAmount = parseFloat(ethers.utils.formatUnits(maxRedeem, wethDecimals));
+  const updateMaxAvailableRedeem = (gmeBal: bigint, maxRedeem: bigint) => {
+    const gmeAmount = parseFloat(ethers.formatUnits(gmeBal, wethDecimals));
+    const maxRedeemAmount = parseFloat(ethers.formatUnits(maxRedeem, wethDecimals));
     const maxAvailable = Math.min(gmeAmount, maxRedeemAmount);
     setMaxAvailableRedeem(maxAvailable.toFixed(4));
   };
@@ -43,18 +49,10 @@ export default function Redeem({
     setLoading(true);
     setError(null);
     setSuccess(null);
+    
+    if (!provider) return;
 
     try {
-      if (!window.ethereum) {
-        throw new Error('Please install MetaMask to use this feature');
-      }
-
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const signer = provider.getSigner();
-      
-      // Request account access
-      await window.ethereum.request({ method: 'eth_requestAccounts' });
-
       // Create contract instances
       const vaultContract = new ethers.Contract(
         TOKEN_ADDRESS,
@@ -77,18 +75,18 @@ export default function Redeem({
       // Get WETH decimals and check balance
       const decimals = await wethContract.decimals();
       setWethDecimals(decimals);
-      const amountWei = ethers.utils.parseUnits(amount, decimals);
-      const currentGmeBalance = ethers.BigNumber.from(gmeBalance);
+      const amountWei = ethers.parseUnits(amount, decimals);
+      const currentGmeBalance = BigInt(gmeBalance);
 
-      if (currentGmeBalance.lt(amountWei)) {
+      if (currentGmeBalance < amountWei) {
         throw new Error('Insufficient GME balance');
       }
 
       // Redeem from vault
       const redeemTx = await vaultContract.redeem(
         amountWei,
-        await signer.getAddress(),
-        await signer.getAddress()
+        address,
+        address
       );
       await redeemTx.wait();
 

@@ -3,18 +3,16 @@ import { formatUnits } from 'ethers';
 import { useAppContext } from '@/context/AppContext';
 
 export default function VaultInfo() {
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [maxDeposit, setMaxDeposit] = useState<string>('0');
   const [maxRedeem, setMaxRedeem] = useState<string>('0');
 
-  const { provider, address, vaultContractLens } = useAppContext();
+  const { address, vaultContractLens } = useAppContext();
 
   const getVaultInfo = async () => {
     if (!address && !vaultContractLens) return;
 
-    setLoading(true);
     setError(null);
 
     try {
@@ -34,26 +32,20 @@ export default function VaultInfo() {
       setError(err instanceof Error ? err.message : 'An error occurred');
       setMaxDeposit('0');
       setMaxRedeem('0');
-    } finally {
-      setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (address && provider) {
+    const interval = setInterval(() => {
       getVaultInfo();
-    } else {
-      setMaxDeposit('0');
-      setMaxRedeem('0');
-    }
-  }, [address, provider]);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [address]);
 
   return (
     <div className="mt-4 p-4 bg-gray-50 rounded-md">
       <h3 className="text-lg font-medium text-gray-900 mb-3">Vault Information</h3>
-      {loading ? (
-        <div className="text-sm text-gray-600">Loading vault information...</div>
-      ) : error ? (
+      {error ? (
         <div className="text-sm text-red-600">{error}</div>
       ) : (
         <div className="space-y-2">

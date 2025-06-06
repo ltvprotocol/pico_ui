@@ -42,8 +42,11 @@ export default function Balances() {
   };
 
   useEffect(() => {
-    getBalances();
-  }, [isConnected])
+    const interval = setInterval(() => {
+      getBalances();
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isConnected]); 
 
   return (
     <div className="flex items-center justify-between bg-gray-50 p-3 rounded-md mt-4">

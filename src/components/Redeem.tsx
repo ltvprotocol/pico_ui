@@ -26,7 +26,10 @@ export default function Redeem() {
   }
 
   useEffect(() => {
-    updateNecessaryInfo();
+    const interval = setInterval(() => {
+      updateNecessaryInfo();
+    }, 1000);
+    return () => clearInterval(interval);
   }, [vaultContractLens, wethContractLens]);
 
   const updateMaxAvailableRedeem = async () => {
@@ -36,16 +39,16 @@ export default function Redeem() {
       const gmeAmount = parseFloat(formatUnits(gmeBalance, wethDecimals));
       const maxRedeemAmount = parseFloat(formatUnits(vaultMaxRedeem, wethDecimals));
       const maxAvailable = Math.min(gmeAmount, maxRedeemAmount);
-      console.log("gmeAmount", gmeAmount);
-      console.log("maxRedeemAmount", maxRedeemAmount);
-      console.log("maxAvailable", maxAvailable);
 
       setMaxAvailableRedeem(maxAvailable.toFixed(4));
     }
   };
 
   useEffect(() => {
-    updateMaxAvailableRedeem();
+    const interval = setInterval(() => {
+      updateMaxAvailableRedeem();
+    }, 1000);
+    return () => clearInterval(interval);
   }, [address, vaultContractLens, wethContractLens, gmeBalance, wethDecimals]);
 
   const handleRedeem = async (e: React.FormEvent) => {

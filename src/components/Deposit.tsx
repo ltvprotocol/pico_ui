@@ -30,7 +30,10 @@ export default function Deposit() {
   }
 
   useEffect(() => {
-    updateWethInfo();
+    const interval = setInterval(() => {
+      updateWethInfo();
+    }, 1000);
+    return () => clearInterval(interval);
   }, [wethContractLens]);
 
   const updateMaxAvailableDeposit = async () => {
@@ -48,7 +51,10 @@ export default function Deposit() {
   };
 
   useEffect(() => {
-    updateMaxAvailableDeposit();
+    const interval = setInterval(() => {
+      updateMaxAvailableDeposit();
+    }, 1000);
+    return () => clearInterval(interval);
   }, [publicProvider, address, vaultContractLens, wethContractLens, wethBalance, wethDecimals]);
 
   const handleWrapEth = async () => {

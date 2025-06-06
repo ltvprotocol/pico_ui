@@ -1,59 +1,39 @@
 import { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
-import { GME_VAULT_ADDRESS } from '@/constants';
+import { formatUnits } from 'ethers';
 import { useAppContext } from '@/context/AppContext';
 
-interface VaultInfoProps {
-  onMaxDeposit: (balance: string) => void;
-  onMaxRedeem: (balance: string) => void;
-}
-
-export default function VaultInfo({ onMaxDeposit, onMaxRedeem }: VaultInfoProps) {
+export default function VaultInfo() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [maxDeposit, setMaxDeposit] = useState<string>('0');
   const [maxRedeem, setMaxRedeem] = useState<string>('0');
 
-  const { provider, address } = useAppContext();
+  const { provider, address, vaultContractLens } = useAppContext();
 
   const getVaultInfo = async () => {
-    if (!address || !provider) return;
+    if (!address && !vaultContractLens) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      const vaultContract = new ethers.Contract(
-        GME_VAULT_ADDRESS,
-        [
-          'function maxDeposit(address) view returns (uint256)',
-          'function maxRedeem(address) view returns (uint256)',
-          'function decimals() view returns (uint8)',
-        ],
-        provider
-      );
-
       const [maxDepositAmount, maxRedeemAmount, decimals] = await Promise.all([
-        vaultContract.maxDeposit(address),
-        vaultContract.maxRedeem(address),
-        vaultContract.decimals()
+        vaultContractLens!.maxDeposit(address!),
+        vaultContractLens!.maxRedeem(address!),
+        vaultContractLens!.decimals()
       ]);
 
-      const formattedMaxDeposit = ethers.formatUnits(maxDepositAmount, decimals);
-      const formattedMaxRedeem = ethers.formatUnits(maxRedeemAmount, decimals);
+      const formattedMaxDeposit = formatUnits(maxDepositAmount, decimals);
+      const formattedMaxRedeem = formatUnits(maxRedeemAmount, decimals);
 
       setMaxDeposit(formattedMaxDeposit);
       setMaxRedeem(formattedMaxRedeem);
-      onMaxDeposit(maxDepositAmount);
-      onMaxRedeem(maxRedeemAmount);
     } catch (err) {
       console.error('Error fetching vault info:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
       setMaxDeposit('0');
       setMaxRedeem('0');
-      onMaxDeposit('0');
-      onMaxRedeem('0');
     } finally {
       setLoading(false);
     }

@@ -1,75 +1,78 @@
 import { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
-import { GME_VAULT_ADDRESS, WETH_ADDRESS } from '@/constants';
+import { formatUnits, parseUnits } from 'ethers';
+import { GME_VAULT_ADDRESS } from '@/constants';
 import { useAppContext } from '@/context/AppContext';
+import { isUserRejected } from '@/utils';
 
-interface DepositProps {
-  vaultMaxDeposit: string;
-  ethBalance: string;
-  wethBalance: string;
-}
-
-export default function Deposit({vaultMaxDeposit, ethBalance, wethBalance } : DepositProps) {
+export default function Deposit() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [amount, setAmount] = useState('');
   const [success, setSuccess] = useState<string | null>(null);
   const [maxAvailableDeposit, setMaxAvailableDeposit] = useState<string>('0');
-  const [wethDecimals, setWethDecimals] = useState<number>(18);
 
-  const { provider, signer, address } = useAppContext();
+  const [wethBalance, setWethBalance] = useState<bigint>(0n);
+  const [wethDecimals, setWethDecimals] = useState<bigint>(18n);
+
+  const { 
+    publicProvider, address, vaultContract, wethContract,
+    vaultContractLens, wethContractLens 
+  } = useAppContext();
+
+  const updateWethInfo = async () => {
+    if(!wethContractLens) return;
+
+    const currentWethBalance = await wethContractLens.balanceOf(address!);
+    const currentWethDecimals = await wethContractLens.decimals();
+    setWethBalance(currentWethBalance);
+    setWethDecimals(currentWethDecimals);
+  }
 
   useEffect(() => {
-    updateMaxAvailableDeposit(
-      BigInt(wethBalance),
-      BigInt(vaultMaxDeposit)
-    );
-  }, [wethBalance, vaultMaxDeposit, ethBalance]);
+    updateWethInfo();
+  }, [wethContractLens]);
 
-  const updateMaxAvailableDeposit = (wethBal: ethers.BigNumberish, maxDep: ethers.BigNumberish) => {
-    const wethAmount = parseFloat(ethers.formatUnits(wethBal, wethDecimals));
-    const ethAmount = parseFloat(ethBalance);
-    const maxDepAmount = parseFloat(ethers.formatUnits(maxDep, wethDecimals));
-    const maxAvailable = Math.min(wethAmount + ethAmount, maxDepAmount);
-    setMaxAvailableDeposit(maxAvailable.toFixed(4));
+  const updateMaxAvailableDeposit = async () => {
+    if(publicProvider && address && vaultContractLens && wethContractLens) {
+      const vaultMaxDeposit = await vaultContractLens!.maxDeposit(address!);
+      const ethBalance = await publicProvider.getBalance(address);
+
+      const wethAmount = parseFloat(formatUnits(wethBalance, wethDecimals));
+      const ethAmount = parseFloat(formatUnits(ethBalance, wethDecimals));
+      const maxDepAmount = parseFloat(formatUnits(vaultMaxDeposit, wethDecimals));
+
+      const maxAvailable = Math.min(wethAmount + ethAmount, maxDepAmount);
+      setMaxAvailableDeposit(maxAvailable.toFixed(4));
+    }
   };
 
+  useEffect(() => {
+    updateMaxAvailableDeposit();
+  }, [publicProvider, address, vaultContractLens, wethContractLens, wethBalance, wethDecimals]);
+
   const handleWrapEth = async () => {
-    if (!provider || !address) return;
+    if (!wethContract) return;
     
     setLoading(true);
     setError(null);
 
     try {
-      const wethContract = new ethers.Contract(
-        WETH_ADDRESS,
-        [
-          'function deposit() payable',
-          'function decimals() view returns (uint8)',
-          'function balanceOf(address) view returns (uint256)',
-        ],
-        signer
-      );
-
-      // Get the amount needed to wrap
-      const wethAmount = ethers.parseUnits(amount, wethDecimals);
-      const currentWeth = BigInt(wethBalance);
-      const neededWeth = wethAmount - BigInt(currentWeth);
+      const wethAmount = parseUnits(amount, wethDecimals);
+      const neededWeth = wethAmount - wethBalance;
       
       // Wrap the needed amount
       const wrapTx = await wethContract.deposit({ value: neededWeth });
       await wrapTx.wait();
       
-      // Refresh balances
-      //if (handleWethBalance) {
-      //  const newBalance = await wethContract.balanceOf(address);
-      //  handleWethBalance(newBalance);
-      //}
-      
       setSuccess('Successfully wrapped ETH to WETH');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to wrap ETH');
+      if (isUserRejected(err)) {
+        setError('Transaction canceled by user.');
+      } else {
+        setError('Failed to wrap ETH');
+        console.error('Failed to wrap', err);
+      }
     } finally {
       setLoading(false);
     }
@@ -81,56 +84,39 @@ export default function Deposit({vaultMaxDeposit, ethBalance, wethBalance } : De
     setError(null);
     setSuccess(null);
 
-    if (!provider || !address) return;
+    if (!wethContractLens && !wethContract && !vaultContract && !address) return;
 
     try {
-      const vaultContract = new ethers.Contract(
-        GME_VAULT_ADDRESS,
-        [
-          'function deposit(uint256 assets, address receiver) returns (uint256)',
-          'function asset() view returns (address)',
-        ],
-        signer
-      );
-
-      const wethContract = new ethers.Contract(
-        WETH_ADDRESS,
-        [
-          'function approve(address spender, uint256 amount) returns (bool)',
-          'function decimals() view returns (uint8)',
-          'function balanceOf(address) view returns (uint256)',
-        ],
-        signer
-      );
-
-      // Get WETH decimals and check balance
-      const decimals = await wethContract.decimals();
+      const decimals = await wethContractLens!.decimals();
       setWethDecimals(decimals);
-      const amountWei = ethers.parseUnits(amount, decimals);
-      const currentWethBalance = await wethContract.balanceOf(address);
+      const amountWei = parseUnits(amount, decimals);
+      const currentWethBalance = await wethContractLens!.balanceOf(address!);
 
       // If not enough WETH, wrap ETH first
       if (currentWethBalance < amountWei) {
         await handleWrapEth();
-        // Wait for balance update
-        const newBalance = await wethContract.balanceOf(address);
+
+        const newBalance = await wethContractLens!.balanceOf(address!);
         if (newBalance < amountWei) {
           throw new Error('Not enough WETH after wrapping');
         }
       }
 
-      // Approve vault to spend WETH
-      const approveTx = await wethContract.approve(GME_VAULT_ADDRESS, amountWei);
+      const approveTx = await wethContract!.approve(GME_VAULT_ADDRESS, amountWei);
       await approveTx.wait();
 
-      // Deposit to vault
-      const depositTx = await vaultContract.deposit(amountWei, address);
+      const depositTx = await vaultContract!.deposit(amountWei, address!);
       await depositTx.wait();
 
       setAmount('');
       setSuccess('Deposit successful!');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      if (isUserRejected(err)) {
+        setError('Transaction canceled by user.');
+      } else {
+        setError('Failed to deposit');
+        console.error('Failed to deposit', err);
+      }
     } finally {
       setLoading(false);
     }

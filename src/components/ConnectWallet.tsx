@@ -1,13 +1,8 @@
 import { useState, useEffect } from 'react';
-import { 
-  BrowserProvider, Eip1193Provider, 
-  formatUnits, formatEther, Contract
-} from 'ethers';
-import { 
-  SEPOLIA_CHAIN_ID, SEPOLIA_CHAIN_ID_HEX, SEPOLIA_NETWORK,
-  GME_VAULT_ADDRESS, WETH_ADDRESS
-} from '@/constants';
+import { BrowserProvider, Eip1193Provider } from 'ethers';
+import { SEPOLIA_CHAIN_ID, SEPOLIA_CHAIN_ID_HEX, SEPOLIA_NETWORK } from '@/constants';
 import { useAppContext } from '@/context/AppContext';
+import { isUserRejected } from '@/utils';
 
 type DiscoveredWallet = {
   info: {
@@ -18,23 +13,13 @@ type DiscoveredWallet = {
   provider: Eip1193Provider;
 }
 
-interface ConnectWalletProps {
-  onWethBalance?: (balance: string) => void;
-  onEthBalance?: (balance: string) => void;
-  onGmeBalance: (balance: string) => void;
-}
-
-export default function ConnectWallet({ onWethBalance, onEthBalance, onGmeBalance }: ConnectWalletProps) {
+export default function ConnectWallet() {
   const [wallets, setWallets] = useState<DiscoveredWallet[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [rawProvider, setRawProvider] = useState<Eip1193Provider | null>(null);
   const [isSepolia, setIsSepolia] = useState(false);
-  
-  const [gmeBalance, setGmeBalance] = useState<string>('0');
-  const [wethBalance, setWethBalance] = useState<string>('0');
-  const [ethBalance, setEthBalance] = useState<string>('0');
 
   const { 
     provider, signer, address,
@@ -62,74 +47,12 @@ export default function ConnectWallet({ onWethBalance, onEthBalance, onGmeBalanc
     };
   }, []);
 
-  const resetBalances = () => {
-    setEthBalance('0');
-    setGmeBalance('0');
-    setWethBalance('0');
-    onEthBalance?.('0');
-    onGmeBalance?.('0');
-    onWethBalance?.('0');
-  };
-
   const disconnectWallet = () => {
     updateProvider(null);
     updateSigner(null);
     updateAddress(null);
     updateChainId(null);
     setIsSepolia(false);
-    resetBalances();
-  };
-
-  const getBalances = async (address: string, currentProvider: BrowserProvider) => {
-    try {
-      if (!currentProvider) {
-        console.warn("getBalances: currentProvider not defined");
-        resetBalances();
-        return;
-      }
-  
-      const ethBalanceRaw = await currentProvider.getBalance(address);
-      const formattedEthBalance = formatEther(ethBalanceRaw);
-      setEthBalance(formattedEthBalance);
-      onEthBalance?.(formattedEthBalance);
-  
-      const gmeContract = new Contract(
-        GME_VAULT_ADDRESS,
-        [
-          'function balanceOf(address owner) view returns (uint256)', 
-          'function decimals() view returns (uint8)'
-        ],
-        currentProvider
-      );
-
-      const wethContract = new Contract(
-        WETH_ADDRESS,
-        [
-          'function balanceOf(address) view returns (uint256)', 
-          'function decimals() view returns (uint8)'
-        ],
-        currentProvider
-      );
-  
-      const [gmeBalanceRaw, gmeDecimals, wethBalanceRaw, wethDecimals] = await Promise.all([
-        gmeContract.balanceOf(address),
-        gmeContract.decimals(),
-        wethContract.balanceOf(address),
-        wethContract.decimals()
-      ]);
-  
-      const formattedGmeBalance = formatUnits(gmeBalanceRaw, gmeDecimals);
-      const formattedWethBalance = formatUnits(wethBalanceRaw, wethDecimals);
-  
-      setGmeBalance(formattedGmeBalance);
-      setWethBalance(formattedWethBalance);
-      onWethBalance?.(wethBalanceRaw);
-      onGmeBalance?.(gmeBalanceRaw);
-  
-    } catch (err) {
-      console.error('Error fetching balances:', err);
-      resetBalances();
-    }
   };
 
   const setupProviderConnection = async (eip1193Provider: Eip1193Provider) => {
@@ -159,8 +82,6 @@ export default function ConnectWallet({ onWethBalance, onEthBalance, onGmeBalanc
       updateSigner(newSigner);
       updateAddress(newAddress);
       updateChainId(newChainId);
-  
-      await getBalances(newAddress, newProvider);
     } catch (error) {
       console.error("Error in setupProviderConnection:", error);
       disconnectWallet();
@@ -177,7 +98,7 @@ export default function ConnectWallet({ onWethBalance, onEthBalance, onGmeBalanc
       await newProvider.send('eth_requestAccounts', []);
       await setupProviderConnection(wallet.provider);
     } catch (err: any) {
-      if (err.code === 4001) {
+      if (isUserRejected(err)) {
         setError('Connection canceled by user.');
       } else {
         setError('Connection failed. Please try again.');
@@ -361,23 +282,6 @@ export default function ConnectWallet({ onWethBalance, onEthBalance, onGmeBalanc
                       </span>
                       <span className="block sm:hidden text-sm text-gray-700 break-all">
                         {address ? `${address.slice(0, 6)}...${address.slice(-12)}` : ''}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between bg-gray-50 p-3 rounded-md mt-4">
-                  <div className="flex flex-col">
-                    <div className="mt-2 space-y-1">
-                      <h3 className="text-lg font-medium text-gray-900">Balances:</h3>
-                      <span className="text-sm text-gray-600">
-                        ETH Balance: {parseFloat(ethBalance).toFixed(4)} ETH
-                      </span>
-                      <span className="text-sm text-gray-600 block">
-                        WETH Balance: {parseFloat(wethBalance).toFixed(4)} WETH
-                      </span>
-                      <span className="text-sm text-gray-600 block">
-                        GME Balance: {parseFloat(gmeBalance).toFixed(4)} GME
                       </span>
                     </div>
                   </div>

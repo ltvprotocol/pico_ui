@@ -1,87 +1,81 @@
 import { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
-import { GME_VAULT_ADDRESS, WETH_ADDRESS } from '@/constants';
+import { formatUnits, parseUnits } from 'ethers';
 import { useAppContext } from '@/context/AppContext';
+import { isUserRejected } from '@/utils';
 
-interface RedeemProps {
-  vaultMaxRedeem: string;
-  gmeBalance: string;
-}
-
-export default function Redeem({ vaultMaxRedeem, gmeBalance } : RedeemProps) {
+export default function Redeem() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [amount, setAmount] = useState('');
   const [success, setSuccess] = useState<string | null>(null);
   const [maxAvailableRedeem, setMaxAvailableRedeem] = useState<string>('0');
-  const [wethDecimals, setWethDecimals] = useState<number>(18);
 
-  const { provider, signer, address } = useAppContext();
+  const [gmeBalance, setGmeBalance] = useState<bigint>(0n);
+  const [wethDecimals, setWethDecimals] = useState<bigint>(18n);
+
+  const { address, vaultContract, vaultContractLens, wethContractLens } = useAppContext();
+
+  const updateNecessaryInfo = async () => {
+    if(!vaultContractLens && !wethContractLens) return;
+
+    const currentGmeBalance = await vaultContractLens!.balanceOf(address!);
+    const currentWethDecimals = await wethContractLens!.decimals();
+    setGmeBalance(currentGmeBalance);
+    setWethDecimals(currentWethDecimals);
+  }
 
   useEffect(() => {
-    updateMaxAvailableRedeem(
-      BigInt(gmeBalance),
-      BigInt(vaultMaxRedeem)
-    );
-  }, [gmeBalance, vaultMaxRedeem]);
+    updateNecessaryInfo();
+  }, [vaultContractLens, wethContractLens]);
 
-  const updateMaxAvailableRedeem = (gmeBal: bigint, maxRedeem: bigint) => {
-    const gmeAmount = parseFloat(ethers.formatUnits(gmeBal, wethDecimals));
-    const maxRedeemAmount = parseFloat(ethers.formatUnits(maxRedeem, wethDecimals));
-    const maxAvailable = Math.min(gmeAmount, maxRedeemAmount);
-    setMaxAvailableRedeem(maxAvailable.toFixed(4));
+  const updateMaxAvailableRedeem = async () => {
+    if(vaultContractLens && wethDecimals) {
+      const vaultMaxRedeem = await vaultContractLens!.maxRedeem(address!);
+
+      const gmeAmount = parseFloat(formatUnits(gmeBalance, wethDecimals));
+      const maxRedeemAmount = parseFloat(formatUnits(vaultMaxRedeem, wethDecimals));
+      const maxAvailable = Math.min(gmeAmount, maxRedeemAmount);
+      console.log("gmeAmount", gmeAmount);
+      console.log("maxRedeemAmount", maxRedeemAmount);
+      console.log("maxAvailable", maxAvailable);
+
+      setMaxAvailableRedeem(maxAvailable.toFixed(4));
+    }
   };
+
+  useEffect(() => {
+    updateMaxAvailableRedeem();
+  }, [address, vaultContractLens, wethContractLens, gmeBalance, wethDecimals]);
 
   const handleRedeem = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!address && !vaultContract && !wethContractLens) return;
+
     setLoading(true);
     setError(null);
     setSuccess(null);
-    
-    if (!provider) return;
 
     try {
-      const vaultContract = new ethers.Contract(
-        GME_VAULT_ADDRESS,
-        [
-          'function redeem(uint256 shares, address receiver, address owner) returns (uint256)',
-          'function asset() view returns (address)',
-        ],
-        signer
-      );
+      const amountWei = parseUnits(amount, wethDecimals);
 
-      const wethContract = new ethers.Contract(
-        WETH_ADDRESS,
-        [
-          'function decimals() view returns (uint8)',
-          'function balanceOf(address) view returns (uint256)',
-        ],
-        provider
-      );
-
-      // Get WETH decimals and check balance
-      const decimals = await wethContract.decimals();
-      setWethDecimals(decimals);
-      const amountWei = ethers.parseUnits(amount, decimals);
-      const currentGmeBalance = BigInt(gmeBalance);
-
-      if (currentGmeBalance < amountWei) {
+      if (gmeBalance < amountWei) {
         throw new Error('Insufficient GME balance');
       }
 
-      // Redeem from vault
-      const redeemTx = await vaultContract.redeem(
-        amountWei,
-        address,
-        address
-      );
+      const redeemTx = await vaultContract!.redeem(amountWei, address!, address!);
       await redeemTx.wait();
 
       setAmount('');
       setSuccess('Redemption successful!');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      if (isUserRejected(err)) {
+        setError('Transaction canceled by user.');
+      } else {
+        setError('Failed to redeem');
+        console.error('Failed to redeem', err);
+      }
     } finally {
       setLoading(false);
     }

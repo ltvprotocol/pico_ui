@@ -1,25 +1,24 @@
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
-
-const GME_VAULT_ADDRESS = '0xe2a7f267124ac3e4131f27b9159c78c521a44f3c';
+import { GME_VAULT_ADDRESS } from '@/constants';
+import { useAppContext } from '@/context/AppContext';
 
 interface VaultInfoProps {
-  isConnected: boolean;
-  isSepolia: boolean;
-  address: string | null;
-  provider: ethers.BrowserProvider | null;
   onMaxDeposit: (balance: string) => void;
   onMaxRedeem: (balance: string) => void;
 }
 
-export default function VaultInfo({ isConnected, isSepolia, address, provider, onMaxDeposit, onMaxRedeem }: VaultInfoProps) {
-  const [maxDeposit, setMaxDeposit] = useState<string>('0');
-  const [maxRedeem, setMaxRedeem] = useState<string>('0');
+export default function VaultInfo({ onMaxDeposit, onMaxRedeem }: VaultInfoProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [maxDeposit, setMaxDeposit] = useState<string>('0');
+  const [maxRedeem, setMaxRedeem] = useState<string>('0');
+
+  const { provider, address } = useAppContext();
+
   const getVaultInfo = async () => {
-    if (!isConnected || !address || !provider) return;
+    if (!address || !provider) return;
 
     setLoading(true);
     setError(null);
@@ -61,17 +60,13 @@ export default function VaultInfo({ isConnected, isSepolia, address, provider, o
   };
 
   useEffect(() => {
-    if (isConnected && address) {
+    if (address && provider) {
       getVaultInfo();
     } else {
       setMaxDeposit('0');
       setMaxRedeem('0');
     }
-  }, [isConnected, address]);
-
-  if (!isConnected || !isSepolia) {
-    return null;
-  }
+  }, [address, provider]);
 
   return (
     <div className="mt-4 p-4 bg-gray-50 rounded-md">

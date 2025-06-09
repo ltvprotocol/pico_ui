@@ -61,8 +61,7 @@ export default function Deposit() {
 
   const handleWrapEth = async () => {
     if (!wethContract) return;
-    
-    setLoading(true);
+
     setError(null);
 
     try {
@@ -81,8 +80,6 @@ export default function Deposit() {
         setError('Failed to wrap ETH');
         console.error('Failed to wrap', err);
       }
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -100,9 +97,7 @@ export default function Deposit() {
     if (!wethContractLens && !wethContract && !vaultContract && !address) return;
 
     try {
-      const decimals = await wethContractLens!.decimals();
-      setWethDecimals(decimals);
-      const amountWei = parseUnits(amount, decimals);
+      const amountWei = parseUnits(amount, wethDecimals);
       const currentWethBalance = await wethContractLens!.balanceOf(address!);
 
       // If not enough WETH, wrap ETH first
@@ -117,6 +112,7 @@ export default function Deposit() {
 
       const approveTx = await wethContract!.approve(GME_VAULT_ADDRESS, amountWei);
       await approveTx.wait();
+      setSuccess('Successfully approved WETH');
 
       const depositTx = await vaultContract!.deposit(amountWei, address!);
       await depositTx.wait();
@@ -150,6 +146,7 @@ export default function Deposit() {
               id="amount"
               value={amount}
               onChange={handleInput}
+              autoComplete="off"
               className="block w-full pr-24 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
               placeholder="0.0"
               step="any"

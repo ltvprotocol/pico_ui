@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { formatUnits, parseUnits } from 'ethers';
 import { useAppContext } from '@/context/AppContext';
-import { isUserRejected } from '@/utils';
+import { isUserRejected, allowOnlyNumbers } from '@/utils';
 
 export default function Redeem() {
   const [loading, setLoading] = useState(false);
@@ -53,6 +53,11 @@ export default function Redeem() {
     return () => clearInterval(interval);
   }, [address, vaultContractLens, wethContractLens, gmeBalance, wethDecimals]);
 
+  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = allowOnlyNumbers(e.target.value);
+    setAmount(value);
+  };
+
   const handleRedeem = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -100,11 +105,11 @@ export default function Redeem() {
           </label>
           <div className="mt-1 relative rounded-md shadow-sm">
             <input
-              type="number"
+              type="text"
               name="amount"
               id="amount"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={handleInput}
               className="block w-full pr-24 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
               placeholder="0.0"
               step="any"
@@ -131,7 +136,7 @@ export default function Redeem() {
         <div>
           <button
             type="submit"
-            disabled={loading || !amount || parseFloat(amount) <= 0}
+            disabled={loading || !amount || parseFloat(amount) > parseFloat(maxAvailableRedeem) || parseFloat(amount) == 0}
             className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
           >
             {loading ? 'Processing...' : 'Redeem'}

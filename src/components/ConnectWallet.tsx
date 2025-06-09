@@ -265,7 +265,11 @@ export default function ConnectWallet() {
                     </div>
                     <button
                       onClick={disconnectWallet}
-                      className="text-sm text-gray-500 hover:text-gray-700"
+                      className="
+                        text-sm text-gray-500 hover:text-gray-700 
+                        border border-blue-300 bg-white dark:bg-white rounded-lg 
+                        hover:bg-blue-50 dark:hover:bg-blue-50 hover:border-blue-600 
+                        transition disabled:opacity-50"
                     >
                       Disconnect
                     </button>

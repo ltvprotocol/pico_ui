@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { formatUnits, formatEther } from 'ethers';
 import { useAppContext } from '@/context/AppContext';
+import { useAdaptiveInterval } from '@/hooks';
 
 export default function Balances() {
   const [gmeBalance, setGmeBalance] = useState<string>('0');
@@ -41,13 +42,9 @@ export default function Balances() {
     }
   };
 
-  useEffect(() => {
-    getBalances();
-    const interval = setInterval(() => {
-      getBalances();
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [isConnected]); 
+  useAdaptiveInterval(getBalances, {
+    enabled: isConnected
+  });
 
   return (
     <div className="flex items-center justify-between bg-gray-50 p-3 rounded-md mt-4">

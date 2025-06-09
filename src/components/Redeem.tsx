@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { formatUnits, parseUnits } from 'ethers';
 import { useAppContext } from '@/context/AppContext';
 import { isUserRejected, allowOnlyNumbers } from '@/utils';
+import { useAdaptiveInterval } from '@/hooks';
 
 export default function Redeem() {
   const [loading, setLoading] = useState(false);
@@ -14,44 +15,43 @@ export default function Redeem() {
   const [gmeBalance, setGmeBalance] = useState<bigint>(0n);
   const [wethDecimals, setWethDecimals] = useState<bigint>(18n);
 
-  const { address, vaultContract, vaultContractLens, wethContractLens } = useAppContext();
+  const {
+    address, isConnected, 
+    vaultContract, vaultContractLens, wethContractLens 
+  } = useAppContext();
 
-  const updateNecessaryInfo = async () => {
-    if(!vaultContractLens && !wethContractLens) return;
-
+  const getGmeBalance = async () : Promise<bigint> => {
     const currentGmeBalance = await vaultContractLens!.balanceOf(address!);
-    const currentWethDecimals = await wethContractLens!.decimals();
     setGmeBalance(currentGmeBalance);
-    setWethDecimals(currentWethDecimals);
+    return currentGmeBalance;
   }
 
-  useEffect(() => {
-    updateNecessaryInfo();
-    const interval = setInterval(() => {
-      updateNecessaryInfo();
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [vaultContractLens, wethContractLens]);
+  const getWethDecimals = async () : Promise<bigint> => {
+    const currentWethDecimals = await wethContractLens!.decimals();
+    setWethDecimals(currentWethDecimals);
+    return currentWethDecimals;
+  }
 
   const updateMaxAvailableRedeem = async () => {
-    if(vaultContractLens && wethDecimals) {
-      const vaultMaxRedeem = await vaultContractLens!.maxRedeem(address!);
-
-      const gmeAmount = parseFloat(formatUnits(gmeBalance, wethDecimals));
-      const maxRedeemAmount = parseFloat(formatUnits(vaultMaxRedeem, wethDecimals));
-      const maxAvailable = Math.min(gmeAmount, maxRedeemAmount);
-
-      setMaxAvailableRedeem(maxAvailable.toFixed(4));
+    if(!address && !vaultContractLens && !wethContractLens) {
+      console.error("Unable to call updateMaxAvailableRedeem");
+      return;
     }
+
+    const currentGmeBalance = await getGmeBalance();
+    const currentWethDecimals = await getWethDecimals();
+    const vaultMaxRedeem = await vaultContractLens!.maxRedeem(address!);
+
+    const gmeAmount = parseFloat(formatUnits(currentGmeBalance, currentWethDecimals));
+    const maxRedeemAmount = parseFloat(formatUnits(vaultMaxRedeem, currentWethDecimals));
+
+    const maxAvailable = Math.min(gmeAmount, maxRedeemAmount);
+    setMaxAvailableRedeem(maxAvailable.toFixed(4));
   };
 
-  useEffect(() => {
-    updateMaxAvailableRedeem();
-    const interval = setInterval(() => {
-      updateMaxAvailableRedeem();
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [address, vaultContractLens, wethContractLens, gmeBalance, wethDecimals]);
+  useAdaptiveInterval(updateMaxAvailableRedeem, {
+    enabled: isConnected
+  });
 
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = allowOnlyNumbers(e.target.value);

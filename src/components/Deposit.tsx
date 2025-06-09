@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { formatUnits, parseUnits } from 'ethers';
 import { GME_VAULT_ADDRESS } from '@/constants';
 import { useAppContext } from '@/context/AppContext';
 import { isUserRejected, allowOnlyNumbers } from '@/utils';
+import { useAdaptiveInterval } from '@/hooks';
 
 export default function Deposit() {
   const [loading, setLoading] = useState(false);
@@ -16,48 +17,45 @@ export default function Deposit() {
   const [wethDecimals, setWethDecimals] = useState<bigint>(18n);
 
   const { 
-    publicProvider, address, vaultContract, wethContract,
+    publicProvider, address, isConnected, vaultContract, wethContract,
     vaultContractLens, wethContractLens 
   } = useAppContext();
 
-  const updateWethInfo = async () => {
-    if(!wethContractLens) return;
-
-    const currentWethBalance = await wethContractLens.balanceOf(address!);
-    const currentWethDecimals = await wethContractLens.decimals();
+  const getWethBalance = async () : Promise<bigint> => {
+    const currentWethBalance = await wethContractLens!.balanceOf(address!);
     setWethBalance(currentWethBalance);
-    setWethDecimals(currentWethDecimals);
+    return currentWethBalance;
   }
 
-  useEffect(() => {
-    updateWethInfo();
-    const interval = setInterval(() => {
-      updateWethInfo();
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [wethContractLens]);
+  const getWethDecimals = async () : Promise<bigint> => {
+    const currentWethDecimals = await wethContractLens!.decimals();
+    setWethDecimals(currentWethDecimals);
+    return currentWethDecimals;
+  }
 
   const updateMaxAvailableDeposit = async () => {
-    if(publicProvider && address && vaultContractLens && wethContractLens) {
-      const vaultMaxDeposit = await vaultContractLens!.maxDeposit(address!);
-      const ethBalance = await publicProvider.getBalance(address);
-
-      const wethAmount = parseFloat(formatUnits(wethBalance, wethDecimals));
-      const ethAmount = parseFloat(formatUnits(ethBalance, wethDecimals));
-      const maxDepAmount = parseFloat(formatUnits(vaultMaxDeposit, wethDecimals));
-
-      const maxAvailable = Math.min(wethAmount + ethAmount, maxDepAmount);
-      setMaxAvailableDeposit(maxAvailable.toFixed(4));
+    if(!publicProvider && !address && !vaultContractLens && !wethContractLens) {
+      console.error("Unable to call updateMaxAvailableDeposit");
+      return;
     }
+
+    const currentWethBalance = await getWethBalance();
+    const currentWethDecimals = await getWethDecimals();
+
+    const vaultMaxDeposit = await vaultContractLens!.maxDeposit(address!);
+    const ethBalance = await publicProvider!.getBalance(address!);
+
+    const wethAmount = parseFloat(formatUnits(currentWethBalance, currentWethDecimals));
+    const ethAmount = parseFloat(formatUnits(ethBalance, currentWethDecimals));
+    const maxDepAmount = parseFloat(formatUnits(vaultMaxDeposit, currentWethDecimals));
+
+    const maxAvailable = Math.min(wethAmount + ethAmount, maxDepAmount);
+    setMaxAvailableDeposit(maxAvailable.toFixed(4));
   };
 
-  useEffect(() => {
-    updateMaxAvailableDeposit();
-    const interval = setInterval(() => {
-      updateMaxAvailableDeposit();
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [publicProvider, address, vaultContractLens, wethContractLens, wethBalance, wethDecimals]);
+  useAdaptiveInterval(updateMaxAvailableDeposit, {
+    enabled: isConnected
+  });
 
   const handleWrapEth = async () => {
     if (!wethContract) return;

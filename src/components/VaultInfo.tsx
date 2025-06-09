@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { formatUnits } from 'ethers';
 import { useAppContext } from '@/context/AppContext';
+import { useAdaptiveInterval } from '@/hooks';
 
 export default function VaultInfo() {
   const [error, setError] = useState<string | null>(null);
@@ -8,10 +9,13 @@ export default function VaultInfo() {
   const [maxDeposit, setMaxDeposit] = useState<string>('0');
   const [maxRedeem, setMaxRedeem] = useState<string>('0');
 
-  const { address, vaultContractLens } = useAppContext();
+  const { address, isConnected, vaultContractLens } = useAppContext();
 
   const getVaultInfo = async () => {
-    if (!address && !vaultContractLens) return;
+    if (!address && !vaultContractLens) {
+      console.error("Unable to call getVaultInfo");
+      return;
+    };
 
     setError(null);
 
@@ -29,19 +33,15 @@ export default function VaultInfo() {
       setMaxRedeem(formattedMaxRedeem);
     } catch (err) {
       console.error('Error fetching vault info:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError('An error occurred');
       setMaxDeposit('0');
       setMaxRedeem('0');
     }
   };
 
-  useEffect(() => {
-    getVaultInfo();
-    const interval = setInterval(() => {
-      getVaultInfo();
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [address]);
+  useAdaptiveInterval(getVaultInfo, {
+    enabled: isConnected
+  });
 
   return (
     <div className="mt-4 p-4 bg-gray-50 rounded-md">

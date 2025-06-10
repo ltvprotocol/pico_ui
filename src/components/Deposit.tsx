@@ -1,90 +1,89 @@
-import { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
+import React, { useState } from 'react';
+import { formatUnits, parseUnits } from 'ethers';
+import { GME_VAULT_ADDRESS } from '@/constants';
+import { useAppContext } from '@/context/AppContext';
+import { isUserRejected, allowOnlyNumbers } from '@/utils';
+import { useAdaptiveInterval } from '@/hooks';
 
-const TOKEN_ADDRESS = '0xe2a7f267124ac3e4131f27b9159c78c521a44f3c';
-const WETH_ADDRESS = '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14';
-
-interface DepositProps {
-  isWalletConnected: boolean;
-  isSepolia: boolean;
-  address: string | null;
-  provider: ethers.BrowserProvider | null;
-  signer: ethers.JsonRpcSigner | null;
-  vaultMaxDeposit: string;
-  ethBalance: string;
-  wethBalance: string;
-}
-
-export default function Deposit({
-  isWalletConnected,
-  isSepolia,
-  address,
-  provider,
-  signer,
-  vaultMaxDeposit,
-  ethBalance,
-  wethBalance,
-}: DepositProps) {
-  const [amount, setAmount] = useState('');
+export default function Deposit() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [amount, setAmount] = useState('');
   const [success, setSuccess] = useState<string | null>(null);
-  const [maxAvailableDeposit, setMaxAvailableDeposit] = useState<string>('0');
-  const [wethDecimals, setWethDecimals] = useState<number>(18);
+  const [maxAvailableDeposit, setMaxAvailableDeposit] = useState<string>('0.0000');
 
-  useEffect(() => {
-    updateMaxAvailableDeposit(
-      BigInt(wethBalance),
-      BigInt(vaultMaxDeposit)
-    );
-  }, [wethBalance, vaultMaxDeposit, ethBalance]);
+  const [wethBalance, setWethBalance] = useState<bigint>(0n);
+  const [wethDecimals, setWethDecimals] = useState<bigint>(18n);
 
-  const updateMaxAvailableDeposit = (wethBal: ethers.BigNumberish, maxDep: ethers.BigNumberish) => {
-    const wethAmount = parseFloat(ethers.formatUnits(wethBal, wethDecimals));
-    const ethAmount = parseFloat(ethBalance);
-    const maxDepAmount = parseFloat(ethers.formatUnits(maxDep, wethDecimals));
+  const { 
+    publicProvider, address, isConnected, vaultContract, wethContract,
+    vaultContractLens, wethContractLens 
+  } = useAppContext();
+
+  const getWethBalance = async () : Promise<bigint> => {
+    const currentWethBalance = await wethContractLens!.balanceOf(address!);
+    setWethBalance(currentWethBalance);
+    return currentWethBalance;
+  }
+
+  const getWethDecimals = async () : Promise<bigint> => {
+    const currentWethDecimals = await wethContractLens!.decimals();
+    setWethDecimals(currentWethDecimals);
+    return currentWethDecimals;
+  }
+
+  const updateMaxAvailableDeposit = async () => {
+    if(!publicProvider && !address && !vaultContractLens && !wethContractLens) {
+      console.error("Unable to call updateMaxAvailableDeposit");
+      return;
+    }
+
+    const currentWethBalance = await getWethBalance();
+    const currentWethDecimals = await getWethDecimals();
+
+    const vaultMaxDeposit = await vaultContractLens!.maxDeposit(address!);
+    const ethBalance = await publicProvider!.getBalance(address!);
+
+    const wethAmount = parseFloat(formatUnits(currentWethBalance, currentWethDecimals));
+    const ethAmount = parseFloat(formatUnits(ethBalance, currentWethDecimals));
+    const maxDepAmount = parseFloat(formatUnits(vaultMaxDeposit, currentWethDecimals));
+
     const maxAvailable = Math.min(wethAmount + ethAmount, maxDepAmount);
     setMaxAvailableDeposit(maxAvailable.toFixed(4));
   };
 
+  useAdaptiveInterval(updateMaxAvailableDeposit, {
+    enabled: isConnected
+  });
+
   const handleWrapEth = async () => {
-    if (!provider || !address) return;
-    
-    setLoading(true);
+    if (!wethContract) return;
+
     setError(null);
 
     try {
-      const wethContract = new ethers.Contract(
-        WETH_ADDRESS,
-        [
-          'function deposit() payable',
-          'function decimals() view returns (uint8)',
-          'function balanceOf(address) view returns (uint256)',
-        ],
-        signer
-      );
-
-      // Get the amount needed to wrap
-      const wethAmount = ethers.parseUnits(amount, wethDecimals);
-      const currentWeth = BigInt(wethBalance);
-      const neededWeth = wethAmount - BigInt(currentWeth);
+      const wethAmount = parseUnits(amount, wethDecimals);
+      const neededWeth = wethAmount - wethBalance;
       
       // Wrap the needed amount
       const wrapTx = await wethContract.deposit({ value: neededWeth });
       await wrapTx.wait();
       
-      // Refresh balances
-      //if (handleWethBalance) {
-      //  const newBalance = await wethContract.balanceOf(address);
-      //  handleWethBalance(newBalance);
-      //}
-      
       setSuccess('Successfully wrapped ETH to WETH');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to wrap ETH');
-    } finally {
-      setLoading(false);
+      if (isUserRejected(err)) {
+        setError('Transaction canceled by user.');
+      } else {
+        setError('Failed to wrap ETH');
+        console.error('Failed to wrap', err);
+      }
     }
+  };
+
+  const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = allowOnlyNumbers(e.target.value);
+    setAmount(value);
   };
 
   const handleDeposit = async (e: React.FormEvent) => {
@@ -93,123 +92,102 @@ export default function Deposit({
     setError(null);
     setSuccess(null);
 
-    if (!provider || !address) return;
+    if (!wethContractLens && !wethContract && !vaultContract && !address) return;
 
     try {
-      const vaultContract = new ethers.Contract(
-        TOKEN_ADDRESS,
-        [
-          'function deposit(uint256 assets, address receiver) returns (uint256)',
-          'function asset() view returns (address)',
-        ],
-        signer
-      );
-
-      const wethContract = new ethers.Contract(
-        WETH_ADDRESS,
-        [
-          'function approve(address spender, uint256 amount) returns (bool)',
-          'function decimals() view returns (uint8)',
-          'function balanceOf(address) view returns (uint256)',
-        ],
-        signer
-      );
-
-      // Get WETH decimals and check balance
-      const decimals = await wethContract.decimals();
-      setWethDecimals(decimals);
-      const amountWei = ethers.parseUnits(amount, decimals);
-      const currentWethBalance = await wethContract.balanceOf(address);
+      const amountWei = parseUnits(amount, wethDecimals);
+      const currentWethBalance = await wethContractLens!.balanceOf(address!);
 
       // If not enough WETH, wrap ETH first
       if (currentWethBalance < amountWei) {
         await handleWrapEth();
-        // Wait for balance update
-        const newBalance = await wethContract.balanceOf(address);
+
+        const newBalance = await wethContractLens!.balanceOf(address!);
         if (newBalance < amountWei) {
           throw new Error('Not enough WETH after wrapping');
         }
       }
 
-      // Approve vault to spend WETH
-      const approveTx = await wethContract.approve(TOKEN_ADDRESS, amountWei);
+      const approveTx = await wethContract!.approve(GME_VAULT_ADDRESS, amountWei);
       await approveTx.wait();
+      setSuccess('Successfully approved WETH');
 
-      // Deposit to vault
-      const depositTx = await vaultContract.deposit(amountWei, address);
+      const depositTx = await vaultContract!.deposit(amountWei, address!);
       await depositTx.wait();
 
       setAmount('');
       setSuccess('Deposit successful!');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      if (isUserRejected(err)) {
+        setError('Transaction canceled by user.');
+      } else {
+        setError('Failed to deposit');
+        console.error('Failed to deposit', err);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <>
-      {isWalletConnected && isSepolia && (
-        <div className="mt-8 p-6 bg-white rounded-lg shadow-lg">
-          <h2 className="text-2xl font-bold mb-6 text-gray-900">Deposit Assets</h2>
-          <form onSubmit={handleDeposit} className="space-y-4">
-            <div>
-              <label htmlFor="amount" className="block text-sm font-medium text-gray-700">
-                Amount to Deposit
-              </label>
-              <div className="mt-1 relative rounded-md shadow-sm">
-                <input
-                  type="number"
-                  name="amount"
-                  id="amount"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="block w-full pr-24 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  placeholder="0.0"
-                  step="any"
-                  required
-                  disabled={!isWalletConnected || loading}
-                  max={maxAvailableDeposit}
-                />
-                <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-                  <button
-                    type="button"
-                    onClick={() => setAmount(maxAvailableDeposit)}
-                    className="text-sm text-indigo-600 hover:text-indigo-500 mr-2"
-                  >
-                    MAX
-                  </button>
-                  <span className="text-gray-500 sm:text-sm">WETH</span>
-                </div>
-              </div>
-              <div className="mt-1 text-sm text-gray-500">
-                Max Available: {maxAvailableDeposit} WETH
-              </div>
+    <div className="mt-8 p-6 bg-white rounded-lg shadow-lg">
+      <h2 className="text-2xl font-bold mb-6 text-gray-900">Deposit Assets</h2>
+      <form onSubmit={handleDeposit} className="space-y-4">
+        <div>
+          <label htmlFor="amount" className="block text-sm font-medium text-gray-700">
+            Amount to Deposit
+          </label>
+          <div className="mt-1 relative rounded-md shadow-sm">
+            <input
+              type="text"
+              name="amount"
+              id="amount"
+              value={amount}
+              onChange={handleInput}
+              autoComplete="off"
+              className="block w-full pr-24 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              placeholder="0.0"
+              step="any"
+              required
+              disabled={loading}
+              max={maxAvailableDeposit}
+            />
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+              <button
+                type="button"
+                onClick={() => setAmount(maxAvailableDeposit)}
+                className="text-sm text-indigo-600 hover:text-indigo-500 mr-2"
+              >
+                MAX
+              </button>
+              <span className="text-gray-500 sm:text-sm">WETH</span>
             </div>
-
-            {error && (
-              <div className="text-sm text-red-600">
-                {error}
-              </div>
-            )}
-
-            {success && (
-              <div className="text-sm text-green-600">
-                {success}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={!isWalletConnected || loading || !amount || parseFloat(amount) > parseFloat(maxAvailableDeposit)}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-            >
-              {loading ? 'Processing...' : 'Deposit'}
-            </button>
-          </form>
+          </div>
+          <div className="mt-1 text-sm text-gray-500">
+            Max Available: {maxAvailableDeposit} WETH
+          </div>
         </div>
-      )}
-    </>
+
+        {error && (
+          <div className="text-sm text-red-600">
+            {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="text-sm text-green-600">
+            {success}
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading || !amount || parseFloat(amount) > parseFloat(maxAvailableDeposit) || parseFloat(amount) == 0}
+          className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+        >
+          {loading ? 'Processing...' : 'Deposit'}
+        </button>
+      </form>
+    </div>
   );
 } 

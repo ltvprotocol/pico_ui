@@ -1,22 +1,8 @@
 import { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
-
-const GME_ADDRESS = '0xe2a7f267124ac3e4131f27b9159c78c521a44f3c';
-const WETH_ADDRESS = '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14';
-
-// Add Sepolia network constants
-const SEPOLIA_CHAIN_ID = '0xaa36a7'; // 11155111 in hex
-const SEPOLIA_NETWORK = {
-  chainId: SEPOLIA_CHAIN_ID,
-  chainName: 'Sepolia',
-  nativeCurrency: {
-    name: 'SepoliaETH',
-    symbol: 'SEP',
-    decimals: 18
-  },
-  rpcUrls: ['https://ethereum-sepolia-rpc.publicnode.com'],
-  blockExplorerUrls: ['https://sepolia.etherscan.io']
-};
+import { BrowserProvider, Eip1193Provider } from 'ethers';
+import { SEPOLIA_CHAIN_ID, SEPOLIA_CHAIN_ID_HEX, SEPOLIA_NETWORK } from '@/constants';
+import { useAppContext } from '@/context/AppContext';
+import { isUserRejected } from '@/utils';
 
 type DiscoveredWallet = {
   info: {
@@ -24,130 +10,22 @@ type DiscoveredWallet = {
     name: string;
     icon: string; // base64 image
   };
-  provider: ethers.Eip1193Provider;
+  provider: Eip1193Provider;
 }
 
-interface WalletConnectProps {
-  onConnect?: (
-    provider: ethers.BrowserProvider | null, 
-    signer: ethers.JsonRpcSigner | null, 
-    address: string | null
-  ) => void;
-  onWethBalance?: (balance: string) => void;
-  onEthBalance?: (balance: string) => void;
-  onGmeBalance: (balance: string) => void;
-  onNetworkChange?: (isSepolia: boolean) => void;
-}
-
-export default function WalletConnect({ onConnect, onWethBalance, onEthBalance, onNetworkChange, onGmeBalance }: WalletConnectProps) {
+export default function ConnectWallet() {
   const [wallets, setWallets] = useState<DiscoveredWallet[]>([]);
-  const [address, setAddress] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [gmeBalance, setGmeBalance] = useState<string>('0');
-  const [wethBalance, setWethBalance] = useState<string>('0');
-  const [ethBalance, setEthBalance] = useState<string>('0');
+
+  const [rawProvider, setRawProvider] = useState<Eip1193Provider | null>(null);
   const [isSepolia, setIsSepolia] = useState(false);
-  const [rawProvider, setRawProvider] = useState<ethers.Eip1193Provider | null>(null)
-  const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null)
-  const [signer, setSigner] = useState<ethers.JsonRpcSigner | null>(null)
 
-  const resetBalances = () => {
-    setEthBalance('0');
-    setGmeBalance('0');
-    setWethBalance('0');
-    onEthBalance?.('0');
-    onGmeBalance?.('0');
-    onWethBalance?.('0');
-  }
-
-  const getBalances = async (address: string, currentProvider: ethers.BrowserProvider) => {
-    try {
-      if (!currentProvider) {
-        console.warn("getBalances: currentProvider not defined");
-        resetBalances();
-        return;
-      }
+  const { 
+    provider, signer, address,
+    updateProvider, updateSigner, updateAddress, updateChainId 
+  } = useAppContext();
   
-      const ethBalanceRaw = await currentProvider.getBalance(address);
-      const formattedEthBalance = ethers.formatEther(ethBalanceRaw);
-      setEthBalance(formattedEthBalance);
-      onEthBalance?.(formattedEthBalance);
-  
-      const gmeContract = new ethers.Contract(
-        GME_ADDRESS,
-        [
-          'function balanceOf(address owner) view returns (uint256)', 
-          'function decimals() view returns (uint8)'
-        ],
-        currentProvider
-      );
-
-      const wethContract = new ethers.Contract(
-        WETH_ADDRESS,
-        [
-          'function balanceOf(address) view returns (uint256)', 
-          'function decimals() view returns (uint8)'
-        ],
-        currentProvider
-      );
-  
-      const [gmeBalanceRaw, gmeDecimals, wethBalanceRaw, wethDecimals] = await Promise.all([
-        gmeContract.balanceOf(address),
-        gmeContract.decimals(),
-        wethContract.balanceOf(address),
-        wethContract.decimals()
-      ]);
-  
-      const formattedGmeBalance = ethers.formatUnits(gmeBalanceRaw, gmeDecimals);
-      const formattedWethBalance = ethers.formatUnits(wethBalanceRaw, wethDecimals);
-  
-      setGmeBalance(formattedGmeBalance);
-      setWethBalance(formattedWethBalance);
-      onWethBalance?.(wethBalanceRaw);
-      onGmeBalance?.(gmeBalanceRaw);
-  
-    } catch (err) {
-      console.error('Error fetching balances:', err);
-      resetBalances();
-    }
-  };
-
-  const setupProviderConnection = async (eip1193Provider: ethers.Eip1193Provider) => {
-    if (!eip1193Provider) {
-      console.warn("setupProviderConnection called wihout provider!");
-      disconnectWallet();
-      return;
-    }
-  
-    try {
-      const newEthersProvider = new ethers.BrowserProvider(eip1193Provider);
-      const newSigner = await newEthersProvider.getSigner();
-      const newAddress = await newSigner.getAddress();
-      const network = await newEthersProvider.getNetwork();
-  
-      const isSepoliaNetwork = network.chainId === BigInt(SEPOLIA_CHAIN_ID);
-
-      console.log(
-        `setupProviderConnection: Chain ID from ethersProvider.getNetwork(): ${network.chainId.toString()}. Is Sepolia: ${isSepoliaNetwork}. Address: ${newAddress}`
-      );
-  
-      setRawProvider(eip1193Provider);
-      setProvider(newEthersProvider);
-      setSigner(newSigner);
-      setAddress(newAddress);
-      setIsSepolia(isSepoliaNetwork);
-  
-      onConnect?.(newEthersProvider, newSigner, newAddress);
-      onNetworkChange?.(isSepoliaNetwork);
-  
-      await getBalances(newAddress, newEthersProvider);
-    } catch (error) {
-      console.error("Error in setupProviderConnection:", error);
-      disconnectWallet();
-    }
-  };
-
   useEffect(() => {
     const discovered: DiscoveredWallet[] = [];
 
@@ -170,26 +48,57 @@ export default function WalletConnect({ onConnect, onWethBalance, onEthBalance, 
   }, []);
 
   const disconnectWallet = () => {
-    setProvider(null);
-    setSigner(null);
-    setAddress(null);
+    updateProvider(null);
+    updateSigner(null);
+    updateAddress(null);
+    updateChainId(null);
     setIsSepolia(false);
-    onConnect?.(null, null, null);
-    onNetworkChange?.(false);
-    resetBalances();
+  };
+
+  const setupProviderConnection = async (eip1193Provider: Eip1193Provider) => {
+    if (!eip1193Provider) {
+      console.warn("setupProviderConnection called wihout provider!");
+      disconnectWallet();
+      return;
+    }
+  
+    try {
+      const newProvider = new BrowserProvider(eip1193Provider);
+      const newSigner = await newProvider.getSigner();
+      const newAddress = await newSigner.getAddress();
+      const network = await newProvider.getNetwork();
+      const newChainId = network.chainId;
+  
+      const isSepoliaNetwork = newChainId === SEPOLIA_CHAIN_ID;
+      setIsSepolia(isSepoliaNetwork);
+
+      console.log(
+        `setupProviderConnection: Chain ID from ethersProvider.getNetwork(): ${network.chainId.toString()}. Is Sepolia: ${isSepoliaNetwork}. Address: ${newAddress}`
+      );
+  
+      setRawProvider(eip1193Provider);
+
+      updateProvider(newProvider);
+      updateSigner(newSigner);
+      updateAddress(newAddress);
+      updateChainId(newChainId);
+    } catch (error) {
+      console.error("Error in setupProviderConnection:", error);
+      disconnectWallet();
+    }
   };
 
   const connectWallet = async (wallet: DiscoveredWallet) => {
     setLoading(true);
     setError(null);
 
-    const newProvider = new ethers.BrowserProvider(wallet.provider);
+    const newProvider = new BrowserProvider(wallet.provider);
     
     try {
       await newProvider.send('eth_requestAccounts', []);
       await setupProviderConnection(wallet.provider);
     } catch (err: any) {
-      if (err.code === 4001) {
+      if (isUserRejected(err)) {
         setError('Connection canceled by user.');
       } else {
         setError('Connection failed. Please try again.');
@@ -206,7 +115,7 @@ export default function WalletConnect({ onConnect, onWethBalance, onEthBalance, 
   
     try {
       await provider.send('wallet_switchEthereumChain', [
-        { chainId: SEPOLIA_CHAIN_ID },
+        { chainId: SEPOLIA_CHAIN_ID_HEX },
       ]);
       await new Promise(resolve => setTimeout(resolve, 500));
     } catch (err: any) {
@@ -235,7 +144,7 @@ export default function WalletConnect({ onConnect, onWethBalance, onEthBalance, 
       const onAccountsChangedHandler = async (accounts: string[]) => {
         console.log('Event: accountsChanged', accounts);
         if (accounts.length > 0) {
-          setAddress(accounts[0])
+          updateAddress(accounts[0])
         } else {
           disconnectWallet();
         }
@@ -243,9 +152,9 @@ export default function WalletConnect({ onConnect, onWethBalance, onEthBalance, 
 
       const onChainChangedHandler = async (chainIdHex: string) => {
         console.log('Event: chainChanged, new chainIdHex:', chainIdHex);
-        const isSepoliaNetwork = chainIdHex === SEPOLIA_CHAIN_ID;
+        const isSepoliaNetwork = chainIdHex === SEPOLIA_CHAIN_ID_HEX;
         setIsSepolia(isSepoliaNetwork);
-        onNetworkChange?.(isSepoliaNetwork);
+        updateChainId(BigInt(chainIdHex));
       };
 
       eip1193.on('accountsChanged', onAccountsChangedHandler);
@@ -356,7 +265,11 @@ export default function WalletConnect({ onConnect, onWethBalance, onEthBalance, 
                     </div>
                     <button
                       onClick={disconnectWallet}
-                      className="text-sm text-gray-500 hover:text-gray-700"
+                      className="
+                        text-sm text-red-500 hover:text-red-600 
+                        border border-red-500 bg-white dark:bg-white rounded-lg 
+                        hover:bg-pink-100 dark:hover:bg-pink-100 hover:border-red-500 
+                        transition disabled:opacity-50"
                     >
                       Disconnect
                     </button>
@@ -373,23 +286,6 @@ export default function WalletConnect({ onConnect, onWethBalance, onEthBalance, 
                       </span>
                       <span className="block sm:hidden text-sm text-gray-700 break-all">
                         {address ? `${address.slice(0, 6)}...${address.slice(-12)}` : ''}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between bg-gray-50 p-3 rounded-md mt-4">
-                  <div className="flex flex-col">
-                    <div className="mt-2 space-y-1">
-                      <h3 className="text-lg font-medium text-gray-900">Balances:</h3>
-                      <span className="text-sm text-gray-600">
-                        ETH Balance: {parseFloat(ethBalance).toFixed(4)} ETH
-                      </span>
-                      <span className="text-sm text-gray-600 block">
-                        WETH Balance: {parseFloat(wethBalance).toFixed(4)} WETH
-                      </span>
-                      <span className="text-sm text-gray-600 block">
-                        GME Balance: {parseFloat(gmeBalance).toFixed(4)} GME
                       </span>
                     </div>
                   </div>

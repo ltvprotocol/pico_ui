@@ -13,7 +13,7 @@ export function useAdaptiveInterval(
 ) {
   const {
     initialDelay = 6000,
-    maxDelay = 60000,
+    maxDelay = 768000, // 6000 * 2**7 -> 768000 or 12 min 48 sec
     multiplier = 2,
     enabled = true,
   } = options;

@@ -1,17 +1,16 @@
 import React, { useState } from 'react';
 import { formatUnits, parseUnits } from 'ethers';
-import { GME_VAULT_ADDRESS } from '@/constants';
 import { useAppContext } from '@/context/AppContext';
-import { isUserRejected, allowOnlyNumbers, wrapEth } from '@/utils';
+import { isUserRejected, allowOnlyNumbers } from '@/utils';
 import { useAdaptiveInterval } from '@/hooks';
 
-export default function Deposit() {
+export default function Withdraw() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [amount, setAmount] = useState('');
   const [success, setSuccess] = useState<string | null>(null);
-  const [maxAvailableDeposit, setMaxAvailableDeposit] = useState<string>('0');
+  const [maxAvailableWithdraw, setmaxAvailableWithdraw] = useState<string>('0');
 
   const [wethDecimals, setWethDecimals] = useState<bigint>(18n);
 
@@ -26,32 +25,32 @@ export default function Deposit() {
     return currentWethDecimals;
   }
 
-  const updateMaxAvailableDeposit = async () => {
+  const updatemaxAvailableWithdraw = async () => {
     if(!publicProvider && !address && !vaultContractLens && !wethContractLens) {
-      console.error("Unable to call updateMaxAvailableDeposit");
+      console.error("Unable to call updatemaxAvailableWithdraw");
       return;
     }
 
-    const wethBalance = await wethContractLens!.balanceOf(address!);
+    const gmeBalance = await vaultContractLens!.balanceOf(address!);
     const currentWethDecimals = await getWethDecimals();
 
-    const vaultMaxDeposit = await vaultContractLens!.maxDeposit(address!);
-    const ethBalance = await publicProvider!.getBalance(address!);
+    const vaultMaxWithdraw = await vaultContractLens!.maxWithdraw(address!);
+    const maxWithdrawAmount = parseFloat(formatUnits(vaultMaxWithdraw, currentWethDecimals));
 
-    const wethAmount = parseFloat(formatUnits(wethBalance, currentWethDecimals));
-    const ethAmount = parseFloat(formatUnits(ethBalance, currentWethDecimals));
-    const maxDepAmount = parseFloat(formatUnits(vaultMaxDeposit, currentWethDecimals));
+    const maxRedeem = await vaultContractLens!.previewRedeem(gmeBalance);
+    const maxRedeemAmount = parseFloat(formatUnits(maxRedeem, currentWethDecimals))
 
-    const maxAvailable = Math.min(wethAmount + ethAmount, maxDepAmount);
-    setMaxAvailableDeposit(maxAvailable.toFixed(4));
+    const maxAvailable = Math.min(maxRedeemAmount, maxWithdrawAmount);
+    setmaxAvailableWithdraw(maxAvailable.toFixed(4));
   };
 
-  useAdaptiveInterval(updateMaxAvailableDeposit, {
+  useAdaptiveInterval(updatemaxAvailableWithdraw, {
     enabled: isConnected
   });
 
-  const handleDeposit = async (e: React.FormEvent) => {
+  const handleWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
+
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -59,37 +58,19 @@ export default function Deposit() {
     if (!wethContractLens && !wethContract && !vaultContract && !address) return;
 
     try {
-      const wethNeededToDeposit = parseUnits(amount, wethDecimals);
-      const wethBalance = await wethContractLens!.balanceOf(address!);
-      const ethBalance = await publicProvider!.getBalance(address!);
+      const amountWei = parseUnits(amount, wethDecimals);
 
-      if (wethBalance < wethNeededToDeposit) {
-        const wethMissing = wethNeededToDeposit - wethBalance;
-        await wrapEth(wethContract!, wethMissing, ethBalance, setSuccess, setError);
-
-        const newWethBalance = await wethContractLens!.balanceOf(address!);
-        if (newWethBalance < wethNeededToDeposit) {
-          setError('Not enough WETH after wrapping.');
-          console.error('Not enough WETH after wrapping');
-          return;
-        }
-      }
-
-      const approveTx = await wethContract!.approve(GME_VAULT_ADDRESS, wethNeededToDeposit);
-      await approveTx.wait();
-      setSuccess('Successfully approved WETH');
-
-      const depositTx = await vaultContract!.deposit(wethNeededToDeposit, address!);
-      await depositTx.wait();
+      const withdrawTx = await vaultContract!.withdraw(amountWei, address!, address!);
+      await withdrawTx.wait();
 
       setAmount('');
-      setSuccess('Deposit successful!');
+      setSuccess('Withdraw successful!');
     } catch (err) {
       if (isUserRejected(err)) {
         setError('Transaction canceled by user.');
       } else {
-        setError('Failed to deposit');
-        console.error('Failed to deposit', err);
+        setError('Failed to Withdraw.');
+        console.error('Failed to Withdraw: ', err);
       }
     } finally {
       setLoading(false);
@@ -98,11 +79,11 @@ export default function Deposit() {
 
   return (
     <div className="mt-8 p-6 bg-white rounded-lg shadow-lg">
-      <h2 className="text-2xl font-bold mb-6 text-gray-900">Deposit Assets</h2>
-      <form onSubmit={handleDeposit} className="space-y-4">
+      <h2 className="text-2xl font-bold mb-6 text-gray-900">Withdraw Assets</h2>
+      <form onSubmit={handleWithdraw} className="space-y-4">
         <div>
           <label htmlFor="amount" className="block text-sm font-medium text-gray-700">
-            Amount to Deposit
+            Amount to Withdraw
           </label>
           <div className="mt-1 relative rounded-md shadow-sm">
             <input
@@ -117,12 +98,12 @@ export default function Deposit() {
               step="any"
               required
               disabled={loading}
-              max={maxAvailableDeposit}
+              max={maxAvailableWithdraw}
             />
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
               <button
                 type="button"
-                onClick={() => setAmount(maxAvailableDeposit)}
+                onClick={() => setAmount(maxAvailableWithdraw)}
                 className="text-sm text-indigo-600 hover:text-indigo-500 mr-2"
               >
                 MAX
@@ -131,7 +112,7 @@ export default function Deposit() {
             </div>
           </div>
           <div className="mt-1 text-sm text-gray-500">
-            Max Available: {maxAvailableDeposit == '0' ? 'Loading...' : `${maxAvailableDeposit} WETH`}
+            Max Available: {maxAvailableWithdraw == '0' ? 'Loading...' : `${maxAvailableWithdraw} WETH`}
           </div>
         </div>
 
@@ -149,10 +130,10 @@ export default function Deposit() {
 
         <button
           type="submit"
-          disabled={loading || !amount || parseFloat(amount) > parseFloat(maxAvailableDeposit) || parseFloat(amount) == 0}
+          disabled={loading || !amount || parseFloat(amount) > parseFloat(maxAvailableWithdraw) || parseFloat(amount) == 0}
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
         >
-          {loading ? 'Processing...' : 'Deposit'}
+          {loading ? 'Processing...' : 'Withdraw'}
         </button>
       </form>
     </div>

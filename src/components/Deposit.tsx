@@ -61,9 +61,9 @@ export default function Deposit() {
     try {
       const wethNeededToDeposit = parseUnits(amount, wethDecimals);
       const wethBalance = await wethContractLens!.balanceOf(address!);
-      const ethBalance = await publicProvider!.getBalance(address!);
 
       if (wethBalance < wethNeededToDeposit) {
+        const ethBalance = await publicProvider!.getBalance(address!);
         const wethMissing = wethNeededToDeposit - wethBalance;
         await wrapEth(wethContract!, wethMissing, ethBalance, setSuccess, setError);
 

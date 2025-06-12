@@ -65,9 +65,9 @@ export default function Mint() {
       const mintAmount = parseUnits(amount, wethDecimals);
       const wethNeededToMint = await vaultContractLens!.previewMint(mintAmount);
       const wethBalance = await wethContractLens!.balanceOf(address!);
-      const ethBalance = await publicProvider!.getBalance(address!);
 
       if (wethBalance < wethNeededToMint) {
+        const ethBalance = await publicProvider!.getBalance(address!);
         const wethMissing = wethNeededToMint - wethBalance;
         await wrapEth(wethContract!, wethMissing, ethBalance, setSuccess, setError);
 

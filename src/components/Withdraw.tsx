@@ -41,7 +41,8 @@ export default function Withdraw() {
     const maxRedeemAmount = parseFloat(formatUnits(maxRedeem, currentWethDecimals))
 
     const maxAvailable = Math.min(maxRedeemAmount, maxWithdrawAmount);
-    setmaxAvailableWithdraw(maxAvailable.toFixed(4));
+    const truncated = Math.floor(maxAvailable * 10_000) / 10_000;
+    setmaxAvailableWithdraw(truncated.toFixed(4));
   };
 
   useAdaptiveInterval(updatemaxAvailableWithdraw, {

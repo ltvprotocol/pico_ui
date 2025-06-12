@@ -12,19 +12,12 @@ export default function Redeem() {
   const [success, setSuccess] = useState<string | null>(null);
   const [maxAvailableRedeem, setMaxAvailableRedeem] = useState<string>('0');
 
-  const [gmeBalance, setGmeBalance] = useState<bigint>(0n);
   const [wethDecimals, setWethDecimals] = useState<bigint>(18n);
 
   const {
     address, isConnected, 
     vaultContract, vaultContractLens, wethContractLens 
   } = useAppContext();
-
-  const getGmeBalance = async () : Promise<bigint> => {
-    const currentGmeBalance = await vaultContractLens!.balanceOf(address!);
-    setGmeBalance(currentGmeBalance);
-    return currentGmeBalance;
-  }
 
   const getWethDecimals = async () : Promise<bigint> => {
     const currentWethDecimals = await wethContractLens!.decimals();
@@ -38,15 +31,18 @@ export default function Redeem() {
       return;
     }
 
-    const currentGmeBalance = await getGmeBalance();
+    const gmeBalance = await vaultContractLens!.balanceOf(address!);
     const currentWethDecimals = await getWethDecimals();
     const vaultMaxRedeem = await vaultContractLens!.maxRedeem(address!);
 
-    const gmeAmount = parseFloat(formatUnits(currentGmeBalance, currentWethDecimals));
+    const gmeAmount = parseFloat(formatUnits(gmeBalance, currentWethDecimals));
     const maxRedeemAmount = parseFloat(formatUnits(vaultMaxRedeem, currentWethDecimals));
 
+    console.log(gmeAmount);
+    console.log(maxRedeemAmount);
     const maxAvailable = Math.min(gmeAmount, maxRedeemAmount);
-    setMaxAvailableRedeem(maxAvailable.toFixed(4));
+    const truncated = Math.floor(maxAvailable * 10_000) / 10_000;
+    setMaxAvailableRedeem(truncated.toFixed(4));
   };
 
   useAdaptiveInterval(updateMaxAvailableRedeem, {
@@ -63,13 +59,17 @@ export default function Redeem() {
     setSuccess(null);
 
     try {
-      const amountWei = parseUnits(amount, wethDecimals);
+      const amountToRedeem = parseUnits(amount, wethDecimals);
+      console.log(amountToRedeem);
+      const maxAvailable = parseUnits(maxAvailableRedeem, wethDecimals);
 
-      if (gmeBalance < amountWei) {
-        throw new Error('Insufficient GME balance');
+      if (maxAvailable < amountToRedeem) {
+        setError('Amount higher than available.');
+        console.error('Amount higher than available');
+        return;
       }
 
-      const redeemTx = await vaultContract!.redeem(amountWei, address!, address!);
+      const redeemTx = await vaultContract!.redeem(amountToRedeem, address!, address!);
       await redeemTx.wait();
 
       setAmount('');

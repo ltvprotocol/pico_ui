@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { formatUnits, parseUnits } from 'ethers';
 import { GME_VAULT_ADDRESS } from '@/constants';
 import { useAppContext } from '@/context/AppContext';
-import { isUserRejected, allowOnlyNumbers, wrapEth } from '@/utils';
+import { isUserRejected, allowOnlyNumbers, wrapEth, isButtonDisabled } from '@/utils';
 import { useAdaptiveInterval } from '@/hooks';
 
 export default function Deposit() {
@@ -11,7 +11,7 @@ export default function Deposit() {
 
   const [amount, setAmount] = useState('');
   const [success, setSuccess] = useState<string | null>(null);
-  const [maxAvailableDeposit, setMaxAvailableDeposit] = useState<string>('0');
+  const [maxAvailableDeposit, setMaxAvailableDeposit] = useState<string>('');
 
   const [wethDecimals, setWethDecimals] = useState<bigint>(18n);
 
@@ -20,23 +20,27 @@ export default function Deposit() {
     vaultContractLens, wethContractLens 
   } = useAppContext();
 
-  const getWethDecimals = async () : Promise<bigint> => {
-    const currentWethDecimals = await wethContractLens!.decimals();
+  const getWethDecimals = useCallback(async (): Promise<bigint> => {
+    if (!wethContractLens) {
+      throw new Error('wethContractLens is not available');
+    }
+    
+    const currentWethDecimals = await wethContractLens.decimals();
     setWethDecimals(currentWethDecimals);
     return currentWethDecimals;
-  }
+  }, [wethContractLens]);
 
-  const updateMaxAvailableDeposit = async () => {
-    if(!publicProvider && !address && !vaultContractLens && !wethContractLens) {
+  const updateMaxAvailableDeposit = useCallback(async () => {
+    if(!publicProvider || !address || !vaultContractLens || !wethContractLens) {
       console.error("Unable to call updateMaxAvailableDeposit");
       return;
     }
 
-    const wethBalance = await wethContractLens!.balanceOf(address!);
+    const wethBalance = await wethContractLens.balanceOf(address);
     const currentWethDecimals = await getWethDecimals();
 
-    const vaultMaxDeposit = await vaultContractLens!.maxDeposit(address!);
-    const ethBalance = await publicProvider!.getBalance(address!);
+    const vaultMaxDeposit = await vaultContractLens.maxDeposit(address);
+    const ethBalance = await publicProvider.getBalance(address);
 
     const wethAmount = parseFloat(formatUnits(wethBalance, currentWethDecimals));
     const ethAmount = parseFloat(formatUnits(ethBalance, currentWethDecimals));
@@ -44,7 +48,7 @@ export default function Deposit() {
 
     const maxAvailable = Math.min(wethAmount + ethAmount, maxDepAmount);
     setMaxAvailableDeposit(maxAvailable.toFixed(4));
-  };
+  }, [publicProvider, address, vaultContractLens, wethContractLens, getWethDecimals])
 
   useAdaptiveInterval(updateMaxAvailableDeposit, {
     enabled: isConnected
@@ -56,18 +60,18 @@ export default function Deposit() {
     setError(null);
     setSuccess(null);
 
-    if (!wethContractLens && !wethContract && !vaultContract && !address) return;
+    if (!publicProvider || !wethContractLens || !wethContract || !vaultContract || !address) return;
 
     try {
       const wethNeededToDeposit = parseUnits(amount, wethDecimals);
-      const wethBalance = await wethContractLens!.balanceOf(address!);
+      const wethBalance = await wethContractLens.balanceOf(address);
 
       if (wethBalance < wethNeededToDeposit) {
-        const ethBalance = await publicProvider!.getBalance(address!);
+        const ethBalance = await publicProvider.getBalance(address);
         const wethMissing = wethNeededToDeposit - wethBalance;
-        await wrapEth(wethContract!, wethMissing, ethBalance, setSuccess, setError);
+        await wrapEth(wethContract, wethMissing, ethBalance, setSuccess, setError);
 
-        const newWethBalance = await wethContractLens!.balanceOf(address!);
+        const newWethBalance = await wethContractLens.balanceOf(address);
         if (newWethBalance < wethNeededToDeposit) {
           setError('Not enough WETH after wrapping.');
           console.error('Not enough WETH after wrapping');
@@ -117,12 +121,12 @@ export default function Deposit() {
               step="any"
               required
               disabled={loading}
-              max={maxAvailableDeposit}
+              max={!maxAvailableDeposit ? "0" : maxAvailableDeposit}
             />
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
               <button
                 type="button"
-                onClick={() => setAmount(maxAvailableDeposit)}
+                onClick={() => setAmount(maxAvailableDeposit as string)}
                 className="text-sm text-indigo-600 hover:text-indigo-500 mr-2"
               >
                 MAX
@@ -131,13 +135,13 @@ export default function Deposit() {
             </div>
           </div>
           <div className="mt-1 text-sm text-gray-500">
-            Max Available: {maxAvailableDeposit == '0' ? 'Loading...' : `${maxAvailableDeposit} WETH`}
+            Max Available: {!maxAvailableDeposit ? 'Loading...' : `${maxAvailableDeposit} WETH`}
           </div>
         </div>
 
         <button
           type="submit"
-          disabled={loading || !amount || parseFloat(amount) > parseFloat(maxAvailableDeposit) || parseFloat(amount) == 0}
+          disabled={isButtonDisabled(loading, amount, maxAvailableDeposit)}
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
         >
           {loading ? 'Processing...' : 'Deposit'}

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { formatUnits, parseUnits } from 'ethers';
 import { useAppContext } from '@/context/AppContext';
-import { isUserRejected, allowOnlyNumbers } from '@/utils';
+import { isUserRejected, allowOnlyNumbers, isButtonDisabled } from '@/utils';
 import { useAdaptiveInterval } from '@/hooks';
 
 export default function Withdraw() {
@@ -10,7 +10,7 @@ export default function Withdraw() {
 
   const [amount, setAmount] = useState('');
   const [success, setSuccess] = useState<string | null>(null);
-  const [maxAvailableWithdraw, setmaxAvailableWithdraw] = useState<string>('0');
+  const [maxAvailableWithdraw, setmaxAvailableWithdraw] = useState<string>('');
 
   const [wethDecimals, setWethDecimals] = useState<bigint>(18n);
 
@@ -19,31 +19,35 @@ export default function Withdraw() {
     vaultContractLens, wethContractLens 
   } = useAppContext();
 
-  const getWethDecimals = async () : Promise<bigint> => {
-    const currentWethDecimals = await wethContractLens!.decimals();
+  const getWethDecimals = useCallback(async (): Promise<bigint> => {
+    if (!wethContractLens) {
+      throw new Error('wethContractLens is not available');
+    }
+    
+    const currentWethDecimals = await wethContractLens.decimals();
     setWethDecimals(currentWethDecimals);
     return currentWethDecimals;
-  }
+  }, [wethContractLens]);
 
-  const updatemaxAvailableWithdraw = async () => {
-    if(!publicProvider && !address && !vaultContractLens && !wethContractLens) {
+  const updatemaxAvailableWithdraw = useCallback(async () => {
+    if(!publicProvider || !address || !vaultContractLens || !getWethDecimals) {
       console.error("Unable to call updatemaxAvailableWithdraw");
       return;
     }
 
-    const gmeBalance = await vaultContractLens!.balanceOf(address!);
+    const gmeBalance = await vaultContractLens.balanceOf(address);
     const currentWethDecimals = await getWethDecimals();
 
-    const vaultMaxWithdraw = await vaultContractLens!.maxWithdraw(address!);
+    const vaultMaxWithdraw = await vaultContractLens.maxWithdraw(address);
     const maxWithdrawAmount = parseFloat(formatUnits(vaultMaxWithdraw, currentWethDecimals));
 
-    const maxRedeem = await vaultContractLens!.previewRedeem(gmeBalance);
+    const maxRedeem = await vaultContractLens.previewRedeem(gmeBalance);
     const maxRedeemAmount = parseFloat(formatUnits(maxRedeem, currentWethDecimals))
 
     const maxAvailable = Math.min(maxRedeemAmount, maxWithdrawAmount);
     const truncated = Math.floor(maxAvailable * 10_000) / 10_000;
     setmaxAvailableWithdraw(truncated.toFixed(4));
-  };
+  }, [publicProvider, address, vaultContractLens, getWethDecimals]);
 
   useAdaptiveInterval(updatemaxAvailableWithdraw, {
     enabled: isConnected
@@ -56,12 +60,12 @@ export default function Withdraw() {
     setError(null);
     setSuccess(null);
 
-    if (!wethContractLens && !wethContract && !vaultContract && !address) return;
+    if (!wethContractLens || !wethContract || !vaultContract || !address) return;
 
     try {
       const amountWei = parseUnits(amount, wethDecimals);
 
-      const withdrawTx = await vaultContract!.withdraw(amountWei, address!, address!);
+      const withdrawTx = await vaultContract.withdraw(amountWei, address, address);
       await withdrawTx.wait();
 
       setAmount('');
@@ -113,13 +117,13 @@ export default function Withdraw() {
             </div>
           </div>
           <div className="mt-1 text-sm text-gray-500">
-            Max Available: {maxAvailableWithdraw == '0' ? 'Loading...' : `${maxAvailableWithdraw} WETH`}
+            Max Available: {!maxAvailableWithdraw ? 'Loading...' : `${maxAvailableWithdraw} WETH`}
           </div>
         </div>
 
         <button
           type="submit"
-          disabled={loading || !amount || parseFloat(amount) > parseFloat(maxAvailableWithdraw) || parseFloat(amount) == 0}
+          disabled={isButtonDisabled(loading, amount, maxAvailableWithdraw)}
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
         >
           {loading ? 'Processing...' : 'Withdraw'}

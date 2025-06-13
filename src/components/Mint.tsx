@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { formatUnits, parseUnits } from 'ethers';
 import { GME_VAULT_ADDRESS } from '@/constants';
 import { useAppContext } from '@/context/AppContext';
-import { isUserRejected, allowOnlyNumbers, wrapEth } from '@/utils';
+import { isUserRejected, allowOnlyNumbers, wrapEth, isButtonDisabled } from '@/utils';
 import { useAdaptiveInterval } from '@/hooks';
 
 export default function Mint() {
@@ -11,7 +11,7 @@ export default function Mint() {
 
   const [amount, setAmount] = useState('');
   const [success, setSuccess] = useState<string | null>(null);
-  const [maxAvailableMint, setMaxAvailableMint] = useState<string>('0');
+  const [maxAvailableMint, setMaxAvailableMint] = useState<string>('');
 
   const [wethDecimals, setWethDecimals] = useState<bigint>(18n);
 
@@ -20,25 +20,29 @@ export default function Mint() {
     vaultContractLens, wethContractLens 
   } = useAppContext();
 
-  const getWethDecimals = async () : Promise<bigint> => {
-    const currentWethDecimals = await wethContractLens!.decimals();
+  const getWethDecimals = useCallback(async (): Promise<bigint> => {
+    if (!wethContractLens) {
+      throw new Error('wethContractLens is not available');
+    }
+    
+    const currentWethDecimals = await wethContractLens.decimals();
     setWethDecimals(currentWethDecimals);
     return currentWethDecimals;
-  }
+  }, [wethContractLens]);
 
-  const updateMaxAvailableMint = async () => {
-    if(!publicProvider && !address && !vaultContractLens && !wethContractLens) {
+  const updateMaxAvailableMint = useCallback(async () => {
+    if(!publicProvider || !address || !vaultContractLens || !wethContractLens) {
       console.error("Unable to call updateMaxAvailableMint");
       return;
     }
 
-    const wethBalance = await wethContractLens!.balanceOf(address!);
+    const wethBalance = await wethContractLens.balanceOf(address);
     const currentWethDecimals = await getWethDecimals();
 
-    const vaultMaxMint = await vaultContractLens!.maxMint(address!);
-    const ethBalance = await publicProvider!.getBalance(address!);
-    const sharesForEth = await vaultContractLens!.previewDeposit(ethBalance);
-    const sharesForWeth = await vaultContractLens!.previewDeposit(wethBalance);
+    const vaultMaxMint = await vaultContractLens.maxMint(address);
+    const ethBalance = await publicProvider.getBalance(address);
+    const sharesForEth = await vaultContractLens.previewDeposit(ethBalance);
+    const sharesForWeth = await vaultContractLens.previewDeposit(wethBalance);
 
     const ethSharesAmount = parseFloat(formatUnits(sharesForEth, currentWethDecimals));
     const wethSharesAmount = parseFloat(formatUnits(sharesForWeth, currentWethDecimals));
@@ -46,7 +50,7 @@ export default function Mint() {
 
     const maxAvailable = Math.min(wethSharesAmount + ethSharesAmount, maxMintAmount);
     setMaxAvailableMint(maxAvailable.toFixed(4));
-  };
+  }, [publicProvider, address, vaultContractLens, wethContractLens, getWethDecimals]);
 
   useAdaptiveInterval(updateMaxAvailableMint, {
     enabled: isConnected
@@ -59,19 +63,26 @@ export default function Mint() {
     setError(null);
     setSuccess(null);
 
-    if (!wethContractLens && !wethContract && !vaultContract && !address) return;
+    if (
+      !publicProvider ||
+      !address ||
+      !wethContractLens ||
+      !wethContract ||
+      !vaultContractLens ||
+      !vaultContract
+    ) return;
 
     try {
       const mintAmount = parseUnits(amount, wethDecimals);
-      const wethNeededToMint = await vaultContractLens!.previewMint(mintAmount);
-      const wethBalance = await wethContractLens!.balanceOf(address!);
+      const wethNeededToMint = await vaultContractLens.previewMint(mintAmount);
+      const wethBalance = await wethContractLens.balanceOf(address);
 
       if (wethBalance < wethNeededToMint) {
-        const ethBalance = await publicProvider!.getBalance(address!);
+        const ethBalance = await publicProvider.getBalance(address);
         const wethMissing = wethNeededToMint - wethBalance;
-        await wrapEth(wethContract!, wethMissing, ethBalance, setSuccess, setError);
+        await wrapEth(wethContract, wethMissing, ethBalance, setSuccess, setError);
 
-        const newWethBalance = await wethContractLens!.balanceOf(address!);
+        const newWethBalance = await wethContractLens.balanceOf(address);
         if (newWethBalance < wethNeededToMint) {
           setError('Not enough WETH after wrapping.');
           console.error('Not enough WETH after wrapping');
@@ -79,11 +90,11 @@ export default function Mint() {
         }
       }
 
-      const approveTx = await wethContract!.approve(GME_VAULT_ADDRESS, wethNeededToMint);
+      const approveTx = await wethContract.approve(GME_VAULT_ADDRESS, wethNeededToMint);
       await approveTx.wait();
       setSuccess('Successfully approved WETH.');
 
-      const mintTx = await vaultContract!.mint(mintAmount, address!);
+      const mintTx = await vaultContract.mint(mintAmount, address);
       await mintTx.wait();
 
       setAmount('');
@@ -135,13 +146,13 @@ export default function Mint() {
             </div>
           </div>
           <div className="mt-1 text-sm text-gray-500">
-            Max Available: {maxAvailableMint == '0' ? 'Loading...' : `${maxAvailableMint} GME`}
+            Max Available: {!maxAvailableMint ? 'Loading...' : `${maxAvailableMint} GME`}
           </div>
         </div>
 
         <button
           type="submit"
-          disabled={loading || !amount || parseFloat(amount) > parseFloat(maxAvailableMint) || parseFloat(amount) == 0}
+          disabled={isButtonDisabled(loading, amount, maxAvailableMint)}
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
         >
           {loading ? 'Processing...' : 'Mint'}

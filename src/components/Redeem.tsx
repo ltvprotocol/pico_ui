@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { formatUnits, parseUnits } from 'ethers';
 import { useAppContext } from '@/context/AppContext';
-import { isUserRejected, allowOnlyNumbers } from '@/utils';
+import { isUserRejected, allowOnlyNumbers, isButtonDisabled } from '@/utils';
 import { useAdaptiveInterval } from '@/hooks';
 
 export default function Redeem() {
@@ -10,7 +10,7 @@ export default function Redeem() {
 
   const [amount, setAmount] = useState('');
   const [success, setSuccess] = useState<string | null>(null);
-  const [maxAvailableRedeem, setMaxAvailableRedeem] = useState<string>('0');
+  const [maxAvailableRedeem, setMaxAvailableRedeem] = useState<string>('');
 
   const [wethDecimals, setWethDecimals] = useState<bigint>(18n);
 
@@ -19,31 +19,34 @@ export default function Redeem() {
     vaultContract, vaultContractLens, wethContractLens 
   } = useAppContext();
 
-  const getWethDecimals = async () : Promise<bigint> => {
-    const currentWethDecimals = await wethContractLens!.decimals();
+  const getWethDecimals = useCallback(async (): Promise<bigint> => {
+    if (!wethContractLens) {
+      throw new Error('wethContractLens is not available');
+    }
+    
+    const currentWethDecimals = await wethContractLens.decimals();
     setWethDecimals(currentWethDecimals);
     return currentWethDecimals;
-  }
+  }, [wethContractLens]);
 
-  const updateMaxAvailableRedeem = async () => {
-    if(!address && !vaultContractLens && !wethContractLens) {
+  const updateMaxAvailableRedeem = useCallback(async () => {
+    if(!address || !vaultContractLens || !getWethDecimals) {
       console.error("Unable to call updateMaxAvailableRedeem");
       return;
     }
 
-    const gmeBalance = await vaultContractLens!.balanceOf(address!);
+    const gmeBalance = await vaultContractLens.balanceOf(address!);
     const currentWethDecimals = await getWethDecimals();
-    const vaultMaxRedeem = await vaultContractLens!.maxRedeem(address!);
+    const vaultMaxRedeem = await vaultContractLens.maxRedeem(address!);
 
     const gmeAmount = parseFloat(formatUnits(gmeBalance, currentWethDecimals));
     const maxRedeemAmount = parseFloat(formatUnits(vaultMaxRedeem, currentWethDecimals));
 
-    console.log(gmeAmount);
-    console.log(maxRedeemAmount);
     const maxAvailable = Math.min(gmeAmount, maxRedeemAmount);
+    console.log("Redeem", maxAvailable);
     const truncated = Math.floor(maxAvailable * 10_000) / 10_000;
     setMaxAvailableRedeem(truncated.toFixed(4));
-  };
+  }, [address, vaultContractLens, getWethDecimals]);
 
   useAdaptiveInterval(updateMaxAvailableRedeem, {
     enabled: isConnected
@@ -52,7 +55,7 @@ export default function Redeem() {
   const handleRedeem = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!address && !vaultContract && !wethContractLens) return;
+    if (!address || !vaultContract || !wethContractLens) return;
 
     setLoading(true);
     setError(null);
@@ -60,7 +63,6 @@ export default function Redeem() {
 
     try {
       const amountToRedeem = parseUnits(amount, wethDecimals);
-      console.log(amountToRedeem);
       const maxAvailable = parseUnits(maxAvailableRedeem, wethDecimals);
 
       if (maxAvailable < amountToRedeem) {
@@ -69,7 +71,7 @@ export default function Redeem() {
         return;
       }
 
-      const redeemTx = await vaultContract!.redeem(amountToRedeem, address!, address!);
+      const redeemTx = await vaultContract.redeem(amountToRedeem, address, address);
       await redeemTx.wait();
 
       setAmount('');
@@ -120,13 +122,13 @@ export default function Redeem() {
             </div>
           </div>
           <p className="mt-1 text-sm text-gray-500">
-            Max Available: {maxAvailableRedeem == '0' ? 'Loading...' : `${maxAvailableRedeem} GME`}
+            Max Available: {!maxAvailableRedeem ? 'Loading...' : `${maxAvailableRedeem} GME`}
           </p>
         </div>
 
         <button
           type="submit"
-          disabled={loading || !amount || parseFloat(amount) > parseFloat(maxAvailableRedeem) || parseFloat(amount) == 0}
+          disabled={isButtonDisabled(loading, amount, maxAvailableRedeem)}
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
         >
           {loading ? 'Processing...' : 'Redeem'}

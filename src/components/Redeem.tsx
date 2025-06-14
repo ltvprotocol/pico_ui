@@ -1,54 +1,24 @@
-import React, { useCallback, useState } from 'react';
-import { formatUnits, parseUnits } from 'ethers';
-import { useAppContext } from '@/context/AppContext';
+import React, { useState } from 'react';
+import { parseUnits } from 'ethers';
+import { useAppContext, useVaultContext } from '@/contexts';
 import { isUserRejected, allowOnlyNumbers, isButtonDisabled } from '@/utils';
 import { useAdaptiveInterval } from '@/hooks';
 
 export default function Redeem() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const [amount, setAmount] = useState('');
-  const [success, setSuccess] = useState<string | null>(null);
-  const [maxAvailableRedeem, setMaxAvailableRedeem] = useState<string>('');
-
-  const [wethDecimals, setWethDecimals] = useState<bigint>(18n);
 
   const {
     address, isConnected, 
-    vaultContract, vaultContractLens, wethContractLens 
+    vaultContract, wethContractLens 
   } = useAppContext();
 
-  const getWethDecimals = useCallback(async (): Promise<bigint> => {
-    if (!wethContractLens) {
-      throw new Error('wethContractLens is not available');
-    }
-    
-    const currentWethDecimals = await wethContractLens.decimals();
-    setWethDecimals(currentWethDecimals);
-    return currentWethDecimals;
-  }, [wethContractLens]);
+  const { decimals, maxRedeem, updateMaxRedeem } = useVaultContext()
 
-  const updateMaxAvailableRedeem = useCallback(async () => {
-    if(!address || !vaultContractLens || !getWethDecimals) {
-      console.error("Unable to call updateMaxAvailableRedeem");
-      return;
-    }
-
-    const gmeBalance = await vaultContractLens.balanceOf(address!);
-    const currentWethDecimals = await getWethDecimals();
-    const vaultMaxRedeem = await vaultContractLens.maxRedeem(address!);
-
-    const gmeAmount = parseFloat(formatUnits(gmeBalance, currentWethDecimals));
-    const maxRedeemAmount = parseFloat(formatUnits(vaultMaxRedeem, currentWethDecimals));
-
-    const maxAvailable = Math.min(gmeAmount, maxRedeemAmount);
-    console.log("Redeem", maxAvailable);
-    const truncated = Math.floor(maxAvailable * 10_000) / 10_000;
-    setMaxAvailableRedeem(truncated.toFixed(4));
-  }, [address, vaultContractLens, getWethDecimals]);
-
-  useAdaptiveInterval(updateMaxAvailableRedeem, {
+  useAdaptiveInterval(updateMaxRedeem, {
     enabled: isConnected
   });
 
@@ -62,8 +32,8 @@ export default function Redeem() {
     setSuccess(null);
 
     try {
-      const amountToRedeem = parseUnits(amount, wethDecimals);
-      const maxAvailable = parseUnits(maxAvailableRedeem, wethDecimals);
+      const amountToRedeem = parseUnits(amount, decimals);
+      const maxAvailable = parseUnits(maxRedeem, decimals);
 
       if (maxAvailable < amountToRedeem) {
         setError('Amount higher than available.');
@@ -108,12 +78,12 @@ export default function Redeem() {
               step="any"
               required
               disabled={loading}
-              max={maxAvailableRedeem}
+              max={maxRedeem}
             />
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
               <button
                 type="button"
-                onClick={() => setAmount(maxAvailableRedeem)}
+                onClick={() => setAmount(maxRedeem)}
                 className="text-indigo-600 hover:text-indigo-500 text-sm font-medium mr-2"
               >
                 MAX
@@ -122,13 +92,13 @@ export default function Redeem() {
             </div>
           </div>
           <p className="mt-1 text-sm text-gray-500">
-            Max Available: {!maxAvailableRedeem ? 'Loading...' : `${maxAvailableRedeem} GME`}
+            Max Available: {!maxRedeem ? 'Loading...' : `${maxRedeem} GME`}
           </p>
         </div>
 
         <button
           type="submit"
-          disabled={isButtonDisabled(loading, amount, maxAvailableRedeem)}
+          disabled={isButtonDisabled(loading, amount, maxRedeem)}
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
         >
           {loading ? 'Processing...' : 'Redeem'}

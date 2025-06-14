@@ -1,61 +1,31 @@
-import React, { useCallback, useState } from 'react';
-import { formatUnits, parseUnits } from 'ethers';
+import React, { useState } from 'react';
+import { parseUnits } from 'ethers';
 import { GME_VAULT_ADDRESS } from '@/constants';
-import { useAppContext } from '@/context/AppContext';
+import { useAppContext } from '@/contexts';
 import { isUserRejected, allowOnlyNumbers, wrapEth, isButtonDisabled } from '@/utils';
 import { useAdaptiveInterval } from '@/hooks';
+import { useVaultContext } from '@/contexts/VaultContext';
 
 export default function Deposit() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const [amount, setAmount] = useState('');
-  const [success, setSuccess] = useState<string | null>(null);
-  const [maxAvailableDeposit, setMaxAvailableDeposit] = useState<string>('');
-
-  const [wethDecimals, setWethDecimals] = useState<bigint>(18n);
 
   const { 
-    publicProvider, address, isConnected, vaultContract, wethContract,
-    vaultContractLens, wethContractLens 
+    publicProvider, address, isConnected, vaultContract, wethContract, wethContractLens 
   } = useAppContext();
 
-  const getWethDecimals = useCallback(async (): Promise<bigint> => {
-    if (!wethContractLens) {
-      throw new Error('wethContractLens is not available');
-    }
-    
-    const currentWethDecimals = await wethContractLens.decimals();
-    setWethDecimals(currentWethDecimals);
-    return currentWethDecimals;
-  }, [wethContractLens]);
+  const {decimals, maxDeposit, updateMaxDeposit} = useVaultContext()
 
-  const updateMaxAvailableDeposit = useCallback(async () => {
-    if(!publicProvider || !address || !vaultContractLens || !wethContractLens) {
-      console.error("Unable to call updateMaxAvailableDeposit");
-      return;
-    }
-
-    const wethBalance = await wethContractLens.balanceOf(address);
-    const currentWethDecimals = await getWethDecimals();
-
-    const vaultMaxDeposit = await vaultContractLens.maxDeposit(address);
-    const ethBalance = await publicProvider.getBalance(address);
-
-    const wethAmount = parseFloat(formatUnits(wethBalance, currentWethDecimals));
-    const ethAmount = parseFloat(formatUnits(ethBalance, currentWethDecimals));
-    const maxDepAmount = parseFloat(formatUnits(vaultMaxDeposit, currentWethDecimals));
-
-    const maxAvailable = Math.min(wethAmount + ethAmount, maxDepAmount);
-    setMaxAvailableDeposit(maxAvailable.toFixed(4));
-  }, [publicProvider, address, vaultContractLens, wethContractLens, getWethDecimals])
-
-  useAdaptiveInterval(updateMaxAvailableDeposit, {
+  useAdaptiveInterval(updateMaxDeposit, {
     enabled: isConnected
   });
 
   const handleDeposit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -63,7 +33,7 @@ export default function Deposit() {
     if (!publicProvider || !wethContractLens || !wethContract || !vaultContract || !address) return;
 
     try {
-      const wethNeededToDeposit = parseUnits(amount, wethDecimals);
+      const wethNeededToDeposit = parseUnits(amount, decimals);
       const wethBalance = await wethContractLens.balanceOf(address);
 
       if (wethBalance < wethNeededToDeposit) {
@@ -121,12 +91,12 @@ export default function Deposit() {
               step="any"
               required
               disabled={loading}
-              max={!maxAvailableDeposit ? "0" : maxAvailableDeposit}
+              max={maxDeposit}
             />
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
               <button
                 type="button"
-                onClick={() => setAmount(maxAvailableDeposit as string)}
+                onClick={() => setAmount(maxDeposit)}
                 className="text-sm text-indigo-600 hover:text-indigo-500 mr-2"
               >
                 MAX
@@ -135,13 +105,13 @@ export default function Deposit() {
             </div>
           </div>
           <div className="mt-1 text-sm text-gray-500">
-            Max Available: {!maxAvailableDeposit ? 'Loading...' : `${maxAvailableDeposit} WETH`}
+            Max Available: {!maxDeposit ? 'Loading...' : `${maxDeposit} WETH`}
           </div>
         </div>
 
         <button
           type="submit"
-          disabled={isButtonDisabled(loading, amount, maxAvailableDeposit)}
+          disabled={isButtonDisabled(loading, amount, maxDeposit)}
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
         >
           {loading ? 'Processing...' : 'Deposit'}

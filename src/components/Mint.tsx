@@ -1,58 +1,25 @@
-import React, { useCallback, useState } from 'react';
-import { formatUnits, parseUnits } from 'ethers';
+import React, { useState } from 'react';
+import { parseUnits } from 'ethers';
 import { GME_VAULT_ADDRESS } from '@/constants';
-import { useAppContext } from '@/context/AppContext';
+import { useAppContext, useVaultContext } from '@/contexts';
 import { isUserRejected, allowOnlyNumbers, wrapEth, isButtonDisabled } from '@/utils';
 import { useAdaptiveInterval } from '@/hooks';
 
 export default function Mint() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const [amount, setAmount] = useState('');
-  const [success, setSuccess] = useState<string | null>(null);
-  const [maxAvailableMint, setMaxAvailableMint] = useState<string>('');
-
-  const [wethDecimals, setWethDecimals] = useState<bigint>(18n);
 
   const { 
     publicProvider, address, isConnected, vaultContract, wethContract,
     vaultContractLens, wethContractLens 
   } = useAppContext();
 
-  const getWethDecimals = useCallback(async (): Promise<bigint> => {
-    if (!wethContractLens) {
-      throw new Error('wethContractLens is not available');
-    }
-    
-    const currentWethDecimals = await wethContractLens.decimals();
-    setWethDecimals(currentWethDecimals);
-    return currentWethDecimals;
-  }, [wethContractLens]);
+  const { decimals, maxMint, updateMaxMint } = useVaultContext();
 
-  const updateMaxAvailableMint = useCallback(async () => {
-    if(!publicProvider || !address || !vaultContractLens || !wethContractLens) {
-      console.error("Unable to call updateMaxAvailableMint");
-      return;
-    }
-
-    const wethBalance = await wethContractLens.balanceOf(address);
-    const currentWethDecimals = await getWethDecimals();
-
-    const vaultMaxMint = await vaultContractLens.maxMint(address);
-    const ethBalance = await publicProvider.getBalance(address);
-    const sharesForEth = await vaultContractLens.previewDeposit(ethBalance);
-    const sharesForWeth = await vaultContractLens.previewDeposit(wethBalance);
-
-    const ethSharesAmount = parseFloat(formatUnits(sharesForEth, currentWethDecimals));
-    const wethSharesAmount = parseFloat(formatUnits(sharesForWeth, currentWethDecimals));
-    const maxMintAmount = parseFloat(formatUnits(vaultMaxMint, currentWethDecimals));
-
-    const maxAvailable = Math.min(wethSharesAmount + ethSharesAmount, maxMintAmount);
-    setMaxAvailableMint(maxAvailable.toFixed(4));
-  }, [publicProvider, address, vaultContractLens, wethContractLens, getWethDecimals]);
-
-  useAdaptiveInterval(updateMaxAvailableMint, {
+  useAdaptiveInterval(updateMaxMint, {
     enabled: isConnected
   });
 
@@ -73,7 +40,7 @@ export default function Mint() {
     ) return;
 
     try {
-      const mintAmount = parseUnits(amount, wethDecimals);
+      const mintAmount = parseUnits(amount, decimals);
       const wethNeededToMint = await vaultContractLens.previewMint(mintAmount);
       const wethBalance = await wethContractLens.balanceOf(address);
 
@@ -132,12 +99,12 @@ export default function Mint() {
               step="any"
               required
               disabled={loading}
-              max={maxAvailableMint}
+              max={maxMint}
             />
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
               <button
                 type="button"
-                onClick={() => setAmount(maxAvailableMint)}
+                onClick={() => setAmount(maxMint)}
                 className="text-sm text-indigo-600 hover:text-indigo-500 mr-2"
               >
                 MAX
@@ -146,13 +113,13 @@ export default function Mint() {
             </div>
           </div>
           <div className="mt-1 text-sm text-gray-500">
-            Max Available: {!maxAvailableMint ? 'Loading...' : `${maxAvailableMint} GME`}
+            Max Available: {!maxMint ? 'Loading...' : `${maxMint} GME`}
           </div>
         </div>
 
         <button
           type="submit"
-          disabled={isButtonDisabled(loading, amount, maxAvailableMint)}
+          disabled={isButtonDisabled(loading, amount, maxMint)}
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
         >
           {loading ? 'Processing...' : 'Mint'}

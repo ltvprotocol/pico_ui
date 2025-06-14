@@ -1,55 +1,23 @@
-import React, { useState, useCallback } from 'react';
-import { formatUnits, parseUnits } from 'ethers';
-import { useAppContext } from '@/context/AppContext';
+import React, { useState } from 'react';
+import { parseUnits } from 'ethers';
+import { useAppContext, useVaultContext } from '@/contexts';
 import { isUserRejected, allowOnlyNumbers, isButtonDisabled } from '@/utils';
 import { useAdaptiveInterval } from '@/hooks';
 
 export default function Withdraw() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   const [amount, setAmount] = useState('');
-  const [success, setSuccess] = useState<string | null>(null);
-  const [maxAvailableWithdraw, setmaxAvailableWithdraw] = useState<string>('');
-
-  const [wethDecimals, setWethDecimals] = useState<bigint>(18n);
 
   const { 
-    publicProvider, address, isConnected, vaultContract, wethContract,
-    vaultContractLens, wethContractLens 
+    address, isConnected, vaultContract, wethContract, wethContractLens 
   } = useAppContext();
 
-  const getWethDecimals = useCallback(async (): Promise<bigint> => {
-    if (!wethContractLens) {
-      throw new Error('wethContractLens is not available');
-    }
-    
-    const currentWethDecimals = await wethContractLens.decimals();
-    setWethDecimals(currentWethDecimals);
-    return currentWethDecimals;
-  }, [wethContractLens]);
+  const { decimals, maxWithdraw, updateMaxWithdraw } = useVaultContext();
 
-  const updatemaxAvailableWithdraw = useCallback(async () => {
-    if(!publicProvider || !address || !vaultContractLens || !getWethDecimals) {
-      console.error("Unable to call updatemaxAvailableWithdraw");
-      return;
-    }
-
-    const gmeBalance = await vaultContractLens.balanceOf(address);
-    const currentWethDecimals = await getWethDecimals();
-
-    const vaultMaxWithdraw = await vaultContractLens.maxWithdraw(address);
-    const maxWithdrawAmount = parseFloat(formatUnits(vaultMaxWithdraw, currentWethDecimals));
-
-    const maxRedeem = await vaultContractLens.previewRedeem(gmeBalance);
-    const maxRedeemAmount = parseFloat(formatUnits(maxRedeem, currentWethDecimals))
-
-    const maxAvailable = Math.min(maxRedeemAmount, maxWithdrawAmount);
-    const truncated = Math.floor(maxAvailable * 10_000) / 10_000;
-    setmaxAvailableWithdraw(truncated.toFixed(4));
-  }, [publicProvider, address, vaultContractLens, getWethDecimals]);
-
-  useAdaptiveInterval(updatemaxAvailableWithdraw, {
+  useAdaptiveInterval(updateMaxWithdraw, {
     enabled: isConnected
   });
 
@@ -63,9 +31,9 @@ export default function Withdraw() {
     if (!wethContractLens || !wethContract || !vaultContract || !address) return;
 
     try {
-      const amountWei = parseUnits(amount, wethDecimals);
+      const amountToWithdraw = parseUnits(amount, decimals);
 
-      const withdrawTx = await vaultContract.withdraw(amountWei, address, address);
+      const withdrawTx = await vaultContract.withdraw(amountToWithdraw, address, address);
       await withdrawTx.wait();
 
       setAmount('');
@@ -103,12 +71,12 @@ export default function Withdraw() {
               step="any"
               required
               disabled={loading}
-              max={maxAvailableWithdraw}
+              max={maxWithdraw}
             />
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
               <button
                 type="button"
-                onClick={() => setAmount(maxAvailableWithdraw)}
+                onClick={() => setAmount(maxWithdraw)}
                 className="text-sm text-indigo-600 hover:text-indigo-500 mr-2"
               >
                 MAX
@@ -117,13 +85,13 @@ export default function Withdraw() {
             </div>
           </div>
           <div className="mt-1 text-sm text-gray-500">
-            Max Available: {!maxAvailableWithdraw ? 'Loading...' : `${maxAvailableWithdraw} WETH`}
+            Max Available: {!maxWithdraw ? 'Loading...' : `${maxWithdraw} WETH`}
           </div>
         </div>
 
         <button
           type="submit"
-          disabled={isButtonDisabled(loading, amount, maxAvailableWithdraw)}
+          disabled={isButtonDisabled(loading, amount, maxWithdraw)}
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
         >
           {loading ? 'Processing...' : 'Withdraw'}

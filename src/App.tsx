@@ -4,7 +4,7 @@ import Balances from '@/components/Balances';
 import VaultInfo from '@/components/VaultInfo';
 import Tabs from '@/components/Tabs';
 import { SEPOLIA_CHAIN_ID } from '@/constants';
-import { useAppContext } from '@/context/AppContext';
+import { useAppContext } from '@/contexts';
 
 function App() {
   const [isSepolia, setIsSepolia] = useState(false);

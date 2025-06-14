@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BrowserProvider, Eip1193Provider } from 'ethers';
 import { SEPOLIA_CHAIN_ID, SEPOLIA_CHAIN_ID_HEX, SEPOLIA_NETWORK } from '@/constants';
-import { useAppContext } from '@/context/AppContext';
+import { useAppContext } from '@/contexts';
 import { isUserRejected } from '@/utils';
 
 type DiscoveredWallet = {

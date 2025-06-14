@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { formatUnits } from 'ethers';
-import { useAppContext } from '@/context/AppContext';
+import { useAppContext } from '@/contexts';
 import { useAdaptiveInterval } from '@/hooks';
 
 export default function VaultInfo() {

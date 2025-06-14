@@ -13,13 +13,18 @@ export function useAdaptiveInterval(
 ) {
   const {
     initialDelay = 6000,
-    maxDelay = 768000, // 6000 * 2**7 -> 768000 or 12 min 48 sec
+    maxDelay = 60000,
     multiplier = 2,
     enabled = true,
   } = options;
 
   const [delay, setDelay] = useState(initialDelay);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const savedFn = useRef(fn);
+
+  useEffect(() => {
+    savedFn.current = fn;
+  }, [fn]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -28,13 +33,13 @@ export function useAdaptiveInterval(
 
     const execute = async () => {
       try {
-        await fn();
+        await savedFn.current();
         if (!cancelled) {
-          setDelay(initialDelay);
+          setDelay(initialDelay); // reset if success
         }
       } catch (e) {
         if (!cancelled) {
-          setDelay(prev => Math.min(prev * multiplier, maxDelay));
+          setDelay(prev => Math.min(prev * multiplier, maxDelay)); // change delay if error
         }
       }
 
@@ -47,9 +52,7 @@ export function useAdaptiveInterval(
 
     return () => {
       cancelled = true;
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  }, [enabled]);
+  }, [enabled, delay, initialDelay, maxDelay, multiplier]);
 }

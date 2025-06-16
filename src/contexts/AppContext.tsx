@@ -1,5 +1,5 @@
-import { BrowserProvider, JsonRpcSigner, JsonRpcProvider } from 'ethers'
-import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react'
+import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import { BrowserProvider, JsonRpcSigner, JsonRpcProvider } from 'ethers';
 import { GmeVault, WETH, GmeVault__factory, WETH__factory } from '@/typechain-types';
 import { GME_VAULT_ADDRESS, WETH_ADDRESS, SEPOLIA_NETWORK } from '@/constants';
 
@@ -91,7 +91,7 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
 };
 
 export const useAppContext = () => {
-  const context = useContext(AppContext)
-  if (!context) throw new Error('useAppContext must be used within a AppContextProvider')
-  return context
+  const context = useContext(AppContext);
+  if (!context) throw new Error('useAppContext must be used within a AppContextProvider');
+  return context;
 };

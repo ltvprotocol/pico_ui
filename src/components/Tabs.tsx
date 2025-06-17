@@ -1,8 +1,5 @@
 import { useState } from 'react';
-import Deposit from '@/components/Deposit';
-import Redeem from '@/components/Redeem';
-import Mint from '@/components/Mint';
-import Withdraw from '@/components/Withdraw';
+import { Deposit, Withdraw, Mint, Redeem } from '@/components/actions';
 
 type Tabs = 'deposit' | 'redeem' | 'mint' | 'withdraw';
 

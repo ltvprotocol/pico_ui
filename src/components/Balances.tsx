@@ -1,41 +1,48 @@
 import { useState } from 'react';
 import { formatUnits, formatEther } from 'ethers';
-import { useAppContext } from '@/contexts';
+import { useAppContext, useVaultContext } from '@/contexts';
 import { useAdaptiveInterval } from '@/hooks';
 
 export default function Balances() {
-  const [gmeBalance, setGmeBalance] = useState<string>('0');
-  const [wethBalance, setWethBalance] = useState<string>('0');
+  const [sharesBalance, setSharesBalance] = useState<string>('0');
+  const [borrowTokenBalance, setBorrowTokenBalance] = useState<string>('0');
+  const [collateralTokenBalance, setCollateralTokenBalance] = useState<string>('0');
   const [ethBalance, setEthBalance] = useState<string>('0');
 
-  const { isConnected, publicProvider, address, vaultContractLens, wethContractLens } = useAppContext();
+  const { isConnected, publicProvider, address } = useAppContext();
+  const { 
+    decimals, vaultLens, borrowTokenLens, collateralTokenLens,
+    sharesSymbol, borrowTokenSymbol, collateralTokenSymbol
+  } = useVaultContext();
 
   const resetBalances = () => {
+    setSharesBalance('0');
+    setBorrowTokenBalance('0');
+    setCollateralTokenBalance('0');
     setEthBalance('0');
-    setGmeBalance('0');
-    setWethBalance('0');
   };
 
   const getBalances = async () => {
-    if(!publicProvider && !address && !vaultContractLens && !wethContractLens) return;
+    if (!publicProvider || !address || !vaultLens || !borrowTokenLens || !collateralTokenLens) return;
 
     try {
-      const ethBalanceRaw = await publicProvider!.getBalance(address!);
+      const ethBalanceRaw = await publicProvider.getBalance(address);
       const formattedEthBalance = formatEther(ethBalanceRaw);
       setEthBalance(formattedEthBalance);
-  
-      const [gmeBalanceRaw, gmeDecimals, wethBalanceRaw, wethDecimals] = await Promise.all([
-        vaultContractLens!.balanceOf(address!),
-        vaultContractLens!.decimals(),
-        wethContractLens!.balanceOf(address!),
-        wethContractLens!.decimals()
+
+      const [
+        sharesBalanceRaw,
+        borrowTokenBalanceRaw,
+        collateralTokenBalanceRaw,
+      ] = await Promise.all([
+        vaultLens.balanceOf(address),
+        borrowTokenLens.balanceOf(address),
+        collateralTokenLens.balanceOf(address),
       ]);
-  
-      const formattedGmeBalance = formatUnits(gmeBalanceRaw, gmeDecimals);
-      const formattedWethBalance = formatUnits(wethBalanceRaw, wethDecimals);
-  
-      setGmeBalance(formattedGmeBalance);
-      setWethBalance(formattedWethBalance);
+
+      setSharesBalance(formatUnits(sharesBalanceRaw, decimals));
+      setBorrowTokenBalance(formatUnits(borrowTokenBalanceRaw, decimals));
+      setCollateralTokenBalance(formatUnits(collateralTokenBalanceRaw, decimals));
     } catch (err) {
       console.error('Error fetching balances:', err);
       resetBalances();
@@ -43,7 +50,7 @@ export default function Balances() {
   };
 
   useAdaptiveInterval(getBalances, {
-    enabled: isConnected
+    enabled: isConnected,
   });
 
   return (
@@ -55,10 +62,13 @@ export default function Balances() {
             ETH Balance: {parseFloat(ethBalance).toFixed(4)} ETH
           </span>
           <span className="text-sm text-gray-600 block">
-            WETH Balance: {parseFloat(wethBalance).toFixed(4)} WETH
+            {borrowTokenSymbol} Balance: {parseFloat(borrowTokenBalance).toFixed(4)} {borrowTokenSymbol}
           </span>
           <span className="text-sm text-gray-600 block">
-            GME Balance: {parseFloat(gmeBalance).toFixed(4)} GME
+            {collateralTokenSymbol} Balance: {parseFloat(collateralTokenBalance).toFixed(4)} {collateralTokenSymbol}
+          </span>
+          <span className="text-sm text-gray-600 block">
+            {sharesSymbol} Balance: {parseFloat(sharesBalance).toFixed(4)} {sharesSymbol}
           </span>
         </div>
       </div>

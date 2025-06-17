@@ -12,6 +12,7 @@ export default function Mint() {
     <div className="mt-8 p-6 bg-white rounded-lg shadow-lg">
       <h2 className="text-2xl font-bold mb-6 text-gray-900">Redeem Assets</h2>
       <SelectToken
+        actionTitle="Redeem"
         borrow={borrowTokenSymbol}
         collateral={collateralTokenSymbol}
         selected={selectedToken}

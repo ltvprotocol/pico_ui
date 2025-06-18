@@ -41,7 +41,7 @@ export default function DepositCollateral() {
 
       if (collateralBalance < neededToDeposit) {
         setError('Not enough tokens to deposit.');
-        console.error('Not enough WETH after wrapping');
+        console.error('Not enough tokens to deposit');
         return;
       }
 

@@ -12,7 +12,7 @@ export default function Deposit() {
     <div className="mt-8 p-6 bg-white rounded-lg shadow-lg">
       <h2 className="text-2xl font-bold mb-6 text-gray-900">Deposit Assets</h2>
       <SelectToken
-        actionTitle="Deposit"
+        label="Select Asset You Provide"
         borrow={borrowTokenSymbol}
         collateral={collateralTokenSymbol}
         selected={selectedToken}

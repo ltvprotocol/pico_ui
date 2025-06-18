@@ -2,7 +2,7 @@ import React from 'react';
 import { allowOnlyNumbers, isButtonDisabled } from '@/utils';
 
 type ActionFormProps = {
-  actionTitle: string;
+  actionName: string;
   amount: string;
   maxAmount: string;
   tokenSymbol: string;
@@ -14,7 +14,7 @@ type ActionFormProps = {
 }
 
 export const ActionForm: React.FC<ActionFormProps> = ({
-  actionTitle,
+  actionName,
   amount,
   maxAmount,
   tokenSymbol,
@@ -28,7 +28,7 @@ export const ActionForm: React.FC<ActionFormProps> = ({
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label htmlFor="amount" className="block text-sm font-medium text-gray-700">
-          Amount to {actionTitle}
+          Amount to {actionName}
         </label>
         <div className="mt-1 relative rounded-md shadow-sm">
           <input
@@ -65,7 +65,7 @@ export const ActionForm: React.FC<ActionFormProps> = ({
         disabled={isButtonDisabled(isLoading, amount, maxAmount)}
         className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
       >
-        {isLoading ? 'Processing...' : 'Deposit'}
+        {isLoading ? 'Processing...' : `${actionName}`}
       </button>
       {error && (
         <div className="text-sm text-red-600">

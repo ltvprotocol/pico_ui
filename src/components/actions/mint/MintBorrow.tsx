@@ -82,7 +82,7 @@ export default function MintBorrow() {
 
   return (
     <ActionForm 
-      actionTitle='Mint'
+      actionName='Mint'
       amount={amount}
       maxAmount={maxMint}
       tokenSymbol={sharesSymbol}

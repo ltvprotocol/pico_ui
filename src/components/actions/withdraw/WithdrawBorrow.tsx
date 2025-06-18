@@ -50,7 +50,7 @@ export default function WithdrawBorrow() {
 
   return (
     <ActionForm 
-      actionTitle='Withdraw'
+      actionName='Withdraw'
       amount={amount}
       maxAmount={maxWithdraw}
       tokenSymbol={borrowTokenSymbol}

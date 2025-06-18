@@ -50,7 +50,7 @@ export default function WithdrawCollateral() {
 
   return (
     <ActionForm 
-      actionTitle='Withdraw'
+      actionName='Withdraw'
       amount={amount}
       maxAmount={maxWithdrawCollateral}
       tokenSymbol={collateralTokenSymbol}

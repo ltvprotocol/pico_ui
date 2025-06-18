@@ -57,7 +57,7 @@ export default function RedeemCollateral() {
 
   return (
     <ActionForm 
-      actionTitle='Redeem'
+      actionName='Redeem'
       amount={amount}
       maxAmount={maxRedeemCollateral}
       tokenSymbol={sharesSymbol}

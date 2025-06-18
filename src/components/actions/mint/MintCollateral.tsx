@@ -75,7 +75,7 @@ export default function MintCollateral() {
 
   return (
     <ActionForm 
-      actionTitle='Mint'
+      actionName='Mint'
       amount={amount}
       maxAmount={maxMintCollateral}
       tokenSymbol={sharesSymbol}

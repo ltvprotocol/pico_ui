@@ -1,7 +1,7 @@
 import React from 'react';
 
 type SelectTokenProps = {
-  actionTitle: string;
+  label: string;
   borrow: string;
   collateral: string;
   selected: string;
@@ -9,7 +9,7 @@ type SelectTokenProps = {
 };
 
 export const SelectToken: React.FC<SelectTokenProps> = ({
-  actionTitle,
+  label,
   borrow,
   collateral,
   selected,
@@ -25,7 +25,7 @@ export const SelectToken: React.FC<SelectTokenProps> = ({
   return (
     <>
       <div className="block text-sm font-medium text-gray-700 mb-1">
-        Select asset to {actionTitle}
+        {label}
       </div>
       <div className="flex space-x-4 mb-3">
         <button onClick={() => onSelect('borrow')} className={tabClass('borrow')}>

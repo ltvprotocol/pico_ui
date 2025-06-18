@@ -57,7 +57,7 @@ export default function RedeemBorrow() {
 
   return (
     <ActionForm 
-      actionTitle='Redeem'
+      actionName='Redeem'
       amount={amount}
       maxAmount={maxRedeem}
       tokenSymbol={sharesSymbol}

@@ -75,7 +75,7 @@ export default function DepositBorrow() {
 
   return (
     <ActionForm 
-      actionTitle='Deposit'
+      actionName='Deposit'
       amount={amount}
       maxAmount={maxDeposit}
       tokenSymbol={borrowTokenSymbol}

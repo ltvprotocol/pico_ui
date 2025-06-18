@@ -12,7 +12,7 @@ export default function Withdraw() {
     <div className="mt-8 p-6 bg-white rounded-lg shadow-lg">
       <h2 className="text-2xl font-bold mb-6 text-gray-900">Withdraw Assets</h2>
       <SelectToken
-        actionTitle="Withdraw"
+        label="Select Asset to Receive"
         borrow={borrowTokenSymbol}
         collateral={collateralTokenSymbol}
         selected={selectedToken}

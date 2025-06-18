@@ -68,7 +68,7 @@ export default function DepositCollateral() {
 
   return (
     <ActionForm 
-      actionTitle='Deposit'
+      actionName='Deposit'
       amount={amount}
       maxAmount={maxDepositCollateral}
       tokenSymbol={collateralTokenSymbol}

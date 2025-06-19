@@ -16,7 +16,7 @@ export default function MintBorrow() {
   const { publicProvider, address, isConnected } = useAppContext();
 
   const {
-    sharesSymbol,
+    sharesSymbol, borrowTokenSymbol,
     vault, borrowToken, vaultLens, borrowTokenLens,
     decimals, maxMint, updateMaxMint
   } = useVaultContext()
@@ -61,7 +61,7 @@ export default function MintBorrow() {
 
       const approveTx = await borrowToken.approve(VAULT_ADDRESS, wethNeededToMint);
       await approveTx.wait();
-      setSuccess('Successfully approved WETH.');
+      setSuccess(`Successfully approved ${borrowTokenSymbol}.`);
 
       const mintTx = await vault.mint(mintAmount, address);
       await mintTx.wait();

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { formatUnits, formatEther } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
 import { useAdaptiveInterval } from '@/hooks';
+import { truncateTo4Decimals } from '@/utils';
 
 export default function Balances() {
   const [sharesBalance, setSharesBalance] = useState<string>('0');
@@ -27,8 +28,8 @@ export default function Balances() {
 
     try {
       const ethBalanceRaw = await publicProvider.getBalance(address);
-      const formattedEthBalance = formatEther(ethBalanceRaw);
-      setEthBalance(formattedEthBalance);
+      const currentEthBalance = parseFloat(formatEther(ethBalanceRaw));
+      setEthBalance(truncateTo4Decimals(currentEthBalance));
 
       const [
         sharesBalanceRaw,
@@ -40,9 +41,13 @@ export default function Balances() {
         collateralTokenLens.balanceOf(address),
       ]);
 
-      setSharesBalance(formatUnits(sharesBalanceRaw, decimals));
-      setBorrowTokenBalance(formatUnits(borrowTokenBalanceRaw, decimals));
-      setCollateralTokenBalance(formatUnits(collateralTokenBalanceRaw, decimals));
+      const currentSharesBalance = parseFloat(formatUnits(sharesBalanceRaw, decimals));
+      const currentBorrowTokenBalance = parseFloat(formatUnits(borrowTokenBalanceRaw, decimals));
+      const currentCollateralTokenBalance = parseFloat(formatUnits(collateralTokenBalanceRaw, decimals));
+
+      setSharesBalance(truncateTo4Decimals(currentSharesBalance));
+      setBorrowTokenBalance(truncateTo4Decimals(currentBorrowTokenBalance));
+      setCollateralTokenBalance(truncateTo4Decimals(currentCollateralTokenBalance));
     } catch (err) {
       console.error('Error fetching balances:', err);
       resetBalances();

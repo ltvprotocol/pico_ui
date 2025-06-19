@@ -47,7 +47,7 @@ export default function DepositCollateral() {
 
       const approveTx = await collateralToken.approve(VAULT_ADDRESS, neededToDeposit);
       await approveTx.wait();
-      setSuccess('Successfully approved WETH');
+      setSuccess(`Successfully approved ${collateralTokenSymbol}.`);
 
       const depositTx = await vault.depositCollateral(neededToDeposit, address);
       await depositTx.wait();

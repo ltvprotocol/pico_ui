@@ -54,7 +54,7 @@ export default function DepositBorrow() {
 
       const approveTx = await borrowToken.approve(VAULT_ADDRESS, wethNeededToDeposit);
       await approveTx.wait();
-      setSuccess('Successfully approved WETH');
+      setSuccess(`Successfully approved ${borrowTokenSymbol}.`);
 
       const depositTx = await vault.deposit(wethNeededToDeposit, address!);
       await depositTx.wait();

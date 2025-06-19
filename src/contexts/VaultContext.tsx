@@ -3,6 +3,7 @@ import { formatUnits } from 'ethers'
 import { useAppContext } from '@/contexts/AppContext';
 import { Vault, WETH, ERC20, Vault__factory, WETH__factory, ERC20__factory } from '@/typechain-types';
 import { VAULT_ADDRESS, BORROW_TOKEN_ADDRESS, COLLATERAL_TOKEN_ADDRESS } from '@/constants';
+import { truncateTo4Decimals } from '@/utils';
 
 interface VaultContextType {
   sharesSymbol: string;
@@ -72,7 +73,7 @@ export const VaultContextProvider = ({ children }: { children: ReactNode }) => {
     const maxDepAmount = parseFloat(formatUnits(vaultMaxDeposit, decimals));
 
     const maxAvailable = Math.min(wethAmount + ethAmount, maxDepAmount);
-    setMaxDeposit(maxAvailable.toFixed(4));
+    setMaxDeposit(truncateTo4Decimals(maxAvailable));
   }, [publicProvider, address, vaultLens, borrowTokenLens, decimals]);
 
   const updateMaxRedeem = useCallback(async () => {
@@ -85,7 +86,7 @@ export const VaultContextProvider = ({ children }: { children: ReactNode }) => {
     const maxRedeemAmount = parseFloat(formatUnits(vaultMaxRedeem, decimals));
 
     const maxAvailable = Math.min(gmeAmount, maxRedeemAmount);
-    setMaxRedeem((Math.floor(maxAvailable * 10_000) / 10_000).toFixed(4));
+    setMaxRedeem(truncateTo4Decimals(maxAvailable));
   }, [address, vaultLens, decimals]);
 
   const updateMaxMint = useCallback(async () => {
@@ -103,7 +104,7 @@ export const VaultContextProvider = ({ children }: { children: ReactNode }) => {
     const maxMintAmount = parseFloat(formatUnits(vaultMaxMint, decimals));
 
     const maxAvailable = Math.min(wethSharesAmount + ethSharesAmount, maxMintAmount);
-    setMaxMint(maxAvailable.toFixed(4));
+    setMaxMint(truncateTo4Decimals(maxAvailable));
   }, [publicProvider, address, vaultLens, borrowTokenLens, decimals]);
 
   const updateMaxWithdraw = useCallback(async () => {
@@ -117,7 +118,7 @@ export const VaultContextProvider = ({ children }: { children: ReactNode }) => {
     const maxWithdrawAmount = parseFloat(formatUnits(vaultMaxWithdraw, decimals));
 
     const maxAvailable = Math.min(maxRedeemAmount, maxWithdrawAmount);
-    setMaxWithdraw((Math.floor(maxAvailable * 10_000) / 10_000).toFixed(4));
+    setMaxWithdraw(truncateTo4Decimals(maxAvailable));
   }, [publicProvider, address, vaultLens, decimals]);
 
   const updateMaxDepositCollateral = useCallback(async () => {
@@ -130,7 +131,7 @@ export const VaultContextProvider = ({ children }: { children: ReactNode }) => {
     const maxDepAmount = parseFloat(formatUnits(vaultMaxDeposit, decimals));
 
     const maxAvailable = Math.min(collateralAmount, maxDepAmount);
-    setMaxDepositCollateral(maxAvailable.toFixed(4));
+    setMaxDepositCollateral(truncateTo4Decimals(maxAvailable));
   }, [publicProvider, address, vaultLens, collateralTokenLens, decimals]);
 
   const updateMaxRedeemCollateral = useCallback(async () => {
@@ -143,7 +144,7 @@ export const VaultContextProvider = ({ children }: { children: ReactNode }) => {
     const maxRedeemAmount = parseFloat(formatUnits(vaultMaxRedeem, decimals));
 
     const maxAvailable = Math.min(sharesAmount, maxRedeemAmount);
-    setMaxRedeemCollateral((Math.floor(maxAvailable * 10_000) / 10_000).toFixed(4));
+    setMaxRedeemCollateral(truncateTo4Decimals(maxAvailable));
   }, [address, vaultLens, decimals]);
 
   const updateMaxMintCollateral = useCallback(async () => {
@@ -157,7 +158,7 @@ export const VaultContextProvider = ({ children }: { children: ReactNode }) => {
     const maxMintAmount = parseFloat(formatUnits(vaultMaxMint, decimals));
 
     const maxAvailable = Math.min(collateralSharesAmount, maxMintAmount);
-    setMaxMintCollateral(maxAvailable.toFixed(4));
+    setMaxMintCollateral(truncateTo4Decimals(maxAvailable));
   }, [publicProvider, address, vaultLens, collateralTokenLens, decimals]);
 
   const updateMaxWithdrawCollateral = useCallback(async () => {
@@ -171,7 +172,7 @@ export const VaultContextProvider = ({ children }: { children: ReactNode }) => {
     const maxWithdrawAmount = parseFloat(formatUnits(vaultMaxWithdraw, decimals));
 
     const maxAvailable = Math.min(maxRedeemAmount, maxWithdrawAmount);
-    setMaxWithdrawCollateral((Math.floor(maxAvailable * 10_000) / 10_000).toFixed(4));
+    setMaxWithdrawCollateral(truncateTo4Decimals(maxAvailable));
   }, [publicProvider, address, vaultLens, decimals]);
 
   const setupContracts = async () => {

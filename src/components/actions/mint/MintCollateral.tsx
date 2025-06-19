@@ -16,7 +16,7 @@ export default function MintCollateral() {
   const { publicProvider, address, isConnected } = useAppContext();
 
   const {
-    sharesSymbol,
+    sharesSymbol, collateralTokenSymbol,
     vault, collateralToken, vaultLens, collateralTokenLens,
     decimals, maxMintCollateral, updateMaxMintCollateral
   } = useVaultContext()
@@ -54,7 +54,7 @@ export default function MintCollateral() {
 
       const approveTx = await collateralToken.approve(VAULT_ADDRESS, neededToMint);
       await approveTx.wait();
-      setSuccess('Successfully approved WETH.');
+      setSuccess(`Successfully approved ${collateralTokenSymbol}.`);
 
       const mintTx = await vault.mintCollateral(mintAmount, address);
       await mintTx.wait();

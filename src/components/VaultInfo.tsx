@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { formatUnits } from 'ethers';
-import { useAppContext } from '@/contexts';
+import { useAppContext, useVaultContext } from '@/contexts';
 import { useAdaptiveInterval } from '@/hooks';
 
 export default function VaultInfo() {
@@ -9,10 +9,11 @@ export default function VaultInfo() {
   const [maxDeposit, setMaxDeposit] = useState<string>('0');
   const [maxRedeem, setMaxRedeem] = useState<string>('0');
 
-  const { address, isConnected, vaultContractLens } = useAppContext();
+  const { address, isConnected } = useAppContext();
+  const { vaultLens, sharesSymbol, borrowTokenSymbol } = useVaultContext();
 
   const getVaultInfo = async () => {
-    if (!address && !vaultContractLens) {
+    if (!address || !vaultLens) {
       console.error("Unable to call getVaultInfo");
       return;
     };
@@ -20,14 +21,14 @@ export default function VaultInfo() {
     setError(null);
 
     try {
-      const [maxDepositAmount, maxRedeemAmount, decimals] = await Promise.all([
-        vaultContractLens!.maxDeposit(address!),
-        vaultContractLens!.maxRedeem(address!),
-        vaultContractLens!.decimals()
+      const [maxDeposit, maxRedeem, decimals] = await Promise.all([
+        vaultLens.maxDeposit(address),
+        vaultLens.maxRedeem(address),
+        vaultLens.decimals()
       ]);
 
-      const formattedMaxDeposit = formatUnits(maxDepositAmount, decimals);
-      const formattedMaxRedeem = formatUnits(maxRedeemAmount, decimals);
+      const formattedMaxDeposit = formatUnits(maxDeposit, decimals);
+      const formattedMaxRedeem = formatUnits(maxRedeem, decimals);
 
       setMaxDeposit(formattedMaxDeposit);
       setMaxRedeem(formattedMaxRedeem);
@@ -53,13 +54,13 @@ export default function VaultInfo() {
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-600">Max Deposit:</span>
             <span className="text-sm font-medium text-gray-900">
-              {parseFloat(maxDeposit).toFixed(4)} WETH
+              {parseFloat(maxDeposit).toFixed(4)} {borrowTokenSymbol}
             </span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-600">Max Redeem:</span>
             <span className="text-sm font-medium text-gray-900">
-              {parseFloat(maxRedeem).toFixed(4)} GME
+              {parseFloat(maxRedeem).toFixed(4)} {sharesSymbol}
             </span>
           </div>
         </div>

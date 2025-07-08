@@ -53,7 +53,7 @@ export default function VaultInfo() {
   });
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-1 border border-gray-300 p-3 rounded-lg">
       <h3 className="text-lg font-medium text-gray-900">Vault Information</h3>
       {error ? (
         <div className="text-sm text-red-600">{error}</div>

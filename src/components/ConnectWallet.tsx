@@ -224,7 +224,7 @@ export default function ConnectWallet() {
       ) : (
           <div>
             {!isSepolia ? ( 
-              <div className="mb-6">
+              <div className="mb-4">
                 <div className="text-center mb-4">
                   <h2 className="text-xl font-semibold text-gray-900 mb-2">
                     Switch to Sepolia
@@ -258,8 +258,8 @@ export default function ConnectWallet() {
           ) : (
             <div>
               <div className="p-3">
-                <div className="items-center justify-between bg-gray-50 rounded-md mb-4">
-                  <div className="flex items-center justify-between mb-1">
+                <div className="items-center justify-between mb-4">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <div className="h-2 w-2 bg-green-500 rounded-full mr-2"></div>
                       <span className="text-xs text-gray-500">Connected Wallet</span>
@@ -276,9 +276,9 @@ export default function ConnectWallet() {
                     </button>
                   </div>
                 </div>
-                <div className="flex items-center justify-between bg-gray-50 rounded-md">
+                <div className="flex items-center justify-between border border-gray-300 p-3 rounded-lg">
                   <div className="flex flex-col">
-                      <h3 className="text-lg font-medium text-gray-900 mb-1">Wallet Address:</h3>
+                    <h3 className="text-lg font-medium text-gray-900 mb-1">Wallet Address:</h3>
                     <CopyAddress address={address ? address : ""} />
                   </div>
                 </div>

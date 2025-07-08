@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom";
 import vaultsConfig from "../../vaults.config.json";
 import VaultBlock from "@/components/VaultBlock";
 

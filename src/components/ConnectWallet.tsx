@@ -3,6 +3,7 @@ import { BrowserProvider, Eip1193Provider } from 'ethers';
 import { SEPOLIA_CHAIN_ID, SEPOLIA_CHAIN_ID_HEX, SEPOLIA_NETWORK } from '@/constants';
 import { useAppContext } from '@/contexts';
 import { isUserRejected } from '@/utils';
+import { CopyAddress } from './ui/CopyAddress';
 
 type DiscoveredWallet = {
   info: {
@@ -256,8 +257,8 @@ export default function ConnectWallet() {
               </div>
           ) : (
             <div>
-              <div>
-                <div className="items-center justify-between bg-gray-50 p-3 rounded-md">
+              <div className="p-3">
+                <div className="items-center justify-between bg-gray-50 rounded-md mb-4">
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center">
                       <div className="h-2 w-2 bg-green-500 rounded-full mr-2"></div>
@@ -275,19 +276,10 @@ export default function ConnectWallet() {
                     </button>
                   </div>
                 </div>
-                <div className="flex items-center justify-between bg-gray-50 p-3 rounded-md mt-4">
+                <div className="flex items-center justify-between bg-gray-50 rounded-md">
                   <div className="flex flex-col">
-                    <div>
-                      <h3 className="text-lg font-medium text-gray-900">Wallet Address:</h3>
-                    </div>
-                    <div>
-                      <span className="hidden sm:block text-sm text-gray-700 break-all">
-                        {address}
-                      </span>
-                      <span className="block sm:hidden text-sm text-gray-700 break-all">
-                        {address ? `${address.slice(0, 6)}...${address.slice(-12)}` : ''}
-                      </span>
-                    </div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-1">Wallet Address:</h3>
+                    <CopyAddress address={address ? address : ""} />
                   </div>
                 </div>
               </div>

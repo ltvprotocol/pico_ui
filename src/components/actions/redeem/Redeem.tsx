@@ -9,8 +9,8 @@ export default function Mint() {
   const { borrowTokenSymbol, collateralTokenSymbol } = useVaultContext();
 
   return (
-    <div className="mt-8 p-6 bg-white rounded-lg shadow-lg">
-      <h2 className="text-2xl font-bold mb-6 text-gray-900">Redeem Assets</h2>
+    <div className="mt-8 bg-white rounded-lg shadow-lg">
+      <h2 className="text-2xl font-bold mb-6 text-gray-900">Redeem Shares</h2>
       <SelectToken
         label="Select Asset to Receive"
         borrow={borrowTokenSymbol}

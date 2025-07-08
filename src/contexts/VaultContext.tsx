@@ -2,7 +2,6 @@ import { createContext, ReactNode, useContext, useEffect, useState, useCallback 
 import { formatUnits } from 'ethers'
 import { useAppContext } from '@/contexts/AppContext';
 import { Vault, WETH, ERC20, Vault__factory, WETH__factory, ERC20__factory } from '@/typechain-types';
-import { VAULT_ADDRESS, BORROW_TOKEN_ADDRESS, COLLATERAL_TOKEN_ADDRESS } from '@/constants';
 import { truncateTo4Decimals } from '@/utils';
 
 interface VaultContextType {
@@ -36,11 +35,11 @@ interface VaultContextType {
 
 const VaultContext = createContext<VaultContextType | undefined>(undefined);
 
-export const VaultContextProvider = ({ children }: { children: ReactNode }) => {
+export const VaultContextProvider = ({ children, vaultAddress }: { children: ReactNode, vaultAddress: string }) => {
   const [sharesSymbol, setSharesSymbol] = useState<string>('');
   const [borrowTokenSymbol, setBorrowTokenSymbol] = useState<string>('');
   const [collateralTokenSymbol, setCollateralTokenSymbol] = useState<string>('');
-  const [symbolsLoaded, setSymbolsLoaded] = useState(false);
+  const [contractsSet, setContractsSet] = useState(false);
 
   const [vault, setVault] = useState<Vault | null>(null);
   const [borrowToken, setBorrowToken] = useState<WETH | null>(null);
@@ -179,15 +178,18 @@ export const VaultContextProvider = ({ children }: { children: ReactNode }) => {
     if (!publicProvider) return;
 
     try {
-      const vaultLens = Vault__factory.connect(VAULT_ADDRESS, publicProvider);
-      const borrowTokenLens = WETH__factory.connect(BORROW_TOKEN_ADDRESS, publicProvider);
-      const collateralTokenLens = ERC20__factory.connect(COLLATERAL_TOKEN_ADDRESS, publicProvider);
+      const vaultLens = Vault__factory.connect(vaultAddress, publicProvider);
+      const borrowTokenAddress = await vaultLens.borrowToken();
+      const collateralTokenAddress = await vaultLens.collateralToken();
+      
+      const borrowTokenLensInstance = WETH__factory.connect(borrowTokenAddress, publicProvider);
+      const collateralTokenLensInstance = ERC20__factory.connect(collateralTokenAddress, publicProvider);
 
       setVaultLens(vaultLens);
-      setBorrowTokenLens(borrowTokenLens);
-      setCollateralTokenLens(collateralTokenLens);
+      setBorrowTokenLens(borrowTokenLensInstance);
+      setCollateralTokenLens(collateralTokenLensInstance);
 
-      const newDecimals = await borrowTokenLens.decimals();
+      const newDecimals = await borrowTokenLensInstance.decimals();
       setDecimals(newDecimals);
 
       await Promise.all([
@@ -202,17 +204,22 @@ export const VaultContextProvider = ({ children }: { children: ReactNode }) => {
       ]);
 
       if (signer) {
-        setVault(Vault__factory.connect(VAULT_ADDRESS, signer));
-        setBorrowToken(WETH__factory.connect(BORROW_TOKEN_ADDRESS, signer));
-        setCollateralToken(ERC20__factory.connect(COLLATERAL_TOKEN_ADDRESS, signer));
+        setVault(Vault__factory.connect(vaultAddress, signer));
+        setBorrowToken(WETH__factory.connect(borrowTokenAddress, signer));
+        setCollateralToken(ERC20__factory.connect(collateralTokenAddress, signer));
       }
+
+      setContractsSet(true);
     } catch (err) {
       console.error('VaultContext contract setup error:', err);
     }
   };
 
   const loadSymbols = async () => {
-    if (!vaultLens || !borrowTokenLens || !collateralTokenLens) return;
+    if (!vaultLens || !borrowTokenLens || !collateralTokenLens) {
+      console.error("contracts not set!");
+      return;
+    };
 
     try {
       const [vaultSymbol, borrowSymbol, collateralSymbol] = await Promise.all([
@@ -224,16 +231,17 @@ export const VaultContextProvider = ({ children }: { children: ReactNode }) => {
       setSharesSymbol(vaultSymbol);
       setBorrowTokenSymbol(borrowSymbol);
       setCollateralTokenSymbol(collateralSymbol);
-      setSymbolsLoaded(true);
     } catch (err) {
       console.error('Error loading token symbols:', err);
     }
   };
 
   useEffect(() => {
-    loadSymbols();
     setupContracts();
-  }, [publicProvider, signer, isConnected, symbolsLoaded]);
+    if(contractsSet) {
+      loadSymbols();
+    }
+  }, [publicProvider, signer, isConnected, contractsSet]);
 
   return (
     <VaultContext.Provider

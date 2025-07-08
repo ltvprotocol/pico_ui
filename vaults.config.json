@@ -1,0 +1,23 @@
+{
+  "11155111": {
+    "vaults": [
+      {
+        "address": "0xe2a7f267124ac3e4131f27b9159c78c521a44f3c"
+      }
+    ]
+  },
+  "1": {
+    "vaults": [
+      {
+        "address": "0xMainnetVaultAddress"
+      }
+    ]
+  },
+  "137": {
+    "vaults": [
+      {
+        "address": "0xPolygonVaultAddress"
+      }
+    ]
+  }
+}

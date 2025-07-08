@@ -9,8 +9,8 @@ export default function Tabs() {
   const tabClass = (tab: Tabs) =>
     `flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
       activeTab === tab
-        ? 'bg-indigo-600 text-white'
-        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+        ? 'border-blue-700 bg-indigo-600 text-white'
+        : 'border-gray-300 bg-gray-100 text-gray-700 hover:bg-gray-200'
     }`;
 
   return (

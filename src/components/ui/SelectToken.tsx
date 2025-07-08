@@ -18,13 +18,13 @@ export const SelectToken: React.FC<SelectTokenProps> = ({
   const tabClass = (tab: 'borrow' | 'collateral') =>
     `flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
       selected === tab
-        ? 'bg-indigo-600 text-white'
-        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+        ? 'border-blue-700 bg-indigo-600 text-white'
+        : 'border-gray-300 bg-gray-100 text-gray-700 hover:bg-gray-200'
     }`;
   
   return (
     <>
-      <div className="block text-sm font-medium text-gray-700 mb-1">
+      <div className="block text-sm font-medium text-gray-700 mb-2">
         {label}
       </div>
       <div className="flex space-x-4 mb-3">

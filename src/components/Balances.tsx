@@ -11,7 +11,7 @@ export default function Balances() {
   const [ethBalance, setEthBalance] = useState<string>('0');
 
   const { isConnected, publicProvider, address } = useAppContext();
-  const { 
+  const {
     decimals, vaultLens, borrowTokenLens, collateralTokenLens,
     sharesSymbol, borrowTokenSymbol, collateralTokenSymbol
   } = useVaultContext();
@@ -59,22 +59,38 @@ export default function Balances() {
   });
 
   return (
-    <div className="flex items-center justify-between bg-gray-50 p-3 rounded-md mt-4">
-      <div className="flex flex-col">
-        <div className="mt-2 space-y-1">
+    <div className="flex items-center justify-between mb-4">
+      <div className="w-full flex flex-col">
+        <div className="w-full space-y-1">
           <h3 className="text-lg font-medium text-gray-900">Balances:</h3>
-          <span className="text-sm text-gray-600">
-            ETH Balance: {parseFloat(ethBalance).toFixed(4)} ETH
-          </span>
-          <span className="text-sm text-gray-600 block">
-            {borrowTokenSymbol} Balance: {parseFloat(borrowTokenBalance).toFixed(4)} {borrowTokenSymbol}
-          </span>
-          <span className="text-sm text-gray-600 block">
-            {collateralTokenSymbol} Balance: {parseFloat(collateralTokenBalance).toFixed(4)} {collateralTokenSymbol}
-          </span>
-          <span className="text-sm text-gray-600 block">
-            {sharesSymbol} Balance: {parseFloat(sharesBalance).toFixed(4)} {sharesSymbol}
-          </span>
+          <div className="w-full flex justify-between text-sm text-gray-600">
+            <div>Ethers: </div>
+            <div className="flex">
+              <div className="mr-2">{parseFloat(ethBalance).toFixed(4)}</div>
+              <div className="font-medium text-gray-700">ETH</div>
+            </div>
+          </div>
+          <div className="w-full flex justify-between text-sm text-gray-600">
+            <div>Shares: </div>
+            <div className="flex">
+              <div className="mr-2">{parseFloat(sharesBalance).toFixed(4)}</div>
+              <div className="font-medium text-gray-700">{sharesSymbol}</div>
+            </div>
+          </div>
+          <div className="w-full flex justify-between text-sm text-gray-600">
+            <div>Borrow Token: </div>
+            <div className="flex">
+              <div className="mr-2">{parseFloat(borrowTokenBalance).toFixed(4)}</div>
+              <div className="font-medium text-gray-700">{borrowTokenSymbol}</div>
+            </div>
+          </div>
+          <div className="w-full flex justify-between text-sm text-gray-600">
+            <div>Collateral Token: </div>
+            <div className="flex">
+              <div className="mr-2">{parseFloat(collateralTokenBalance).toFixed(4)}</div>
+              <div className="font-medium text-gray-700">{collateralTokenSymbol}</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

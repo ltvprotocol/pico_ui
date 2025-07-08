@@ -2,14 +2,15 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
-import { AppContextProvider, VaultContextProvider } from '@/contexts';
+import { AppContextProvider } from '@/contexts';
+import { BrowserRouter } from "react-router-dom";
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <AppContextProvider>
-      <VaultContextProvider>
+    <BrowserRouter>
+      <AppContextProvider>
         <App />
-      </VaultContextProvider>
-    </AppContextProvider>
-  </React.StrictMode>,
+      </AppContextProvider>
+    </BrowserRouter>
+  </React.StrictMode>
 );

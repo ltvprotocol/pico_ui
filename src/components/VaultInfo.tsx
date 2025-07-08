@@ -7,6 +7,8 @@ export default function VaultInfo() {
   const [error, setError] = useState<string | null>(null);
 
   const [maxDeposit, setMaxDeposit] = useState<string>('0');
+  const [maxWithdraw, setMaxWithdraw] = useState<string>('0');
+  const [maxMint, setMaxMint] = useState<string>('0');
   const [maxRedeem, setMaxRedeem] = useState<string>('0');
 
   const { address, isConnected } = useAppContext();
@@ -21,16 +23,22 @@ export default function VaultInfo() {
     setError(null);
 
     try {
-      const [maxDeposit, maxRedeem, decimals] = await Promise.all([
+      const [maxDeposit, maxWithdraw, maxMint, maxRedeem, decimals] = await Promise.all([
         vaultLens.maxDeposit(address),
+        vaultLens.maxWithdraw(address),
+        vaultLens.maxMint(address),
         vaultLens.maxRedeem(address),
         vaultLens.decimals()
       ]);
 
       const formattedMaxDeposit = formatUnits(maxDeposit, decimals);
+      const formattedMaxWithdraw = formatUnits(maxWithdraw, decimals);
+      const formattedMaxMint = formatUnits(maxMint, decimals);
       const formattedMaxRedeem = formatUnits(maxRedeem, decimals);
 
       setMaxDeposit(formattedMaxDeposit);
+      setMaxWithdraw(formattedMaxWithdraw);
+      setMaxMint(formattedMaxMint);
       setMaxRedeem(formattedMaxRedeem);
     } catch (err) {
       console.error('Error fetching vault info:', err);
@@ -45,23 +53,39 @@ export default function VaultInfo() {
   });
 
   return (
-    <div className="mt-4 p-4 bg-gray-50 rounded-md">
-      <h3 className="text-lg font-medium text-gray-900 mb-3">Vault Information</h3>
+    <div className="space-y-1">
+      <h3 className="text-lg font-medium text-gray-900">Vault Information</h3>
       {error ? (
         <div className="text-sm text-red-600">{error}</div>
       ) : (
-        <div className="space-y-2">
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-gray-600">Max Deposit:</span>
-            <span className="text-sm font-medium text-gray-900">
-              {parseFloat(maxDeposit).toFixed(4)} {borrowTokenSymbol}
-            </span>
+        <div className="space-y-1">
+          <div className="w-full flex justify-between text-sm text-gray-600">
+            <div>Max Deposit: </div>
+            <div className="flex">
+              <div className="mr-2">{parseFloat(maxDeposit).toFixed(4)}</div>
+              <div className="font-medium text-gray-700">{borrowTokenSymbol}</div>
+            </div>
           </div>
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-gray-600">Max Redeem:</span>
-            <span className="text-sm font-medium text-gray-900">
-              {parseFloat(maxRedeem).toFixed(4)} {sharesSymbol}
-            </span>
+          <div className="w-full flex justify-between text-sm text-gray-600">
+            <div>Max Withdraw: </div>
+            <div className="flex">
+              <div className="mr-2">{parseFloat(maxWithdraw).toFixed(4)}</div>
+              <div className="font-medium text-gray-700">{borrowTokenSymbol}</div>
+            </div>
+          </div>
+          <div className="w-full flex justify-between text-sm text-gray-600">
+            <div>Max Mint: </div>
+            <div className="flex">
+              <div className="mr-2">{parseFloat(maxMint).toFixed(4)}</div>
+              <div className="font-medium text-gray-700">{sharesSymbol}</div>
+            </div>
+          </div>
+          <div className="w-full flex justify-between text-sm text-gray-600">
+            <div>Max Redeem: </div>
+            <div className="flex">
+              <div className="mr-2">{parseFloat(maxRedeem).toFixed(4)}</div>
+              <div className="font-medium text-gray-700">{sharesSymbol}</div>
+            </div>
           </div>
         </div>
       )}

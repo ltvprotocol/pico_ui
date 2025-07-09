@@ -4,6 +4,7 @@ import { formatUnits } from "ethers";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { CopyAddress } from "./ui/CopyAddress";
+import { getMaxLeverage } from "@/utils";
 
 interface VaultBlockProps {
   address: string;
@@ -14,7 +15,7 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
   const [collateral, setCollateral] = useState<bigint | null>(null);
   const [borrowSymbol, setBorrowSymbol] = useState<string | null>(null);
   const [collateralSymbol, setCollateralSymbol] = useState<string | null>(null);
-  const [ltv, setLtv] = useState<bigint | null>(null);
+  const [ltv, setLtv] = useState<string | null>(null);
   // const [borrowTokenContract, setBorrowTokenContract] = useState<ERC20 | null>(null);
   // const [collateralTokenContract, setCollateralTokenContract] = useState<ERC20 | null>(null);
 
@@ -40,30 +41,33 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
       setCollateral(collateralAssets);
 
       const targetLtv = await vaultContractLens.targetLTV();
-      setLtv(targetLtv);
+      const formattedLtv = formatUnits(targetLtv, 18);
+      const parsedLtv = parseFloat(formattedLtv);
+      const currentLtv = getMaxLeverage(parsedLtv);
+      setLtv(currentLtv);
     }
 
     getSomething();
   }, [publicProvider]);
-
 
   return (
     <div className="w-full d-block border border-gray-300 p-4 rounded-lg mb-4">
       <div className="w-full">
         <div className="w-full flex flex-row justify-between mb-2 hidden sm:flex">
         <div className="flex text-base font-medium text-gray-900">
-          {collateralSymbol && borrowSymbol ? 
+          <div className="mr-2">
+            {collateralSymbol && borrowSymbol ? 
             `${collateralSymbol}/${borrowSymbol}` :
             "Loading..."
           }
-          <div className="font-normal ml-2">HodlMyBeer</div>
-        </div>
-        <div className="flex font-normal text-gray-700 text-sm">
-          <div className="font-medium text-gray-700 mr-2">LTV: </div>
-          {ltv ? 
-            `${parseFloat(formatUnits(ltv, 18)).toFixed(2)}` :
+          </div>
+          <div className="mr-2 font-normal">
+            {ltv ? 
+            `x${ltv}` :
             "Loading..."
           }
+          </div>
+          <div className="font-normal">HodlMyBeer</div>
         </div>
         </div>
         <div className="w-full mb-2 sm:hidden">
@@ -77,7 +81,7 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
           <div className="flex font-normal text-gray-700 text-sm">
             <div className="font-medium text-gray-700 mr-2">LTV: </div>
             {ltv ? 
-              `${parseFloat(formatUnits(ltv, 18)).toFixed(2)}` :
+              `${ltv}` :
               "Loading..."
             }
           </div>

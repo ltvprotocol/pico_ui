@@ -59,10 +59,10 @@ export default function Balances() {
   });
 
   return (
-    <div className="flex items-center justify-between mb-4 border border-gray-300 p-3 rounded-lg">
+    <div className="flex items-center justify-between border border-gray-300 p-3 rounded-lg">
       <div className="w-full flex flex-col">
         <div className="w-full space-y-1">
-          <h3 className="text-lg font-medium text-gray-900">Balances</h3>
+          <h3 className="text-lg font-medium text-gray-900">Your Balances</h3>
           <div className="w-full flex justify-between text-sm text-gray-600">
             <div>Ethers: </div>
             <div className="flex">

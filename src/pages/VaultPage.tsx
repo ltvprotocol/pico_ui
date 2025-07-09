@@ -14,8 +14,8 @@ export default function VaultPage() {
     <VaultContextProvider vaultAddress={vaultAddress}>
       <div className="p-3">
         <VaultHeader vaultAddress={vaultAddress} />
-        <Balances />
         <VaultInfo />
+        <Balances />
         <Tabs />
       </div>
     </VaultContextProvider>

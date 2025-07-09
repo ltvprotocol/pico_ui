@@ -3,3 +3,4 @@ export { allowOnlyNumbers } from './input';
 export { wrapEth } from './wrap';
 export { isButtonDisabled } from './isButtonDisabled';
 export { truncateTo4Decimals } from './truncate';
+export { getMaxLeverage } from './leverage';

@@ -3,6 +3,7 @@ import { Vault__factory, ERC20__factory } from "@/typechain-types";
 import { formatUnits } from "ethers";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { CopyAddress } from "./ui/CopyAddress";
 
 interface VaultBlockProps {
   address: string;
@@ -47,8 +48,9 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
 
 
   return (
-    <Link to={`/${address}`} className="w-full d-block border border-gray-300 p-4 rounded-lg mb-4 transition-colors hover:border-blue-500 hover:bg-gray-100">
-      <div className="w-full flex flex-row justify-between mb-2">
+    <div className="w-full d-block border border-gray-300 p-4 rounded-lg mb-4">
+      <div className="w-full">
+        <div className="w-full flex flex-row justify-between mb-2 hidden sm:flex">
         <div className="flex text-base font-medium text-gray-900">
           {collateralSymbol && borrowSymbol ? 
             `${collateralSymbol}/${borrowSymbol}` :
@@ -63,7 +65,25 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
             "Loading..."
           }
         </div>
+        </div>
+        <div className="w-full mb-2 sm:hidden">
+          <div className="flex text-base font-medium text-gray-900 mb-2">
+            {collateralSymbol && borrowSymbol ? 
+              `${collateralSymbol}/${borrowSymbol}` :
+              "Loading..."
+            }
+            <div className="font-normal ml-2">HodlMyBeer</div>
+          </div>
+          <div className="flex font-normal text-gray-700 text-sm">
+            <div className="font-medium text-gray-700 mr-2">LTV: </div>
+            {ltv ? 
+              `${parseFloat(formatUnits(ltv, 18)).toFixed(2)}` :
+              "Loading..."
+            }
+          </div>
+        </div>
       </div>
+      <CopyAddress className="mb-2" address={address} />
       <div className="w-full flex justify-between text-sm">
         <div className="font-medium text-gray-700">Collateral: </div>
         <div className="font-normal text-gray-700">
@@ -88,7 +108,7 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
           }
         </div>
       </div>
-      <p className="font-normal text-gray-700 text-sm">{address}</p>
-    </Link>
+      <Link to={`/${address}`} className="w-full flex justify-center py-2 px-4 border border-blue-300 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors hover:border-blue-600">Open Vault</Link>
+    </div>
   );
 }

@@ -13,7 +13,7 @@ export function CopyAddress({ className, address } : CopyAddressProps ) {
  
   return (
     <div className={className}>
-      <div className="w-full flex items-center justify-between">
+      <div className="flex items-center">
         <div className="text-sm mr-2">
           <div className="hidden sm:block text-sm text-gray-700 break-all">
             {address}

@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { parseUnits } from 'ethers';
-import { VAULT_ADDRESS } from '@/constants';
 import { useAppContext } from '@/contexts';
 import { isUserRejected, wrapEth } from '@/utils';
 import { useAdaptiveInterval } from '@/hooks';
@@ -17,6 +16,7 @@ export default function DepositBorrow() {
   const { publicProvider, address, isConnected} = useAppContext();
 
   const {
+    vaultAddress,
     borrowTokenSymbol,
     vault, borrowToken, borrowTokenLens, 
     decimals, maxDeposit, updateMaxDeposit
@@ -52,7 +52,7 @@ export default function DepositBorrow() {
         }
       }
 
-      const approveTx = await borrowToken.approve(VAULT_ADDRESS, wethNeededToDeposit);
+      const approveTx = await borrowToken.approve(vaultAddress, wethNeededToDeposit);
       await approveTx.wait();
       setSuccess(`Successfully approved ${borrowTokenSymbol}.`);
 

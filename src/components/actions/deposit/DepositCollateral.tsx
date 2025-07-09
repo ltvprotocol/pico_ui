@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { parseUnits } from 'ethers';
-import { VAULT_ADDRESS } from '@/constants';
 import { useAppContext } from '@/contexts';
 import { isUserRejected } from '@/utils';
 import { useAdaptiveInterval } from '@/hooks';
@@ -17,6 +16,7 @@ export default function DepositCollateral() {
   const { publicProvider, address, isConnected } = useAppContext();
 
   const {
+    vaultAddress,
     collateralTokenSymbol,
     vault, collateralToken, collateralTokenLens, 
     decimals, maxDepositCollateral, updateMaxDepositCollateral
@@ -45,7 +45,7 @@ export default function DepositCollateral() {
         return;
       }
 
-      const approveTx = await collateralToken.approve(VAULT_ADDRESS, neededToDeposit);
+      const approveTx = await collateralToken.approve(vaultAddress, neededToDeposit);
       await approveTx.wait();
       setSuccess(`Successfully approved ${collateralTokenSymbol}.`);
 

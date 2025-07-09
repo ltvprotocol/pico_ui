@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { parseUnits } from 'ethers';
-import { VAULT_ADDRESS } from '@/constants';
 import { useAppContext, useVaultContext } from '@/contexts';
 import { isUserRejected } from '@/utils';
 import { useAdaptiveInterval } from '@/hooks';
@@ -16,6 +15,7 @@ export default function MintCollateral() {
   const { publicProvider, address, isConnected } = useAppContext();
 
   const {
+    vaultAddress,
     sharesSymbol, collateralTokenSymbol,
     vault, collateralToken, vaultLens, collateralTokenLens,
     decimals, maxMintCollateral, updateMaxMintCollateral
@@ -52,7 +52,7 @@ export default function MintCollateral() {
         return;
       }
 
-      const approveTx = await collateralToken.approve(VAULT_ADDRESS, neededToMint);
+      const approveTx = await collateralToken.approve(vaultAddress, neededToMint);
       await approveTx.wait();
       setSuccess(`Successfully approved ${collateralTokenSymbol}.`);
 

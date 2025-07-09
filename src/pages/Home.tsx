@@ -1,7 +1,7 @@
 import vaultsConfig from "../../vaults.config.json";
-import VaultBlock from "@/components/VaultBlock";
+import VaultBlock from "@/components/vault/VaultBlock";
 
-export default function HomePage() {
+export default function Home() {
   const chainId = "11155111";
 
   const vaults = vaultsConfig[chainId]?.vaults || [];

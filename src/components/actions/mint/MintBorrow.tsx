@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { parseUnits } from 'ethers';
-import { VAULT_ADDRESS } from '@/constants';
 import { useAppContext, useVaultContext } from '@/contexts';
 import { isUserRejected, wrapEth } from '@/utils';
 import { useAdaptiveInterval } from '@/hooks';
@@ -16,6 +15,7 @@ export default function MintBorrow() {
   const { publicProvider, address, isConnected } = useAppContext();
 
   const {
+    vaultAddress,
     sharesSymbol, borrowTokenSymbol,
     vault, borrowToken, vaultLens, borrowTokenLens,
     decimals, maxMint, updateMaxMint
@@ -59,7 +59,7 @@ export default function MintBorrow() {
         }
       }
 
-      const approveTx = await borrowToken.approve(VAULT_ADDRESS, wethNeededToMint);
+      const approveTx = await borrowToken.approve(vaultAddress, wethNeededToMint);
       await approveTx.wait();
       setSuccess(`Successfully approved ${borrowTokenSymbol}.`);
 

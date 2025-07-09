@@ -5,6 +5,7 @@ import { Vault, WETH, ERC20, Vault__factory, WETH__factory, ERC20__factory } fro
 import { truncateTo4Decimals } from '@/utils';
 
 interface VaultContextType {
+  vaultAddress: string;
   sharesSymbol: string;
   borrowTokenSymbol: string;
   collateralTokenSymbol: string;
@@ -246,6 +247,7 @@ export const VaultContextProvider = ({ children, vaultAddress }: { children: Rea
   return (
     <VaultContext.Provider
       value={{
+        vaultAddress,
         sharesSymbol,
         borrowTokenSymbol,
         collateralTokenSymbol,

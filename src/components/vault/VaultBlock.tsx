@@ -1,10 +1,12 @@
-import { useAppContext } from "@/contexts";
-import { Vault__factory, ERC20__factory } from "@/typechain-types";
-import { formatUnits } from "ethers";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { CopyAddress } from "./ui/CopyAddress";
+import { formatUnits } from "ethers";
+
+import { useAppContext } from "@/contexts";
 import { getMaxLeverage } from "@/utils";
+import { Vault__factory, ERC20__factory } from "@/typechain-types";
+
+import { CopyAddress, Loader } from "@/components/ui";
 
 interface VaultBlockProps {
   address: string;
@@ -15,15 +17,15 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
   const [collateral, setCollateral] = useState<bigint | null>(null);
   const [borrowSymbol, setBorrowSymbol] = useState<string | null>(null);
   const [collateralSymbol, setCollateralSymbol] = useState<string | null>(null);
-  const [ltv, setLtv] = useState<string | null>(null);
-  // const [borrowTokenContract, setBorrowTokenContract] = useState<ERC20 | null>(null);
-  // const [collateralTokenContract, setCollateralTokenContract] = useState<ERC20 | null>(null);
+  const [maxLeverage, setMaxLeverage] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const { publicProvider } = useAppContext();
-  const vaultContractLens = Vault__factory.connect(address, publicProvider);
 
   useEffect(() => {
     const getSomething = async () => {
+      const vaultContractLens = Vault__factory.connect(address, publicProvider);
+
       const borrowAddress = await vaultContractLens.borrowToken();
       const collateralAddress = await vaultContractLens.collateralToken();
       const borrowContract = ERC20__factory.connect(borrowAddress, publicProvider);
@@ -40,19 +42,24 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
       setBorrow(borrowAssets);
       setCollateral(collateralAssets);
 
-      const targetLtv = await vaultContractLens.targetLTV();
-      const formattedLtv = formatUnits(targetLtv, 18);
-      const parsedLtv = parseFloat(formattedLtv);
-      const currentLtv = getMaxLeverage(parsedLtv);
-      setLtv(currentLtv);
+      const rawLtv = await vaultContractLens.targetLTV();
+      const ltv = parseFloat(formatUnits(rawLtv, 18)).toFixed(4);
+      const leverage = getMaxLeverage(parseFloat(ltv));
+
+      setMaxLeverage(leverage);
+      setLoading(false);
     }
 
     getSomething();
   }, [publicProvider]);
 
   return (
-    <div className="w-full d-block border border-gray-300 p-4 rounded-lg mb-4">
-      <div className="w-full">
+    <div className="h-[185px] relative w-full d-block border border-gray-300 p-4 rounded-lg mb-4">
+      {loading ? (
+        <Loader />
+      ) : (
+        <div>
+          <div className="w-full">
         <div className="w-full flex flex-row justify-between mb-2 hidden sm:flex">
         <div className="flex text-base font-medium text-gray-900">
           <div className="mr-2">
@@ -62,8 +69,8 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
           }
           </div>
           <div className="mr-2 font-normal">
-            {ltv ? 
-            `x${ltv}` :
+            {maxLeverage ? 
+            `x${maxLeverage}` :
             "Loading..."
           }
           </div>
@@ -80,8 +87,8 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
           </div>
           <div className="flex font-normal text-gray-700 text-sm">
             <div className="font-medium text-gray-700 mr-2">LTV: </div>
-            {ltv ? 
-              `${ltv}` :
+            {maxLeverage ? 
+              `${maxLeverage}` :
               "Loading..."
             }
           </div>
@@ -113,6 +120,8 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
         </div>
       </div>
       <Link to={`/${address}`} className="w-full flex justify-center py-2 px-4 border border-blue-300 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors hover:border-blue-600">Open Vault</Link>
+        </div>
+      )}
     </div>
   );
 }

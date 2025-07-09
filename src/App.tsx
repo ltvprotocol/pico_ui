@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useAppContext } from '@/contexts';
 import { Routes, Route } from "react-router-dom";
-import Layout from '@/components/Layout';
+
+import { useAppContext } from '@/contexts';
 import { SEPOLIA_CHAIN_ID } from '@/constants';
-import HomePage from './pages/HomePage';
-import VaultPage from './pages/VaultPage';
+
+import Layout from '@/components/Layout';
+import Home from './pages/Home';
+import Vault from './pages/Vault';
 
 function App() {
   const [isSepolia, setIsSepolia] = useState(false);
@@ -20,17 +22,10 @@ function App() {
   return (
     <Layout showContent={showContent}>
       <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/:vaultAddress" element={<VaultPage />} />
+        <Route path="/" element={<Home />} />
+        <Route path="/:vaultAddress" element={<Vault />} />
       </Routes>
     </Layout>
-
-    // <Layout showContent={isConnected && isSepolia}>
-    //   <Balances />
-    //   <VaultInfo />
-    //   <Tabs />
-    //   <HomePage />
-    // </Layout>
   );
 }
 

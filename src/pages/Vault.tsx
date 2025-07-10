@@ -15,13 +15,11 @@ export default function Vault() {
 
   return (
     <VaultContextProvider vaultAddress={vaultAddress}>
-      <div className="p-3">
-        <Header />
-        <Addresses />
-        <Information />
-        <Balances />
-        <Tabs />
-      </div>
+      <Header />
+      <Addresses />
+      <Information />
+      <Balances />
+      <Tabs />
     </VaultContextProvider>
   );
 }

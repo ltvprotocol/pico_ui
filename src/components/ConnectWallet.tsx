@@ -173,9 +173,9 @@ export default function ConnectWallet() {
   }, [provider, signer, address]);
 
   return (
-    <div className="mb-6">
+    <>
       {!address && wallets ? (
-        <div className="mb-6">
+        <div className="mb-6 mt-6">
           <div className="text-center mb-4">
             <h2 className="text-xl font-semibold text-gray-900 mb-2">
               Connect Your Wallet
@@ -222,9 +222,9 @@ export default function ConnectWallet() {
           </div>
         </div>
       ) : (
-          <div>
+          <>
             {!isSepolia ? ( 
-              <div className="mb-4">
+              <div className="mb-6 mt-6">
                 <div className="text-center mb-4">
                   <h2 className="text-xl font-semibold text-gray-900 mb-2">
                     Switch to Sepolia
@@ -256,42 +256,40 @@ export default function ConnectWallet() {
                 </button>
               </div>
           ) : (
-            <div>
-              <div className="p-3">
-                <div className="items-center justify-between mb-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className="h-2 w-2 bg-green-500 rounded-full mr-2"></div>
-                      <span className="text-xs text-gray-500">Connected Wallet</span>
-                    </div>
-                    <button
-                      onClick={disconnectWallet}
-                      className="
-                        text-sm text-red-500 hover:text-red-600 
-                        border border-red-500 bg-white dark:bg-white rounded-lg 
-                        hover:bg-pink-100 dark:hover:bg-pink-100 hover:border-red-500 
-                        transition disabled:opacity-50"
-                    >
-                      Disconnect
-                    </button>
+            <div className="mb-[60px]">
+              <div className="items-center justify-between mb-4 bg-gray-50 p-3 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="h-2 w-2 bg-green-500 rounded-full mr-2"></div>
+                    <span className="text-xs text-gray-500">Connected Wallet</span>
                   </div>
+                  <button
+                    onClick={disconnectWallet}
+                    className="
+                      text-sm text-red-500 hover:text-red-600 
+                      border border-red-500 bg-white dark:bg-white rounded-lg 
+                      hover:bg-pink-100 dark:hover:bg-pink-100 hover:border-red-500 
+                      transition disabled:opacity-50"
+                  >
+                    Disconnect
+                  </button>
                 </div>
-                <div className="flex items-center justify-between border border-gray-300 p-3 rounded-lg">
-                  <div className="flex flex-col">
-                    <h3 className="text-lg font-medium text-gray-900 mb-1">Wallet Address:</h3>
-                    <CopyAddress address={address ? address : ""} />
-                  </div>
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+                <div className="flex flex-col">
+                  <h3 className="text-lg font-medium text-gray-900 mb-1">Wallet Address:</h3>
+                  <CopyAddress address={address ? address : ""} />
                 </div>
               </div>
             </div>
           )}
-        </div>
+        </>
       )}
       {error && (
         <div className="mt-2 text-sm text-red-600">
           {error}
         </div>
       )}
-    </div>
+    </>
   );
 }

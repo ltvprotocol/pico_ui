@@ -3,79 +3,146 @@ import { formatUnits } from 'ethers';
 
 import { useAppContext, useVaultContext } from '@/contexts';
 import { useAdaptiveInterval } from '@/hooks';
+import { truncateTo4Decimals } from '@/utils';
 
-import { Loader } from '@/components/ui';
-
-export default function VaultInfo() {
+export default function Information() {
   // const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  const [maxDeposit, setMaxDeposit] = useState<string>('0');
-  const [maxWithdraw, setMaxWithdraw] = useState<string>('0');
-  const [maxMint, setMaxMint] = useState<string>('0');
-  const [maxRedeem, setMaxRedeem] = useState<string>('0');
-  const [totalAssets, setTotalAssets] = useState<string>('0');
+  const [maxDeposit, setMaxDeposit] = useState<string | null>(null);
+  const [maxWithdraw, setMaxWithdraw] = useState<string | null>(null)
+  const [maxMint, setMaxMint] = useState<string | null>(null)
+  const [maxRedeem, setMaxRedeem] = useState<string | null>(null)
+  const [maxDepositCollateral, setMaxDepositCollateral] = useState<string | null>(null)
+  const [maxWithdrawCollateral, setMaxWithdrawCollateral] = useState<string | null>(null)
+  const [maxMintCollateral, setMaxMintCollateral] = useState<string | null>(null)
+  const [maxRedeemCollateral, setMaxRedeemCollateral] = useState<string | null>(null)
+  const [totalAssets, setTotalAssets] = useState<string | null>(null)
 
   const { address, isConnected } = useAppContext();
-  const { vaultLens, sharesSymbol, borrowTokenSymbol } = useVaultContext();
+  const { vaultLens, sharesSymbol, borrowTokenSymbol, collateralTokenSymbol } = useVaultContext();
 
-  const getVaultInfo = async () => {
+  const getVaultInformation = async () => {
     if (!address || !vaultLens) return;
 
     // setError(null);
 
     try {
-      const [maxDeposit, maxWithdraw, maxMint, maxRedeem, assets, decimals] = await Promise.all([
+      const [
+        maxDeposit, maxWithdraw, maxMint, maxRedeem, 
+        maxDepositCollateral, maxWithdrawCollateral, maxMintCollateral, maxRedeemCollateral,
+        assets, decimals
+      ] = await Promise.all([
         vaultLens.maxDeposit(address),
         vaultLens.maxWithdraw(address),
         vaultLens.maxMint(address),
         vaultLens.maxRedeem(address),
+        vaultLens.maxDepositCollateral(address),
+        vaultLens.maxWithdrawCollateral(address),
+        vaultLens.maxMintCollateral(address),
+        vaultLens.maxRedeemCollateral(address),
         vaultLens.totalAssets(),
         vaultLens.decimals()
       ]);
 
-      setMaxDeposit(formatUnits(maxDeposit, decimals));
-      setMaxWithdraw(formatUnits(maxWithdraw, decimals));
-      setMaxMint(formatUnits(maxMint, decimals));
-      setMaxRedeem(formatUnits(maxRedeem, decimals));
-      setTotalAssets(formatUnits(assets, decimals));
+      setMaxDeposit(
+        truncateTo4Decimals(parseFloat(formatUnits(maxDeposit, decimals)))
+      );
+      setMaxWithdraw(
+        truncateTo4Decimals(parseFloat(formatUnits(maxWithdraw, decimals)))
+      );
+      setMaxMint(
+        truncateTo4Decimals(parseFloat(formatUnits(maxMint, decimals)))
+      );
+      setMaxRedeem(
+        truncateTo4Decimals(parseFloat(formatUnits(maxRedeem, decimals)))
+      );
 
-      setLoading(false);
+      setMaxDepositCollateral(
+        truncateTo4Decimals(parseFloat(formatUnits(maxDepositCollateral, decimals)))
+      );
+      setMaxWithdrawCollateral(
+        truncateTo4Decimals(parseFloat(formatUnits(maxWithdrawCollateral, decimals)))
+      );
+      setMaxMintCollateral(
+        truncateTo4Decimals(parseFloat(formatUnits(maxMintCollateral, decimals)))
+      );
+      setMaxRedeemCollateral(
+        truncateTo4Decimals(parseFloat(formatUnits(maxRedeemCollateral, decimals)))
+      );
+
+      setTotalAssets(parseFloat(formatUnits(assets, decimals)).toFixed(4));
     } catch (err) {
       console.error('Error fetching vault info:', err);
       // setError('An error occurred');
-      setLoading(false);
     }
   };
 
-  useAdaptiveInterval(getVaultInfo, {
+  useAdaptiveInterval(getVaultInformation, {
     enabled: isConnected
   });
 
   return (
-    <div className="relative h-[174px] border border-gray-300 p-3 rounded-lg mb-4 bg-white">
-      {loading ? (
-        <Loader />
-      ) : (
-        <div className="space-y-1">
-          <h3 className="text-lg font-medium text-gray-900">Vault Information</h3>
-          {[
-            ["Max Deposit", maxDeposit, borrowTokenSymbol],
-            ["Max Withdraw", maxWithdraw, borrowTokenSymbol],
-            ["Max Mint", maxMint, sharesSymbol],
-            ["Max Redeem", maxRedeem, sharesSymbol],
-            ["TVL", totalAssets, borrowTokenSymbol],
-          ].map(([label, value, symbol]) => (
-            <div key={label as string} className="w-full flex justify-between text-sm text-gray-600">
-              <div>{label}:</div>
-              <div className="flex">
-                <div className="mr-2">{parseFloat(value as string).toFixed(4)}</div>
-                <div className="font-medium text-gray-700">{symbol}</div>
-              </div>
+    <div className="relative rounded-lg mb-4 bg-gray-50 p-3">
+      <div className="">
+        <h3 className="text-lg font-medium text-gray-900">Vault Information</h3>
+        <div className="w-full flex items-end justify-between text-sm text-gray-600 mb-2">
+          <div>
+            <div>Max Deposit:</div>
+            <div>Max Withdraw:</div>
+            <div>Max Mint:</div>
+            <div>Max Redeem:</div>
+          </div>
+          <div className="flex">
+            <div className="flex flex-col items-end mr-2">
+              <div className="mb-2">Collateral: </div>
+              {[
+                [maxDepositCollateral, collateralTokenSymbol],
+                [maxWithdrawCollateral, collateralTokenSymbol],
+                [maxMintCollateral, sharesSymbol],
+                [maxRedeemCollateral, sharesSymbol]
+              ].map((info, index) => (
+                <div key={index} className='flex'>
+                  <div className="mr-2">{info[0] ? info[0] : "..."}</div>
+                  <div className="font-medium text-gray-700">{info[1] ? info[1] : "..."}</div>
+                </div>
+              ))}
             </div>
-          ))}
+            <div className="flex flex-col items-end">
+              <div className="mb-2">Borrow: </div>
+              {[
+                [maxDeposit, borrowTokenSymbol],
+                [maxWithdraw, borrowTokenSymbol],
+                [maxMint, sharesSymbol],
+                [maxRedeem, sharesSymbol]
+              ].map((info, index) => (
+                <div key={index} className="flex">
+                  <div className="mr-2">{info[0] ? info[0] : "..."}</div>
+                  <div className="font-medium text-gray-700">{info[1] ? info[1] : "..."}</div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-      )}
+        <div className="w-full flex justify-between items-center text-sm mb-2">
+          <div>TVL:</div>
+          <div className='flex'>
+            <div className="mr-2">{totalAssets ? totalAssets : "..."}</div>
+            <div className="font-medium text-gray-700">{borrowTokenSymbol ? borrowTokenSymbol : "..."}</div>
+          </div>
+        </div>
+        <div className="w-full flex justify-between items-center text-sm">
+          <div>Target LTV:</div>
+          <div>0.75</div>
+        </div>
+        <div className="w-full flex justify-between items-center text-sm">
+          <div>Max Safe LTV:</div>
+          <div>0.90</div>
+        </div>
+        <div className="w-full flex justify-between items-center text-sm">
+          <div>Min Profit LTV:</div>
+          <div>0.50</div>
+        </div>
+      </div>
     </div>
   );
 }

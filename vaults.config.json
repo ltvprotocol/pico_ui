@@ -2,21 +2,52 @@
   "11155111": {
     "vaults": [
       {
-        "address": "0xe2a7f267124ac3e4131f27b9159c78c521a44f3c"
+        "address": "0xe2a7f267124ac3e4131f27b9159c78c521a44f3c",
+        "collateralTokenAddress": "0x8f7b2044F9aA6fbf495c1cC3bDE120dF9032aE43",
+        "borrowTokenAddress": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
+        "sharesSymbol": "GME",
+        "collateralTokenSymbol": "MAE",
+        "borrowTokenSymbol": "WETH",
+        "leverage": "4",
+        "targetLTV": "0.75",
+        "maxSafeLTV": "0.90",
+        "minProfitLTV": "0.50",
+        "lendingName": "HodlMyBeer",
+        "lendingAddress": "0x1Dcd756db287354c4607D5d57621cdfb4456E2d4"
       }
     ]
   },
   "1": {
     "vaults": [
       {
-        "address": "0xMainnetVaultAddress"
+        "address": "0xMainnetVaultAddress",
+        "collateralTokenAddress": "",
+        "borrowTokenAddress": "",
+        "collateralTokenSymbol": "",
+        "borrowTokenSymbol": "",
+        "leverage": "",
+        "targetLTV": "",
+        "maxSafeLTV": "",
+        "minSafeLTV": "",
+        "lendingName": "",
+        "lendingAddress": ""
       }
     ]
   },
   "137": {
     "vaults": [
       {
-        "address": "0xPolygonVaultAddress"
+        "address": "0xPolygonVaultAddress",
+        "collateralTokenAddress": "",
+        "borrowTokenAddress": "",
+        "collateralTokenSymbol": "",
+        "borrowTokenSymbol": "",
+        "leverage": "",
+        "targetLTV": "",
+        "maxSafeLTV": "",
+        "minSafeLTV": "",
+        "lendingName": "",
+        "lendingAddress": ""
       }
     ]
   }

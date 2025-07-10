@@ -7,7 +7,7 @@ export default function Home() {
   const vaults = vaultsConfig[chainId]?.vaults || [];
 
   return (
-    <div className="w-full flex flex-col p-3">
+    <div className="w-full flex flex-col">
       <h3 className="text-lg font-medium text-gray-900 mb-2">Vaults:</h3>
       {vaults.map((vault, index) => (
         <VaultBlock address={vault.address} key={index} />

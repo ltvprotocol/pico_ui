@@ -1,11 +1,15 @@
 import { createContext, ReactNode, useContext, useEffect, useState, useCallback } from 'react'
 import { formatUnits } from 'ethers'
 import { useAppContext } from '@/contexts/AppContext';
-import { Vault, WETH, ERC20, Vault__factory, WETH__factory, ERC20__factory } from '@/typechain-types';
-import { truncateTo4Decimals } from '@/utils';
+import { Vault, WETH, ERC20, Vault__factory, WETH__factory, ERC20__factory, LendingConnector__factory } from '@/typechain-types';
+import { getMaxLeverage, truncateTo4Decimals } from '@/utils';
+import vaultsConfig from '../../vaults.config.json';
 
 interface VaultContextType {
   vaultAddress: string;
+  lendingAddress: string | null;
+  lendingName: string | null;
+  maxLeverage: string | null;
   sharesSymbol: string;
   borrowTokenSymbol: string;
   collateralTokenSymbol: string;
@@ -40,6 +44,10 @@ export const VaultContextProvider = ({ children, vaultAddress }: { children: Rea
   const [sharesSymbol, setSharesSymbol] = useState<string>('');
   const [borrowTokenSymbol, setBorrowTokenSymbol] = useState<string>('');
   const [collateralTokenSymbol, setCollateralTokenSymbol] = useState<string>('');
+  const [lendingName, setLendingName] = useState<string | null>(null);
+  const [lendingAddress, setLendingAddress] = useState<string | null>(null);
+  const [maxLeverage, setMaxLeverage] = useState<string | null>(null);
+
   const [contractsSet, setContractsSet] = useState(false);
 
   const [vault, setVault] = useState<Vault | null>(null);
@@ -222,18 +230,56 @@ export const VaultContextProvider = ({ children, vaultAddress }: { children: Rea
       return;
     };
 
-    try {
-      const [vaultSymbol, borrowSymbol, collateralSymbol] = await Promise.all([
-        vaultLens.symbol(),
-        borrowTokenLens.symbol(),
-        collateralTokenLens.symbol(),
-      ]);
+    const chainId = "11155111";
 
-      setSharesSymbol(vaultSymbol);
-      setBorrowTokenSymbol(borrowSymbol);
-      setCollateralTokenSymbol(collateralSymbol);
-    } catch (err) {
-      console.error('Error loading token symbols:', err);
+    const vaults = vaultsConfig[chainId]?.vaults || [];
+    const vault = vaults.find(v => v.address.toLowerCase() === vaultAddress.toLowerCase());
+
+    if (vault?.sharesSymbol) {
+      setSharesSymbol(vault.sharesSymbol);
+    } else {
+      const symbol = await vaultLens.symbol();
+      setSharesSymbol(symbol);
+    }
+
+    if (vault?.collateralTokenSymbol) {
+      setCollateralTokenSymbol(vault.collateralTokenSymbol);
+    } else {
+      const symbol = await collateralTokenLens.symbol();
+      setCollateralTokenSymbol(symbol);
+    }
+
+    if (vault?.borrowTokenSymbol) {
+      setBorrowTokenSymbol(vault.borrowTokenSymbol);
+    } else {
+      const symbol = await borrowTokenLens.symbol();
+      setBorrowTokenSymbol(symbol);
+    }
+
+    if (vault?.leverage) {
+      setMaxLeverage(vault.leverage);
+    } else {
+      const rawLtv = await vaultLens.targetLTV();
+      const ltv = parseFloat(formatUnits(rawLtv, 18)).toFixed(4);
+      const leverage = getMaxLeverage(parseFloat(ltv));
+
+      setMaxLeverage(leverage);
+    }
+
+    if (vault?.lendingName) {
+      setLendingName(vault.lendingName);
+    } else {
+      setLendingName("Lending");
+    }
+
+    if (vault?.lendingAddress) {
+      setLendingAddress(vault.lendingAddress);
+    } else {
+      const lendingConnector = await vaultLens.lendingConnector();
+      const lending = LendingConnector__factory.connect(lendingConnector, publicProvider)
+      const lendingProtocol = await lending.lendingProtocol();
+
+      setLendingAddress(lendingProtocol);
     }
   };
 
@@ -248,6 +294,9 @@ export const VaultContextProvider = ({ children, vaultAddress }: { children: Rea
     <VaultContext.Provider
       value={{
         vaultAddress,
+        lendingAddress,
+        lendingName,
+        maxLeverage,
         sharesSymbol,
         borrowTokenSymbol,
         collateralTokenSymbol,

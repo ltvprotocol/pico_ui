@@ -9,7 +9,7 @@ export default function Withdraw() {
   const { borrowTokenSymbol, collateralTokenSymbol } = useVaultContext();
 
   return (
-    <div className="mt-8 bg-white rounded-lg shadow-lg">
+    <div className="mt-8 p-3">
       <h2 className="text-2xl font-bold mb-6 text-gray-900">Withdraw Assets</h2>
       <SelectToken
         label="Select Asset to Receive"

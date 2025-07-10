@@ -82,7 +82,7 @@ export default function Information() {
   });
 
   return (
-    <div className="relative rounded-lg mb-4 bg-gray-50 p-3">
+    <div className="h-[256px] relative rounded-lg mb-4 bg-gray-50 p-3">
       <div className="">
         <h3 className="text-lg font-medium text-gray-900">Vault Information</h3>
         <div className="w-full flex items-end justify-between text-sm text-gray-600 mb-2">
@@ -102,8 +102,8 @@ export default function Information() {
                 [maxRedeemCollateral, sharesSymbol]
               ].map((info, index) => (
                 <div key={index} className='flex'>
-                  <div className="mr-2">{info[0] ? info[0] : "..."}</div>
-                  <div className="font-medium text-gray-700">{info[1] ? info[1] : "..."}</div>
+                  <div className="mr-2">{info[0] ? info[0] : ""}</div>
+                  <div className="font-medium text-gray-700">{info[1] ? info[1] : ""}</div>
                 </div>
               ))}
             </div>
@@ -116,8 +116,8 @@ export default function Information() {
                 [maxRedeem, sharesSymbol]
               ].map((info, index) => (
                 <div key={index} className="flex">
-                  <div className="mr-2">{info[0] ? info[0] : "..."}</div>
-                  <div className="font-medium text-gray-700">{info[1] ? info[1] : "..."}</div>
+                  <div className="mr-2">{info[0] ? info[0] : ""}</div>
+                  <div className="font-medium text-gray-700">{info[1] ? info[1] : ""}</div>
                 </div>
               ))}
             </div>
@@ -126,8 +126,8 @@ export default function Information() {
         <div className="w-full flex justify-between items-center text-sm mb-2">
           <div>TVL:</div>
           <div className='flex'>
-            <div className="mr-2">{totalAssets ? totalAssets : "..."}</div>
-            <div className="font-medium text-gray-700">{borrowTokenSymbol ? borrowTokenSymbol : "..."}</div>
+            <div className="mr-2">{totalAssets ? totalAssets : ""}</div>
+            <div className="font-medium text-gray-700">{borrowTokenSymbol ? borrowTokenSymbol : ""}</div>
           </div>
         </div>
         <div className="w-full flex justify-between items-center text-sm">

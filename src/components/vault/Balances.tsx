@@ -67,29 +67,29 @@ export default function Balances() {
           <div className="w-full flex justify-between text-sm text-gray-600">
             <div>Ethers:</div>
             <div className="flex">
-              <div className="mr-2">{ethBalance ? ethBalance : "..."}</div>
+              <div className="mr-2">{ethBalance ? ethBalance : ""}</div>
               <div className="font-medium text-gray-700">ETH</div>
             </div>
           </div>
           <div className="w-full flex justify-between text-sm text-gray-600">
             <div>Shares:</div>
             <div className="flex">
-              <div className="mr-2">{sharesBalance ? sharesBalance : "..."}</div>
-              <div className="font-medium text-gray-700">{sharesSymbol ? sharesSymbol : "..."}</div>
+              <div className="mr-2">{sharesBalance ? sharesBalance : ""}</div>
+              <div className="font-medium text-gray-700">{sharesSymbol ? sharesSymbol : ""}</div>
             </div>
           </div>
           <div className="w-full flex justify-between text-sm text-gray-600">
             <div>Borrow Token:</div>
             <div className="flex">
-              <div className="mr-2">{borrowTokenBalance ? borrowTokenBalance : "..."}</div>
-              <div className="font-medium text-gray-700">{borrowTokenSymbol ? borrowTokenSymbol : "..."}</div>
+              <div className="mr-2">{borrowTokenBalance ? borrowTokenBalance : ""}</div>
+              <div className="font-medium text-gray-700">{borrowTokenSymbol ? borrowTokenSymbol : ""}</div>
             </div>
           </div>
           <div className="w-full flex justify-between text-sm text-gray-600">
             <div>Collateral Token:</div>
             <div className="flex">
-              <div className="mr-2">{collateralTokenBalance ? collateralTokenBalance : "..."}</div>
-              <div className="font-medium text-gray-700">{collateralTokenSymbol ? collateralTokenSymbol : "..."}</div>
+              <div className="mr-2">{collateralTokenBalance ? collateralTokenBalance : ""}</div>
+              <div className="font-medium text-gray-700">{collateralTokenSymbol ? collateralTokenSymbol : ""}</div>
             </div>
           </div>
         </div>

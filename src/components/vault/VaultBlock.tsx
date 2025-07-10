@@ -90,69 +90,69 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
   }, [publicProvider]);
 
   return (
-    <div className="wrapper w-full bg-gray-50 transition-colors border border-gray-50 rounded-lg mb-4">
-        <CopyAddress className="mb-2 pl-3 pr-3 pt-3" address={address} />
-        <Link className="w-full block p-3" to={`/${address}`} >
-          <div className="w-full">
-            <div className="w-full flex flex-row justify-between mb-2 hidden sm:flex">
-            <div className="flex items-center text-base font-medium text-gray-900">
-              <div className="mr-2">
-                {collateralTokenSymbol && borrowTokenSymbol ? 
+    <>
+      <CopyAddress className="mb-2" address={address} />
+      <Link to={`/${address}`} className="wrapper block w-full bg-gray-50 transition-colors border border-gray-50 rounded-lg mb-12 p-3">
+        <div className="w-full">
+          <div className="w-full flex flex-row justify-between mb-2 hidden sm:flex">
+          <div className="flex items-center text-base font-medium text-gray-900">
+            <div className="mr-2">
+              {collateralTokenSymbol && borrowTokenSymbol ? 
+              `${collateralTokenSymbol}/${borrowTokenSymbol}` :
+              "..."
+            }
+            </div>
+            <div className="mr-2 font-normal">
+              {maxLeverage ? 
+              `x${maxLeverage}` :
+              "..."
+            }
+            </div>
+            <div className="font-normal">{lendingName ? lendingName : "Lending"}</div>
+          </div>
+          </div>
+          <div className="w-full mb-2 sm:hidden">
+            <div className="flex text-base font-medium text-gray-900 mb-2">
+              {collateralTokenSymbol && borrowTokenSymbol ? 
                 `${collateralTokenSymbol}/${borrowTokenSymbol}` :
                 "..."
               }
-              </div>
-              <div className="mr-2 font-normal">
-                {maxLeverage ? 
-                `x${maxLeverage}` :
+              <div className="font-normal ml-2">{lendingName ? lendingName : "Lending"}</div>
+            </div>
+            <div className="flex font-normal text-gray-700 text-sm">
+              <div className="font-medium text-gray-700 mr-2">LTV: </div>
+              {maxLeverage ? 
+                `${maxLeverage}` :
                 "..."
               }
-              </div>
-              <div className="font-normal">{lendingName ? lendingName : "Lending"}</div>
-            </div>
-            </div>
-            <div className="w-full mb-2 sm:hidden">
-              <div className="flex text-base font-medium text-gray-900 mb-2">
-                {collateralTokenSymbol && borrowTokenSymbol ? 
-                  `${collateralTokenSymbol}/${borrowTokenSymbol}` :
-                  "..."
-                }
-                <div className="font-normal ml-2">{lendingName ? lendingName : "Lending"}</div>
-              </div>
-              <div className="flex font-normal text-gray-700 text-sm">
-                <div className="font-medium text-gray-700 mr-2">LTV: </div>
-                {maxLeverage ? 
-                  `${maxLeverage}` :
-                  "..."
-                }
-              </div>
             </div>
           </div>
-          <div className="w-full flex justify-between text-sm">
-            <div className="font-medium text-gray-700">Collateral: </div>
-            <div className="font-normal text-gray-700">
-            {collateralAssets && collateralTokenSymbol ? 
+        </div>
+        <div className="w-full flex justify-between text-sm">
+          <div className="font-medium text-gray-700">Collateral: </div>
+          <div className="font-normal text-gray-700">
+          {collateralAssets && collateralTokenSymbol ? 
+            <div className="flex">
+              <div className="font-normal text-gray-700 mr-2">{`${parseFloat(formatUnits(collateralAssets, 18)).toFixed(4)}`}</div>
+              <div className="font-medium text-gray-700">{collateralTokenSymbol}</div>
+            </div> :
+            "..."
+          }
+        </div>
+        </div>
+        <div className="w-full flex justify-between text-sm">
+          <div className="font-medium text-gray-700">Borrow: </div>
+          <div className="font-normal text-gray-700">
+            {borrowAssets && borrowTokenSymbol ?
               <div className="flex">
-                <div className="font-normal text-gray-700 mr-2">{`${parseFloat(formatUnits(collateralAssets, 18)).toFixed(4)}`}</div>
-                <div className="font-medium text-gray-700">{collateralTokenSymbol}</div>
+                <div className="font-normal text-gray-700 mr-2">{`${parseFloat(formatUnits(borrowAssets, 18)).toFixed(4)}`}</div>
+                <div className="font-medium text-gray-700">{borrowTokenSymbol}</div>
               </div> :
               "..."
             }
           </div>
-          </div>
-          <div className="w-full flex justify-between text-sm">
-            <div className="font-medium text-gray-700">Borrow: </div>
-            <div className="font-normal text-gray-700">
-              {borrowAssets && borrowTokenSymbol ?
-                <div className="flex">
-                  <div className="font-normal text-gray-700 mr-2">{`${parseFloat(formatUnits(borrowAssets, 18)).toFixed(4)}`}</div>
-                  <div className="font-medium text-gray-700">{borrowTokenSymbol}</div>
-                </div> :
-                "..."
-              }
-            </div>
-          </div>
-        </Link>
-    </div>
+        </div>
+      </Link>
+    </>
   );
 }

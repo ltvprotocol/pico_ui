@@ -23,7 +23,7 @@ export function CopyAddress({ className, address } : CopyAddressProps ) {
           </div>
         </div>
         <button
-          className="bg-transparent m-0 p-0 pb-1 hover:border-none border-none"
+          className="bg-transparent m-0 p-0 pb-1 hover:border-none border-none outline-none focus:outline-none focus:ring-0"
           onMouseLeave={() => setCopied(false)}
           onClick={() => {
             copy(address);

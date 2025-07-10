@@ -15,8 +15,8 @@ export const SelectToken: React.FC<SelectTokenProps> = ({
   selected,
   onSelect,
 }) => {
-    const tabClass = (tab: "borrow" | "collateral") =>
-  `flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+  const tabClass = (tab: "borrow" | "collateral") =>
+  `flex-1 py-2 px-4 rounded-lg font-medium transition-colors focus:outline-none focus:ring-0 ${
     selected === tab
       ? 'bg-indigo-600 text-white'
       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'

@@ -7,7 +7,7 @@ export default function Tabs() {
   const [activeTab, setActiveTab] = useState<Tabs>('deposit');
 
   const tabClass = (tab: Tabs) =>
-  `flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
+  `flex-1 py-2 px-4 rounded-lg font-medium transition-colors focus:outline-none focus:ring-0 ${
     activeTab === tab
       ? 'bg-indigo-600 text-white'
       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'

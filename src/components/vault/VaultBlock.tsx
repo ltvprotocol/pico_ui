@@ -92,7 +92,7 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
   return (
     <>
       <CopyAddress className="mb-2" address={address} />
-      <Link to={`/${address}`} className="wrapper block w-full bg-gray-50 transition-colors border border-gray-50 rounded-lg mb-12 p-3">
+      <Link to={`/${address}`} className="wrapper block w-full bg-gray-50 transition-colors border border-gray-50 rounded-lg mb-12 last:mb-0 p-3">
         <div className="w-full">
           <div className="w-full flex flex-row justify-between mb-2 hidden sm:flex">
           <div className="flex items-center text-base font-medium text-gray-900">

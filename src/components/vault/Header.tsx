@@ -27,19 +27,19 @@ export default function Header() {
   }, [vaultLens]);
 
   return (
-    <div className="w-full flex items-center justify-between w-full mb-4">
-      <Link className="text-gray-700 transition-colors hover:underline hover:text-gray-700" to="/">{"< Vaults"}</Link>
-      {loading ? (
-        <div className="flex items-center">
-          Loading...
-        </div>
-      ) : (
-        <div className="flex items-center">
-          <div className="text-xl font-medium mr-2">{borrowTokenSymbol}/{collateralTokenSymbol}</div>
-          <div className="text-xl font-normal mr-2">{`x${maxLeverage}`}</div>
-          <div className="text-xl font-light">HodlMyBeer</div>
-        </div>
-      )}
-    </div>
+      <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between w-full mb-4">
+        <Link className="mb-2 sm:mb-0 text-gray-700 transition-colors hover:underline hover:text-gray-700" to="/">{"< Vaults"}</Link>
+        {loading ? (
+          <div className="flex items-center">
+            Loading...
+          </div>
+        ) : (
+          <div className="flex items-center">
+            <div className="text-xl font-medium mr-2">{borrowTokenSymbol}/{collateralTokenSymbol}</div>
+            <div className="text-xl font-normal mr-2">{`x${maxLeverage}`}</div>
+            <div className="text-xl font-light">HodlMyBeer</div>
+          </div>
+        )}
+      </div>
   );
 }

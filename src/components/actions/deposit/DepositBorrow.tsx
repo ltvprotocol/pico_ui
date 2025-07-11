@@ -5,6 +5,8 @@ import { isUserRejected, wrapEth } from '@/utils';
 import { useAdaptiveInterval } from '@/hooks';
 import { useVaultContext } from '@/contexts/VaultContext';
 import { ActionForm } from '@/components/ui';
+import { WETH_ADDRESS } from '@/constants';
+import { WETH } from '@/typechain-types';
 
 export default function DepositBorrow() {
   const [loading, setLoading] = useState(false);
@@ -13,12 +15,12 @@ export default function DepositBorrow() {
 
   const [amount, setAmount] = useState('');
 
-  const { publicProvider, address, isConnected} = useAppContext();
+  const { publicProvider, address, isConnected } = useAppContext();
 
   const {
     vaultAddress,
-    borrowTokenSymbol,
-    vault, borrowToken, borrowTokenLens, 
+    borrowTokenSymbol, borrowTokenAddress,
+    vault, borrowToken, borrowTokenLens,
     decimals, maxDeposit, updateMaxDeposit
   } = useVaultContext()
 
@@ -36,27 +38,33 @@ export default function DepositBorrow() {
     if (!publicProvider || !borrowTokenLens || !borrowToken || !vault || !address) return;
 
     try {
-      const wethNeededToDeposit = parseUnits(amount, decimals);
-      const wethBalance = await borrowTokenLens.balanceOf(address);
+      const neededToDeposit = parseUnits(amount, decimals);
+      const balance = await borrowTokenLens.balanceOf(address);
 
-      if (wethBalance < wethNeededToDeposit) {
-        const ethBalance = await publicProvider.getBalance(address);
-        const wethMissing = wethNeededToDeposit - wethBalance;
-        await wrapEth(borrowToken, wethMissing, ethBalance, setSuccess, setError);
+      if (balance < neededToDeposit) {
+        if (borrowTokenAddress === WETH_ADDRESS) {
+          const ethBalance = await publicProvider.getBalance(address);
+          const wethMissing = neededToDeposit - balance;
+          await wrapEth(borrowToken as WETH, wethMissing, ethBalance, setSuccess, setError);
 
-        const newWethBalance = await borrowTokenLens.balanceOf(address);
-        if (newWethBalance < wethNeededToDeposit) {
-          setError('Not enough WETH after wrapping.');
-          console.error('Not enough WETH after wrapping');
+          const newBalance = await borrowTokenLens.balanceOf(address);
+          if (newBalance < neededToDeposit) {
+            setError('Not enough WETH after wrapping.');
+            console.error('Not enough WETH after wrapping');
+            return;
+          }
+        } else {
+          setError('Not enough tokens to deposit.');
+          console.error('Not enough tokens to deposit');
           return;
         }
       }
 
-      const approveTx = await borrowToken.approve(vaultAddress, wethNeededToDeposit);
+      const approveTx = await borrowToken.approve(vaultAddress, neededToDeposit);
       await approveTx.wait();
       setSuccess(`Successfully approved ${borrowTokenSymbol}.`);
 
-      const depositTx = await vault.deposit(wethNeededToDeposit, address!);
+      const depositTx = await vault.deposit(neededToDeposit, address);
       await depositTx.wait();
 
       setAmount('');

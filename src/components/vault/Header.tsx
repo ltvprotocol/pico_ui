@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { formatUnits } from 'ethers';
 
 import { useVaultContext } from '@/contexts';
-import { getMaxLeverage } from '@/utils';
+import { ltvToLeverage } from '@/utils';
 
 export default function Header() {
   const [maxLeverage, setMaxLeverage] = useState<string | null>(null);
@@ -17,7 +17,7 @@ export default function Header() {
 
       const rawLtv = await vaultLens.targetLTV();
       const ltv = parseFloat(formatUnits(rawLtv, 18)).toFixed(4);
-      const leverage = getMaxLeverage(parseFloat(ltv));
+      const leverage = ltvToLeverage(parseFloat(ltv));
 
       setMaxLeverage(leverage);
       setLoading(false);

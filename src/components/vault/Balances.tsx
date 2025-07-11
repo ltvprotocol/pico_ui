@@ -3,7 +3,9 @@ import { formatUnits, formatEther } from 'ethers';
 
 import { useAppContext, useVaultContext } from '@/contexts';
 import { useAdaptiveInterval } from '@/hooks';
-import { truncateTo4Decimals } from '@/utils';
+import { truncate } from '@/utils';
+
+import { Loader } from '@/components/ui';
 
 export default function Balances() {
   const [sharesBalance, setSharesBalance] = useState<string | null>(null);
@@ -30,7 +32,7 @@ export default function Balances() {
     try {
       const ethBalanceRaw = await publicProvider.getBalance(address);
       const currentEthBalance = parseFloat(formatEther(ethBalanceRaw));
-      setEthBalance(truncateTo4Decimals(currentEthBalance));
+      setEthBalance(truncate(currentEthBalance, 4));
 
       const [
         sharesBalanceRaw,
@@ -46,9 +48,9 @@ export default function Balances() {
       const currentBorrowTokenBalance = parseFloat(formatUnits(borrowTokenBalanceRaw, decimals));
       const currentCollateralTokenBalance = parseFloat(formatUnits(collateralTokenBalanceRaw, decimals));
 
-      setSharesBalance(truncateTo4Decimals(currentSharesBalance));
-      setBorrowTokenBalance(truncateTo4Decimals(currentBorrowTokenBalance));
-      setCollateralTokenBalance(truncateTo4Decimals(currentCollateralTokenBalance));
+      setSharesBalance(truncate(currentSharesBalance, 4));
+      setBorrowTokenBalance(truncate(currentBorrowTokenBalance, 4));
+      setCollateralTokenBalance(truncate(currentCollateralTokenBalance, 4));
 
     } catch (err) {
       console.error('Error fetching balances:', err);
@@ -67,29 +69,29 @@ export default function Balances() {
           <div className="w-full flex justify-between text-sm text-gray-600">
             <div>Ethers:</div>
             <div className="flex">
-              <div className="mr-2">{ethBalance ? ethBalance : ""}</div>
+              <div className="mr-2">{ethBalance ? ethBalance : <Loader />}</div>
               <div className="font-medium text-gray-700">ETH</div>
             </div>
           </div>
           <div className="w-full flex justify-between text-sm text-gray-600">
             <div>Shares:</div>
             <div className="flex">
-              <div className="mr-2">{sharesBalance ? sharesBalance : ""}</div>
-              <div className="font-medium text-gray-700">{sharesSymbol ? sharesSymbol : ""}</div>
+              <div className="mr-2">{sharesBalance ? sharesBalance : <Loader />}</div>
+              <div className="font-medium text-gray-700">{sharesSymbol ? sharesSymbol : <Loader />}</div>
             </div>
           </div>
           <div className="w-full flex justify-between text-sm text-gray-600">
             <div>Borrow Token:</div>
             <div className="flex">
-              <div className="mr-2">{borrowTokenBalance ? borrowTokenBalance : ""}</div>
-              <div className="font-medium text-gray-700">{borrowTokenSymbol ? borrowTokenSymbol : ""}</div>
+              <div className="mr-2">{borrowTokenBalance ? borrowTokenBalance : <Loader />}</div>
+              <div className="font-medium text-gray-700">{borrowTokenSymbol ? borrowTokenSymbol : <Loader />}</div>
             </div>
           </div>
           <div className="w-full flex justify-between text-sm text-gray-600">
             <div>Collateral Token:</div>
             <div className="flex">
-              <div className="mr-2">{collateralTokenBalance ? collateralTokenBalance : ""}</div>
-              <div className="font-medium text-gray-700">{collateralTokenSymbol ? collateralTokenSymbol : ""}</div>
+              <div className="mr-2">{collateralTokenBalance ? collateralTokenBalance : <Loader />}</div>
+              <div className="font-medium text-gray-700">{collateralTokenSymbol ? collateralTokenSymbol : <Loader />}</div>
             </div>
           </div>
         </div>

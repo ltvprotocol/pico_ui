@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { parseUnits } from 'ethers';
 import { useAppContext } from '@/contexts';
-import { isUserRejected } from '@/utils';
+import { isUserRejected, wrapEth } from '@/utils';
 import { useAdaptiveInterval } from '@/hooks';
 import { useVaultContext } from '@/contexts/VaultContext';
 import { ActionForm } from '@/components/ui';
+import { WETH_ADDRESS } from '@/constants';
+import { WETH } from '@/typechain-types';
 
 export default function DepositCollateral() {
   const [loading, setLoading] = useState(false);
@@ -17,7 +19,7 @@ export default function DepositCollateral() {
 
   const {
     vaultAddress,
-    collateralTokenSymbol,
+    collateralTokenSymbol, collateralTokenAddress,
     vault, collateralToken, collateralTokenLens, 
     decimals, maxDepositCollateral, updateMaxDepositCollateral
   } = useVaultContext();
@@ -37,12 +39,25 @@ export default function DepositCollateral() {
 
     try {
       const neededToDeposit = parseUnits(amount, decimals);
-      const collateralBalance = await collateralTokenLens.balanceOf(address);
+      const balance = await collateralTokenLens.balanceOf(address);
 
-      if (collateralBalance < neededToDeposit) {
-        setError('Not enough tokens to deposit.');
-        console.error('Not enough tokens to deposit');
-        return;
+      if (balance < neededToDeposit) {
+        if (collateralTokenAddress === WETH_ADDRESS) {
+          const ethBalance = await publicProvider.getBalance(address);
+          const wethMissing = neededToDeposit - balance;
+          await wrapEth(collateralToken as WETH, wethMissing, ethBalance, setSuccess, setError);
+
+          const newBalance = await collateralTokenLens.balanceOf(address);
+          if (newBalance < neededToDeposit) {
+            setError('Not enough WETH after wrapping.');
+            console.error('Not enough WETH after wrapping');
+            return;
+          }
+        } else {
+          setError('Not enough tokens to deposit.');
+          console.error('Not enough tokens to deposit');
+          return;
+        }
       }
 
       const approveTx = await collateralToken.approve(vaultAddress, neededToDeposit);

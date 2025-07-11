@@ -4,6 +4,8 @@ import { useAppContext, useVaultContext } from '@/contexts';
 import { isUserRejected, wrapEth } from '@/utils';
 import { useAdaptiveInterval } from '@/hooks';
 import { ActionForm } from '@/components/ui';
+import { WETH_ADDRESS } from '@/constants';
+import { WETH } from '@/typechain-types';
 
 export default function MintBorrow() {
   const [loading, setLoading] = useState(false);
@@ -16,7 +18,7 @@ export default function MintBorrow() {
 
   const {
     vaultAddress,
-    sharesSymbol, borrowTokenSymbol,
+    sharesSymbol, borrowTokenSymbol, borrowTokenAddress,
     vault, borrowToken, vaultLens, borrowTokenLens,
     decimals, maxMint, updateMaxMint
   } = useVaultContext()
@@ -43,23 +45,29 @@ export default function MintBorrow() {
 
     try {
       const mintAmount = parseUnits(amount, decimals);
-      const wethNeededToMint = await vaultLens.previewMint(mintAmount);
-      const wethBalance = await borrowTokenLens.balanceOf(address);
+      const tokensNeededToMint = await vaultLens.previewMint(mintAmount);
+      const balance = await borrowTokenLens.balanceOf(address);
 
-      if (wethBalance < wethNeededToMint) {
-        const ethBalance = await publicProvider.getBalance(address);
-        const wethMissing = wethNeededToMint - wethBalance;
-        await wrapEth(borrowToken, wethMissing, ethBalance, setSuccess, setError);
+      if (balance < tokensNeededToMint) {
+        if (borrowTokenAddress === WETH_ADDRESS) {
+          const ethBalance = await publicProvider.getBalance(address);
+          const wethMissing = tokensNeededToMint - balance;
+          await wrapEth(borrowToken as WETH, wethMissing, ethBalance, setSuccess, setError);
 
-        const newWethBalance = await borrowTokenLens.balanceOf(address);
-        if (newWethBalance < wethNeededToMint) {
-          setError('Not enough WETH after wrapping.');
-          console.error('Not enough WETH after wrapping');
+          const newBalance = await borrowTokenLens.balanceOf(address);
+          if (newBalance < tokensNeededToMint) {
+            setError('Not enough WETH after wrapping.');
+            console.error('Not enough WETH after wrapping');
+            return;
+          }
+        } else {
+          setError('Not enough tokens to mint.');
+          console.error('Not enough tokens to mint');
           return;
         }
       }
 
-      const approveTx = await borrowToken.approve(vaultAddress, wethNeededToMint);
+      const approveTx = await borrowToken.approve(vaultAddress, tokensNeededToMint);
       await approveTx.wait();
       setSuccess(`Successfully approved ${borrowTokenSymbol}.`);
 

@@ -1,29 +1,8 @@
-import { useEffect, useState } from 'react';
-
-import { useAppContext, useVaultContext } from '@/contexts';
-import { LendingConnector__factory } from '@/typechain-types';
-
+import { useVaultContext } from '@/contexts';
 import { CopyAddress } from '@/components/ui';
 
 export default function Addresses() {
-  const [lendingAddress, setLendingAddress] = useState<string | null>(null);
-
-  const { publicProvider } = useAppContext();
-  const { vaultLens, vaultAddress } = useVaultContext();
-
-  useEffect(() => {
-    const getLendingAddress = async () => {
-      if(!vaultLens) return;
-
-      const lendingConnector = await vaultLens.lendingConnector();
-      const lending = LendingConnector__factory.connect(lendingConnector, publicProvider)
-      const lendingProtocol = await lending.lendingProtocol();
-
-      setLendingAddress(lendingProtocol);
-    }
-
-    getLendingAddress();
-  }, [vaultLens, vaultAddress])
+  const { vaultAddress, lendingAddress } = useVaultContext();
 
   return (
     <div className="relative w-full rounded-lg mb-4 bg-gray-50 p-3">

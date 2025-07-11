@@ -3,7 +3,9 @@ import { formatUnits } from 'ethers';
 
 import { useAppContext, useVaultContext } from '@/contexts';
 import { useAdaptiveInterval } from '@/hooks';
-import { truncateTo4Decimals } from '@/utils';
+import { truncate } from '@/utils';
+
+import { Loader } from '@/components/ui';
 
 export default function Information() {
   // const [error, setError] = useState<string | null>(null);
@@ -18,19 +20,47 @@ export default function Information() {
   const [maxRedeemCollateral, setMaxRedeemCollateral] = useState<string | null>(null)
   const [totalAssets, setTotalAssets] = useState<string | null>(null)
 
+  const [targetLtv, setTargetLtv] = useState<string | null>(null);
+  const [maxSafeLtv, setMaxSafeLtv] = useState<string | null>(null);
+  const [minProfitLtv, setMinProfitLtv] = useState<string | null>(null);
+
   const { address, isConnected } = useAppContext();
-  const { vaultLens, sharesSymbol, borrowTokenSymbol, collateralTokenSymbol } = useVaultContext();
+  const { vaultLens, sharesSymbol, borrowTokenSymbol, collateralTokenSymbol, decimals, vaultConfig } = useVaultContext();
 
   const getVaultInformation = async () => {
     if (!address || !vaultLens) return;
 
     // setError(null);
 
+    if (vaultConfig?.targetLTV) {
+      setTargetLtv(vaultConfig.targetLTV);
+    } else {
+      const rawTargetLtv = await vaultLens.targetLTV();
+      const newTargetLtv = truncate(parseFloat(formatUnits(rawTargetLtv, 18)), 2);
+      setTargetLtv(newTargetLtv);
+    }
+
+    if (vaultConfig?.maxSafeLTV) {
+      setMaxSafeLtv(vaultConfig.maxSafeLTV);
+    } else {
+      const rawMaxSafeLtv = await vaultLens.maxSafeLTV();
+      const newMaxSafeLtv = truncate(parseFloat(formatUnits(rawMaxSafeLtv, 18)), 2);
+      setMaxSafeLtv(newMaxSafeLtv);
+    }
+
+    if (vaultConfig?.minProfitLTV) {
+      setMinProfitLtv(vaultConfig.minProfitLTV);
+    } else {
+      const rawMinProfitLtv = await vaultLens.minProfitLTV();
+      const newMinProfitLtv = truncate(parseFloat(formatUnits(rawMinProfitLtv, 18)), 2);
+      setMinProfitLtv(newMinProfitLtv);
+    }
+
     try {
       const [
         maxDeposit, maxWithdraw, maxMint, maxRedeem, 
         maxDepositCollateral, maxWithdrawCollateral, maxMintCollateral, maxRedeemCollateral,
-        assets, decimals
+        assets
       ] = await Promise.all([
         vaultLens.maxDeposit(address),
         vaultLens.maxWithdraw(address),
@@ -40,34 +70,33 @@ export default function Information() {
         vaultLens.maxWithdrawCollateral(address),
         vaultLens.maxMintCollateral(address),
         vaultLens.maxRedeemCollateral(address),
-        vaultLens.totalAssets(),
-        vaultLens.decimals()
+        vaultLens.totalAssets()
       ]);
 
       setMaxDeposit(
-        truncateTo4Decimals(parseFloat(formatUnits(maxDeposit, decimals)))
+        truncate(parseFloat(formatUnits(maxDeposit, decimals)), 4)
       );
       setMaxWithdraw(
-        truncateTo4Decimals(parseFloat(formatUnits(maxWithdraw, decimals)))
+        truncate(parseFloat(formatUnits(maxWithdraw, decimals)), 4)
       );
       setMaxMint(
-        truncateTo4Decimals(parseFloat(formatUnits(maxMint, decimals)))
+        truncate(parseFloat(formatUnits(maxMint, decimals)), 4)
       );
       setMaxRedeem(
-        truncateTo4Decimals(parseFloat(formatUnits(maxRedeem, decimals)))
+        truncate(parseFloat(formatUnits(maxRedeem, decimals)), 4)
       );
 
       setMaxDepositCollateral(
-        truncateTo4Decimals(parseFloat(formatUnits(maxDepositCollateral, decimals)))
+        truncate(parseFloat(formatUnits(maxDepositCollateral, decimals)), 4)
       );
       setMaxWithdrawCollateral(
-        truncateTo4Decimals(parseFloat(formatUnits(maxWithdrawCollateral, decimals)))
+        truncate(parseFloat(formatUnits(maxWithdrawCollateral, decimals)), 4)
       );
       setMaxMintCollateral(
-        truncateTo4Decimals(parseFloat(formatUnits(maxMintCollateral, decimals)))
+        truncate(parseFloat(formatUnits(maxMintCollateral, decimals)), 4)
       );
       setMaxRedeemCollateral(
-        truncateTo4Decimals(parseFloat(formatUnits(maxRedeemCollateral, decimals)))
+        truncate(parseFloat(formatUnits(maxRedeemCollateral, decimals)), 4)
       );
 
       setTotalAssets(parseFloat(formatUnits(assets, decimals)).toFixed(4));
@@ -82,8 +111,7 @@ export default function Information() {
   });
 
   return (
-    <div className="h-[256px] relative rounded-lg mb-4 bg-gray-50 p-3">
-      <div className="">
+    <div className="relative rounded-lg mb-4 bg-gray-50 p-3">
         <h3 className="text-lg font-medium text-gray-900">Vault Information</h3>
         <div className="w-full flex items-end justify-between text-sm text-gray-600 mb-2">
           <div>
@@ -102,8 +130,8 @@ export default function Information() {
                 [maxRedeemCollateral, sharesSymbol]
               ].map((info, index) => (
                 <div key={index} className='flex'>
-                  <div className="mr-2">{info[0] ? info[0] : ""}</div>
-                  <div className="font-medium text-gray-700">{info[1] ? info[1] : ""}</div>
+                  <div className="mr-2">{info[0] ? info[0] : <Loader />}</div>
+                  <div className="font-medium text-gray-700">{info[1] ? info[1] : <Loader />}</div>
                 </div>
               ))}
             </div>
@@ -116,8 +144,8 @@ export default function Information() {
                 [maxRedeem, sharesSymbol]
               ].map((info, index) => (
                 <div key={index} className="flex">
-                  <div className="mr-2">{info[0] ? info[0] : ""}</div>
-                  <div className="font-medium text-gray-700">{info[1] ? info[1] : ""}</div>
+                  <div className="mr-2">{info[0] ? info[0] : <Loader />}</div>
+                  <div className="font-medium text-gray-700">{info[1] ? info[1] : <Loader />}</div>
                 </div>
               ))}
             </div>
@@ -126,23 +154,22 @@ export default function Information() {
         <div className="w-full flex justify-between items-center text-sm mb-2">
           <div>TVL:</div>
           <div className='flex'>
-            <div className="mr-2">{totalAssets ? totalAssets : ""}</div>
-            <div className="font-medium text-gray-700">{borrowTokenSymbol ? borrowTokenSymbol : ""}</div>
+            <div className="mr-2">{totalAssets ? totalAssets : <Loader />}</div>
+            <div className="font-medium text-gray-700">{borrowTokenSymbol ? <div>{borrowTokenSymbol}</div> : <Loader />}</div>
           </div>
         </div>
         <div className="w-full flex justify-between items-center text-sm">
           <div>Target LTV:</div>
-          <div>0.75</div>
+          <div>{targetLtv ? <div>{targetLtv}</div> : <Loader />}</div>
         </div>
         <div className="w-full flex justify-between items-center text-sm">
           <div>Max Safe LTV:</div>
-          <div>0.90</div>
+          <div>{maxSafeLtv ? <div>{maxSafeLtv}</div> : <Loader />}</div>
         </div>
         <div className="w-full flex justify-between items-center text-sm">
           <div>Min Profit LTV:</div>
-          <div>0.50</div>
+          <div>{minProfitLtv ? <div>{minProfitLtv}</div> : <Loader />}</div>
         </div>
-      </div>
     </div>
   );
 }

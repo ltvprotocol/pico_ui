@@ -1,4 +1,6 @@
-export function getMaxLeverage(ltv: number): string {
+import { truncate } from "./truncate";
+
+export function ltvToLeverage(ltv: number): string {
   if (ltv <= 0 || ltv >= 1) {
     throw new Error("LTV must be between 0 and 1 (exclusive)");
   }
@@ -8,5 +10,5 @@ export function getMaxLeverage(ltv: number): string {
     return maxLeverage.toString();
   }
 
-  return maxLeverage.toFixed(2);
+  return truncate(maxLeverage, 2)
 }

@@ -3,10 +3,10 @@ import { Link } from "react-router-dom";
 import { formatUnits } from "ethers";
 
 import { useAppContext } from "@/contexts";
-import { getMaxLeverage } from "@/utils";
+import { ltvToLeverage } from "@/utils";
 import { Vault__factory, ERC20__factory } from "@/typechain-types";
 
-import { CopyAddress } from "@/components/ui";
+import { CopyAddress, Loader } from "@/components/ui";
 
 import vaultsConfig from "../../../vaults.config.json";
 
@@ -68,7 +68,7 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
       } else {
         const rawLtv = await vaultContractLens.targetLTV();
         const ltv = parseFloat(formatUnits(rawLtv, 18)).toFixed(4);
-        const leverage = getMaxLeverage(parseFloat(ltv));
+        const leverage = ltvToLeverage(parseFloat(ltv));
 
         setMaxLeverage(leverage);
       }
@@ -99,13 +99,13 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
             <div className="mr-2">
               {collateralTokenSymbol && borrowTokenSymbol ? 
               `${collateralTokenSymbol}/${borrowTokenSymbol}` :
-              "..."
+              <Loader />
             }
             </div>
             <div className="mr-2 font-normal">
               {maxLeverage ? 
               `x${maxLeverage}` :
-              "..."
+              <Loader />
             }
             </div>
             <div className="font-normal">{lendingName ? lendingName : "Lending"}</div>
@@ -115,7 +115,7 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
             <div className="flex text-base font-medium text-gray-900 mb-2">
               {collateralTokenSymbol && borrowTokenSymbol ? 
                 `${collateralTokenSymbol}/${borrowTokenSymbol}` :
-                "..."
+                <Loader />
               }
               <div className="font-normal ml-2">{lendingName ? lendingName : "Lending"}</div>
             </div>
@@ -123,7 +123,7 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
               <div className="font-medium text-gray-700 mr-2">LTV: </div>
               {maxLeverage ? 
                 `${maxLeverage}` :
-                "..."
+                <Loader />
               }
             </div>
           </div>
@@ -136,7 +136,7 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
               <div className="font-normal text-gray-700 mr-2">{`${parseFloat(formatUnits(collateralAssets, 18)).toFixed(4)}`}</div>
               <div className="font-medium text-gray-700">{collateralTokenSymbol}</div>
             </div> :
-            "..."
+            <Loader />
           }
         </div>
         </div>
@@ -148,7 +148,7 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
                 <div className="font-normal text-gray-700 mr-2">{`${parseFloat(formatUnits(borrowAssets, 18)).toFixed(4)}`}</div>
                 <div className="font-medium text-gray-700">{borrowTokenSymbol}</div>
               </div> :
-              "..."
+              <Loader />
             }
           </div>
         </div>

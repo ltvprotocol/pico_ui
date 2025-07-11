@@ -27,10 +27,10 @@ export const ActionForm: React.FC<ActionFormProps> = ({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="amount" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-2">
           Amount to {actionName}
         </label>
-        <div className="mt-1 relative rounded-md shadow-sm">
+        <div className="relative rounded-md shadow-sm">
           <input
             type="text"
             name="amount"

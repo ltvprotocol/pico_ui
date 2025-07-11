@@ -3,6 +3,7 @@ import { BrowserProvider, Eip1193Provider } from 'ethers';
 import { SEPOLIA_CHAIN_ID, SEPOLIA_CHAIN_ID_HEX, SEPOLIA_NETWORK } from '@/constants';
 import { useAppContext } from '@/contexts';
 import { isUserRejected } from '@/utils';
+import { CopyAddress } from './ui/CopyAddress';
 
 type DiscoveredWallet = {
   info: {
@@ -172,9 +173,9 @@ export default function ConnectWallet() {
   }, [provider, signer, address]);
 
   return (
-    <div className="mb-6">
+    <>
       {!address && wallets ? (
-        <div className="mb-6">
+        <div className="mb-6 mt-6">
           <div className="text-center mb-4">
             <h2 className="text-xl font-semibold text-gray-900 mb-2">
               Connect Your Wallet
@@ -221,9 +222,9 @@ export default function ConnectWallet() {
           </div>
         </div>
       ) : (
-          <div>
+          <>
             {!isSepolia ? ( 
-              <div className="mb-6">
+              <div className="mb-6 mt-6">
                 <div className="text-center mb-4">
                   <h2 className="text-xl font-semibold text-gray-900 mb-2">
                     Switch to Sepolia
@@ -255,51 +256,40 @@ export default function ConnectWallet() {
                 </button>
               </div>
           ) : (
-            <div>
-              <div>
-                <div className="items-center justify-between bg-gray-50 p-3 rounded-md">
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center">
-                      <div className="h-2 w-2 bg-green-500 rounded-full mr-2"></div>
-                      <span className="text-xs text-gray-500">Connected Wallet</span>
-                    </div>
-                    <button
-                      onClick={disconnectWallet}
-                      className="
-                        text-sm text-red-500 hover:text-red-600 
-                        border border-red-500 bg-white dark:bg-white rounded-lg 
-                        hover:bg-pink-100 dark:hover:bg-pink-100 hover:border-red-500 
-                        transition disabled:opacity-50"
-                    >
-                      Disconnect
-                    </button>
+            <div className="mb-[60px]">
+              <div className="items-center justify-between mb-4 bg-gray-50 p-3 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <div className="h-2 w-2 bg-green-500 rounded-full mr-2"></div>
+                    <span className="text-xs text-gray-500">Connected Wallet</span>
                   </div>
+                  <button
+                    onClick={disconnectWallet}
+                    className="
+                      text-sm text-red-500 hover:text-red-600 
+                      border border-red-500 bg-white dark:bg-white rounded-lg 
+                      hover:bg-pink-100 dark:hover:bg-pink-100 hover:border-red-500 
+                      transition disabled:opacity-50"
+                  >
+                    Disconnect
+                  </button>
                 </div>
-                <div className="flex items-center justify-between bg-gray-50 p-3 rounded-md mt-4">
-                  <div className="flex flex-col">
-                    <div>
-                      <h3 className="text-lg font-medium text-gray-900">Wallet Address:</h3>
-                    </div>
-                    <div>
-                      <span className="hidden sm:block text-sm text-gray-700 break-all">
-                        {address}
-                      </span>
-                      <span className="block sm:hidden text-sm text-gray-700 break-all">
-                        {address ? `${address.slice(0, 6)}...${address.slice(-12)}` : ''}
-                      </span>
-                    </div>
-                  </div>
+              </div>
+              <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+                <div className="flex flex-col">
+                  <h3 className="text-lg font-medium text-gray-900 mb-1">Wallet Address:</h3>
+                  <CopyAddress address={address ? address : ""} />
                 </div>
               </div>
             </div>
           )}
-        </div>
+        </>
       )}
       {error && (
         <div className="mt-2 text-sm text-red-600">
           {error}
         </div>
       )}
-    </div>
+    </>
   );
 }

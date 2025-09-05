@@ -16,6 +16,7 @@ type DiscoveredWallet = {
 export default function ConnectWallet() {
   const [wallets, setWallets] = useState<DiscoveredWallet[]>([]);
   const [loading, setLoading] = useState(false);
+  const [connectingWalletId, setConnectingWalletId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [rawProvider, setRawProvider] = useState<Eip1193Provider | null>(null);
@@ -31,7 +32,14 @@ export default function ConnectWallet() {
 
     const handleAnnounce = (event: Event) => {
       const newWallet = (event as CustomEvent).detail as DiscoveredWallet;
-      discovered.push(newWallet);
+      const alreadyExists = discovered.some(wallet => 
+        wallet.info.uuid === newWallet.info.uuid || wallet.info.name === newWallet.info.name
+      );
+
+      if (!alreadyExists) {
+        discovered.push(newWallet);
+      }
+      
       setWallets([...discovered]);
     };
 
@@ -89,6 +97,7 @@ export default function ConnectWallet() {
   };
 
   const connectWallet = async (wallet: DiscoveredWallet) => {
+    setConnectingWalletId(wallet.info.uuid);
     setLoading(true);
     setError(null);
 
@@ -97,7 +106,9 @@ export default function ConnectWallet() {
     try {
       await newProvider.send('eth_requestAccounts', []);
       await setupProviderConnection(wallet.provider);
+      setConnectingWalletId(null);
     } catch (err: any) {
+      setConnectingWalletId(null);
       if (isUserRejected(err)) {
         setError('Connection canceled by user.');
       } else {
@@ -192,7 +203,7 @@ export default function ConnectWallet() {
               </div>
               <div className="ml-3">
                 <p className="text-sm text-blue-700">
-                  Make sure you have MetaMask installed and are connected to the Sepolia network
+                  Make sure you have MetaMask or other wallet installed and are connected to the Sepolia network
                 </p>
               </div>
             </div>
@@ -215,7 +226,7 @@ export default function ConnectWallet() {
                   alt={wallet.info.name}
                   className="w-6 h-6"
                 />
-                <span>{loading ? 'Connecting...' : wallet.info.name}</span>
+                <span>{connectingWalletId === wallet.info.uuid ? 'Connecting...' : wallet.info.name}</span>
               </button>
             ))}
           </div>

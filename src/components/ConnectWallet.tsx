@@ -156,6 +156,9 @@ export default function ConnectWallet() {
         console.log('Event: accountsChanged', accounts);
         if (accounts.length > 0) {
           updateAddress(accounts[0])
+          if (rawProvider) {
+            await setupProviderConnection(rawProvider);
+          }
         } else {
           disconnectWallet();
         }
@@ -164,6 +167,9 @@ export default function ConnectWallet() {
       const onChainChangedHandler = async (chainIdHex: string) => {
         console.log('Event: chainChanged, new chainIdHex:', chainIdHex);
         const isSepoliaNetwork = chainIdHex === SEPOLIA_CHAIN_ID_HEX;
+        if (rawProvider) {
+          await setupProviderConnection(rawProvider);
+        }
         setIsSepolia(isSepoliaNetwork);
         updateChainId(BigInt(chainIdHex));
       };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { isUserRejected } from './errors';
+import { isUserRejected } from './isUserRejected';
 import { WETH } from '@/typechain-types';
 
 export const wrapEth = async (
@@ -8,7 +8,7 @@ export const wrapEth = async (
   ethBalance: bigint,
   setSuccess: React.Dispatch<React.SetStateAction<string | null>>,
   setError: React.Dispatch<React.SetStateAction<string | null>>
-): Promise<void> => {  
+): Promise<void> => {
   
   if (!wethContract) {
     setError('Error trying to wrap ETH.');

@@ -9,12 +9,12 @@ export default function Deposit() {
   const { borrowTokenSymbol, collateralTokenSymbol } = useVaultContext();
 
   return (
-    <div className="mt-8 p-6 bg-white rounded-lg shadow-lg">
+    <div className="mt-8 p-3">
       <h2 className="text-2xl font-bold mb-6 text-gray-900">Deposit Assets</h2>
       <SelectToken
         label="Select Asset You Provide"
-        borrow={borrowTokenSymbol}
-        collateral={collateralTokenSymbol}
+        borrow={borrowTokenSymbol ? borrowTokenSymbol : "Borrow"}
+        collateral={collateralTokenSymbol ? collateralTokenSymbol : "Collateral"}
         selected={selectedToken}
         onSelect={setSelectedToken}
       />

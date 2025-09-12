@@ -1,10 +1,11 @@
 import { createContext, ReactNode, useContext, useEffect, useState, useCallback } from 'react'
-import { formatUnits, ZeroAddress } from 'ethers'
+import { formatUnits, formatEther, parseUnits, ZeroAddress } from 'ethers'
 import { useAppContext } from '@/contexts/AppContext';
 import { Vault, WETH, ERC20, Vault__factory, WETH__factory, ERC20__factory, LendingConnector__factory } from '@/typechain-types';
-import { ltvToLeverage, truncate } from '@/utils';
+import { truncate, ltvToLeverage } from '@/utils';
 import vaultsConfig from '../../vaults.config.json';
 import { WETH_ADDRESS } from '@/constants';
+import { useAdaptiveInterval } from '@/hooks';
 
 interface VaultConfig {
   address: string;
@@ -29,8 +30,8 @@ interface VaultContextType {
   lendingName: string | null;
   maxLeverage: string | null;
   sharesSymbol: string;
-  borrowTokenSymbol: string;
-  collateralTokenSymbol: string;
+  borrowTokenSymbol: string | null;
+  collateralTokenSymbol: string | null;
   vault: Vault | null;
   borrowToken: ERC20 | WETH | null;
   collateralToken: ERC20 | WETH | null;
@@ -39,6 +40,22 @@ interface VaultContextType {
   collateralTokenLens: ERC20 | WETH | null;
   decimals: bigint;
   vaultConfig: VaultConfig | undefined;
+  // Balances
+  ethBalance: string;
+  sharesBalance: string;
+  borrowTokenBalance: string;
+  collateralTokenBalance: string;
+  // Vault limits
+  vaultMaxDeposit: string;
+  vaultMaxRedeem: string;
+  vaultMaxMint: string;
+  vaultMaxWithdraw: string;
+  vaultMaxDepositCollateral: string;
+  vaultMaxRedeemCollateral: string;
+  vaultMaxMintCollateral: string;
+  vaultMaxWithdrawCollateral: string;
+  totalAssets: string;
+  // User max values
   maxDeposit: string;
   maxRedeem: string;
   maxMint: string;
@@ -47,31 +64,20 @@ interface VaultContextType {
   maxRedeemCollateral: string;
   maxMintCollateral: string;
   maxWithdrawCollateral: string;
-  updateMaxDeposit: () => Promise<void>;
-  updateMaxRedeem: () => Promise<void>;
-  updateMaxMint: () => Promise<void>;
-  updateMaxWithdraw: () => Promise<void>;
-  updateMaxDepositCollateral: () => Promise<void>;
-  updateMaxRedeemCollateral: () => Promise<void>;
-  updateMaxMintCollateral: () => Promise<void>;
-  updateMaxWithdrawCollateral: () => Promise<void>;
 };
 
 const VaultContext = createContext<VaultContextType | undefined>(undefined);
 
-export const VaultContextProvider = ({ children, vaultAddress }: { children: ReactNode, vaultAddress: string }) => {
+export const VaultContextProvider = ({ children, vaultAddress, params }: { children: ReactNode, vaultAddress: string, params: { collateralTokenSymbol: string | null, borrowTokenSymbol: string | null, maxLeverage: string | null, lendingName: string | null } }) => {
   const [vaultConfig, setVaultConfig] = useState<VaultConfig | undefined>(undefined);
   const [collateralTokenAddress, setCollateralTokenAddress] = useState<string>(ZeroAddress);
   const [borrowTokenAddress, setBorrowTokenAddress] = useState<string>(ZeroAddress);
-
   const [sharesSymbol, setSharesSymbol] = useState<string>('');
-  const [borrowTokenSymbol, setBorrowTokenSymbol] = useState<string>('');
-  const [collateralTokenSymbol, setCollateralTokenSymbol] = useState<string>('');
-  const [lendingName, setLendingName] = useState<string | null>(null);
   const [lendingAddress, setLendingAddress] = useState<string | null>(null);
+  const [lendingName, setLendingName] = useState<string | null>(null);
   const [maxLeverage, setMaxLeverage] = useState<string | null>(null);
-
-  const [contractsSet, setContractsSet] = useState(false);
+  const [borrowTokenSymbol, setBorrowTokenSymbol] = useState<string | null>(null);
+  const [collateralTokenSymbol, setCollateralTokenSymbol] = useState<string | null>(null);
 
   const [vault, setVault] = useState<Vault | null>(null);
   const [borrowToken, setBorrowToken] = useState<ERC20 | WETH | null>(null);
@@ -79,295 +85,304 @@ export const VaultContextProvider = ({ children, vaultAddress }: { children: Rea
   const [vaultLens, setVaultLens] = useState<Vault | null>(null);
   const [borrowTokenLens, setBorrowTokenLens] = useState<ERC20 | WETH | null>(null);
   const [collateralTokenLens, setCollateralTokenLens] = useState<ERC20 | WETH | null>(null);
-
   const [decimals, setDecimals] = useState<bigint>(18n);
-  const [maxDeposit, setMaxDeposit] = useState<string>('');
-  const [maxRedeem, setMaxRedeem] = useState<string>('');
-  const [maxMint, setMaxMint] = useState<string>('');
-  const [maxWithdraw, setMaxWithdraw] = useState<string>('');
-  const [maxDepositCollateral, setMaxDepositCollateral] = useState<string>('');
-  const [maxRedeemCollateral, setMaxRedeemCollateral] = useState<string>('');
-  const [maxMintCollateral, setMaxMintCollateral] = useState<string>('');
-  const [maxWithdrawCollateral, setMaxWithdrawCollateral] = useState<string>('');
+
+  const [ethBalance, setEthBalance] = useState<string>('0');
+  const [sharesBalance, setSharesBalance] = useState<string>('0');
+  const [borrowTokenBalance, setBorrowTokenBalance] = useState<string>('0');
+  const [collateralTokenBalance, setCollateralTokenBalance] = useState<string>('0');
+
+  const [vaultMaxDeposit, setVaultMaxDeposit] = useState<string>('0');
+  const [vaultMaxRedeem, setVaultMaxRedeem] = useState<string>('0');
+  const [vaultMaxMint, setVaultMaxMint] = useState<string>('0');
+  const [vaultMaxWithdraw, setVaultMaxWithdraw] = useState<string>('0');
+  const [vaultMaxDepositCollateral, setVaultMaxDepositCollateral] = useState<string>('0');
+  const [vaultMaxRedeemCollateral, setVaultMaxRedeemCollateral] = useState<string>('0');
+  const [vaultMaxMintCollateral, setVaultMaxMintCollateral] = useState<string>('0');
+  const [vaultMaxWithdrawCollateral, setVaultMaxWithdrawCollateral] = useState<string>('0');
+  const [totalAssets, setTotalAssets] = useState<string>('0');
+
+  const [maxDeposit, setMaxDeposit] = useState<string>('0');
+  const [maxRedeem, setMaxRedeem] = useState<string>('0');
+  const [maxMint, setMaxMint] = useState<string>('0');
+  const [maxWithdraw, setMaxWithdraw] = useState<string>('0');
+  const [maxDepositCollateral, setMaxDepositCollateral] = useState<string>('0');
+  const [maxRedeemCollateral, setMaxRedeemCollateral] = useState<string>('0');
+  const [maxMintCollateral, setMaxMintCollateral] = useState<string>('0');
+  const [maxWithdrawCollateral, setMaxWithdrawCollateral] = useState<string>('0');
 
   const { publicProvider, signer, isConnected, address } = useAppContext();
 
-  const updateMaxDeposit = useCallback(async () => {
-    if (!publicProvider || !address || !vaultLens || !borrowTokenLens) return;
-
-    const isBorrowTokenWeth = borrowTokenAddress === WETH_ADDRESS;
-
-    const rawBorrowTokenBalance = await borrowTokenLens.balanceOf(address);
-    const borrowTokenBalance = parseFloat(formatUnits(rawBorrowTokenBalance, decimals));
-
-    const rawEthBalance = isBorrowTokenWeth ?  await publicProvider.getBalance(address) : 0n;
-    const ethBalance = parseFloat(formatUnits(rawEthBalance, decimals));
-
-    const rawVaultMaxDeposit = await vaultLens.maxDeposit(address);
-    const vaultMaxDeposit = parseFloat(formatUnits(rawVaultMaxDeposit, decimals));
-
-    const maxAvailable = Math.min(borrowTokenBalance + ethBalance, vaultMaxDeposit);
-    setMaxDeposit(truncate(maxAvailable, 4));
-  }, [publicProvider, address, vaultLens, borrowTokenLens, borrowTokenAddress, decimals]);
-
-  const updateMaxRedeem = useCallback(async () => {
-    if (!address || !vaultLens) return;
-
-    const rawSharesBalance = await vaultLens.balanceOf(address);
-    const sharesBalance = parseFloat(formatUnits(rawSharesBalance, decimals));
-
-    const rawVaultMaxRedeem = await vaultLens.maxRedeem(address);
-    const vaultMaxRedeem = parseFloat(formatUnits(rawVaultMaxRedeem, decimals));
-
-    const maxAvailable = Math.min(sharesBalance, vaultMaxRedeem);
-    setMaxRedeem(truncate(maxAvailable, 4));
-  }, [address, vaultLens, decimals]);
-
-  const updateMaxMint = useCallback(async () => {
-    if (!publicProvider || !address || !vaultLens || !borrowTokenLens) return;
-
-    const isBorrowTokenWeth = borrowTokenAddress === WETH_ADDRESS;
-
-    const rawBorrowTokenBalance = await borrowTokenLens.balanceOf(address);
-    const rawSharesForBorrowToken = await vaultLens.previewDeposit(rawBorrowTokenBalance);
-    const sharesForBorrowToken = parseFloat(formatUnits(rawSharesForBorrowToken, decimals));
-
-    const rawEthBalance = isBorrowTokenWeth ? await publicProvider.getBalance(address) : 0n;
-    const rawSharesForEth = await vaultLens.previewDeposit(rawEthBalance);
-    const sharesForEth = parseFloat(formatUnits(rawSharesForEth, decimals));
-
-    const rawVaultMaxMint = await vaultLens.maxMint(address);
-    const vaultMaxMint = parseFloat(formatUnits(rawVaultMaxMint, decimals));
-
-    const maxAvailable = Math.min(sharesForBorrowToken + sharesForEth, vaultMaxMint);
-    setMaxMint(truncate(maxAvailable, 4));
-  }, [publicProvider, address, vaultLens, borrowTokenLens, borrowTokenAddress, decimals]);
-
-  const updateMaxWithdraw = useCallback(async () => {
-    if (!publicProvider || !address || !vaultLens) return;
-
-    const rawSharesBalance = await vaultLens.balanceOf(address);
-    const rawPreviwedRedeem = await vaultLens.previewRedeem(rawSharesBalance);
-    const previewedRedeem = parseFloat(formatUnits(rawPreviwedRedeem, decimals));
-
-    const rawVaultMaxWithdraw = await vaultLens.maxWithdraw(address);
-    const vaultMaxWithdraw = parseFloat(formatUnits(rawVaultMaxWithdraw, decimals));
-
-    const maxAvailable = Math.min(previewedRedeem, vaultMaxWithdraw);
-    setMaxWithdraw(truncate(maxAvailable, 4));
-  }, [publicProvider, address, vaultLens, decimals]);
-
-  const updateMaxDepositCollateral = useCallback(async () => {
-    if (!publicProvider || !address || !vaultLens || !collateralTokenLens) return;
-
-    const isCollateralTokenWeth = collateralTokenAddress === WETH_ADDRESS;
-
-    const rawCollateralTokenBalance = await collateralTokenLens.balanceOf(address);
-    const collateralTokenBalance = parseFloat(formatUnits(rawCollateralTokenBalance, decimals));
-
-    const rawEthBalance = isCollateralTokenWeth ?  await publicProvider.getBalance(address) : 0n;
-    const ethBalance = parseFloat(formatUnits(rawEthBalance, decimals));
-
-    const rawVaultMaxDeposit = await vaultLens.maxDepositCollateral(address);
-    const vaultMaxDeposit = parseFloat(formatUnits(rawVaultMaxDeposit, decimals));
-
-    const maxAvailable = Math.min(collateralTokenBalance + ethBalance, vaultMaxDeposit);
-    setMaxDepositCollateral(truncate(maxAvailable, 4));
-  }, [publicProvider, address, vaultLens, collateralTokenLens, collateralTokenAddress, decimals]);
-
-  const updateMaxRedeemCollateral = useCallback(async () => {
-    if (!address || !vaultLens) return;
-
-    const rawSharesBalance = await vaultLens.balanceOf(address);
-    const sharesBalance = parseFloat(formatUnits(rawSharesBalance, decimals));
-
-    const rawVaultMaxRedeem = await vaultLens.maxRedeemCollateral(address);
-    const vaultMaxRedeem = parseFloat(formatUnits(rawVaultMaxRedeem, decimals));
-
-    const maxAvailable = Math.min(sharesBalance, vaultMaxRedeem);
-    setMaxRedeemCollateral(truncate(maxAvailable, 4));
-  }, [address, vaultLens, decimals]);
-
-  const updateMaxMintCollateral = useCallback(async () => {
-    if (!publicProvider || !address || !vaultLens || !collateralTokenLens) return;
-
-    const isCollateralTokenWeth = collateralTokenAddress === WETH_ADDRESS;
-
-    const rawCollateralTokenBalance = await collateralTokenLens.balanceOf(address);
-    const rawSharesForCollateral = await vaultLens.previewDepositCollateral(rawCollateralTokenBalance);
-    const sharesForCollateral = parseFloat(formatUnits(rawSharesForCollateral, decimals));
-
-    const rawEthBalance = isCollateralTokenWeth ?  await publicProvider.getBalance(address) : 0n;
-    const rawSharesForEth = await vaultLens.previewDepositCollateral(rawEthBalance);
-    const sharesForEth = parseFloat(formatUnits(rawSharesForEth, decimals));
-
-    const rawVaultMaxMint = await vaultLens.maxMintCollateral(address);
-    const vaultMaxMint = parseFloat(formatUnits(rawVaultMaxMint, decimals));
-
-    const maxAvailable = Math.min(sharesForCollateral + sharesForEth, vaultMaxMint);
-    setMaxMintCollateral(truncate(maxAvailable, 4));
-  }, [publicProvider, address, vaultLens, collateralTokenLens, collateralTokenAddress, decimals]);
-
-  const updateMaxWithdrawCollateral = useCallback(async () => {
-    if (!publicProvider || !address || !vaultLens) return;
-
-    const rawSharesBalance = await vaultLens.balanceOf(address);
-    const rawVaultMaxRedeem = await vaultLens.previewRedeemCollateral(rawSharesBalance);
-    const vaultMaxRedeem = parseFloat(formatUnits(rawVaultMaxRedeem, decimals));
-
-    const rawVaultMaxWithdraw = await vaultLens.maxWithdrawCollateral(address);
-    const vaultMaxWithdraw = parseFloat(formatUnits(rawVaultMaxWithdraw, decimals));
-
-    const maxAvailable = Math.min(vaultMaxRedeem, vaultMaxWithdraw);
-    setMaxWithdrawCollateral(truncate(maxAvailable, 4));
-  }, [publicProvider, address, vaultLens, decimals]);
-
-  const setupCofig = () => {
+  const loadConfigAndParams = useCallback(() => {
     const chainId = "11155111";
     const vaults = vaultsConfig[chainId]?.vaults || [];
     const config = vaults.find(v => v.address.toLowerCase() === vaultAddress.toLowerCase());
-    setVaultConfig(config)
-  };
+    setVaultConfig(config);
 
-  const setupContracts = async () => {
+    setCollateralTokenAddress(config?.collateralTokenAddress || ZeroAddress);
+    setBorrowTokenAddress(config?.borrowTokenAddress || ZeroAddress);
+    setSharesSymbol(config?.sharesSymbol || '');
+    setLendingAddress(config?.lendingAddress || null);
+    setLendingName(params.lendingName || config?.lendingName || null);
+    setMaxLeverage(params.maxLeverage || config?.leverage || null);
+    setBorrowTokenSymbol(params.borrowTokenSymbol || config?.borrowTokenSymbol || null);
+    setCollateralTokenSymbol(params.collateralTokenSymbol || config?.collateralTokenSymbol || null);
+  }, [vaultAddress, params]);
+
+  const initializeContracts = useCallback(async () => {
     if (!publicProvider) return;
 
     try {
       const vaultLensInstance = Vault__factory.connect(vaultAddress, publicProvider);
       setVaultLens(vaultLensInstance);
 
-      const newCollateralTokenAddress = 
-        vaultConfig?.collateralTokenAddress ? 
-        vaultConfig?.collateralTokenAddress :
-        await vaultLensInstance.collateralToken();
+      const newCollateralTokenAddress = vaultConfig?.collateralTokenAddress || await vaultLensInstance.collateralToken();
+      const newBorrowTokenAddress = vaultConfig?.borrowTokenAddress || await vaultLensInstance.borrowToken();
 
       setCollateralTokenAddress(newCollateralTokenAddress);
-
-      const newBorrowTokenAddress = 
-        vaultConfig?.borrowTokenAddress ? 
-        vaultConfig?.borrowTokenAddress :
-        await vaultLensInstance.borrowToken();
-
       setBorrowTokenAddress(newBorrowTokenAddress);
 
-      if (newCollateralTokenAddress === WETH_ADDRESS) {
-        const contract = WETH__factory.connect(newCollateralTokenAddress, publicProvider);
-        setCollateralTokenLens(contract);
-      } else {
-        const contract = ERC20__factory.connect(newCollateralTokenAddress, publicProvider);
-        setCollateralTokenLens(contract);
-      }
+      const collateralContract = newCollateralTokenAddress === WETH_ADDRESS 
+        ? WETH__factory.connect(newCollateralTokenAddress, publicProvider)
+        : ERC20__factory.connect(newCollateralTokenAddress, publicProvider);
+      setCollateralTokenLens(collateralContract);
 
-      if (newBorrowTokenAddress === WETH_ADDRESS) {
-        const contract = WETH__factory.connect(newBorrowTokenAddress, publicProvider);
-        setBorrowTokenLens(contract);
-      } else {
-        const contract = ERC20__factory.connect(newBorrowTokenAddress, publicProvider);
-        setBorrowTokenLens(contract);
-      }
+      const borrowContract = newBorrowTokenAddress === WETH_ADDRESS 
+        ? WETH__factory.connect(newBorrowTokenAddress, publicProvider)
+        : ERC20__factory.connect(newBorrowTokenAddress, publicProvider);
+      setBorrowTokenLens(borrowContract);
 
       const newDecimals = await vaultLensInstance.decimals();
       setDecimals(newDecimals);
 
-      await Promise.all([
-        updateMaxDeposit(),
-        updateMaxRedeem(),
-        updateMaxMint(),
-        updateMaxWithdraw(),
-        updateMaxDepositCollateral(),
-        updateMaxRedeemCollateral(),
-        updateMaxMintCollateral(),
-        updateMaxWithdrawCollateral()
-      ]);
-
       if (signer) {
         setVault(Vault__factory.connect(vaultAddress, signer));
-
-        if (newCollateralTokenAddress === WETH_ADDRESS) {
-          const contract = WETH__factory.connect(newCollateralTokenAddress, signer);
-          setCollateralToken(contract);
-        } else {
-          const contract = ERC20__factory.connect(newCollateralTokenAddress, signer);
-          setCollateralToken(contract);
-        }
-
-        if (newBorrowTokenAddress === WETH_ADDRESS) {
-          const contract = WETH__factory.connect(newBorrowTokenAddress, signer);
-          setBorrowToken(contract);
-        } else {
-          const contract = ERC20__factory.connect(newBorrowTokenAddress, signer);
-          setBorrowToken(contract);
-        }
+        setCollateralToken(newCollateralTokenAddress === WETH_ADDRESS 
+          ? WETH__factory.connect(newCollateralTokenAddress, signer)
+          : ERC20__factory.connect(newCollateralTokenAddress, signer));
+        setBorrowToken(newBorrowTokenAddress === WETH_ADDRESS 
+          ? WETH__factory.connect(newBorrowTokenAddress, signer)
+          : ERC20__factory.connect(newBorrowTokenAddress, signer));
       }
 
-      setContractsSet(true);
+      if (!vaultConfig?.sharesSymbol) {
+        const symbol = await vaultLensInstance.symbol();
+        setSharesSymbol(symbol);
+      }
+
+      if (!vaultConfig?.lendingAddress) {
+        const lendingConnector = await vaultLensInstance.lendingConnector();
+        const lending = LendingConnector__factory.connect(lendingConnector, publicProvider);
+        const lendingProtocol = await lending.lendingProtocol();
+        setLendingAddress(lendingProtocol);
+      }
+
+      if (!params.collateralTokenSymbol && !vaultConfig?.collateralTokenSymbol) {
+        const symbol = await collateralContract.symbol();
+        setCollateralTokenSymbol(symbol);
+      }
+
+      if (!params.borrowTokenSymbol && !vaultConfig?.borrowTokenSymbol) {
+        const symbol = await borrowContract.symbol();
+        setBorrowTokenSymbol(symbol);
+      }
+
+      if (!params.maxLeverage && !vaultConfig?.leverage) {
+        const rawLtv = await vaultLensInstance.targetLTV();
+        const ltv = parseFloat(formatUnits(rawLtv, newDecimals)).toFixed(4);
+        const leverage = ltvToLeverage(parseFloat(ltv));
+        setMaxLeverage(leverage);
+      }
+
+      if (!params.lendingName && !vaultConfig?.lendingName) {
+        setLendingName("Lending");
+      }
+
     } catch (err) {
       console.error('VaultContext contract setup error:', err);
     }
-  };
+  }, [publicProvider, signer, vaultAddress, vaultConfig, params]);
 
-  const loadSymbols = async () => {
-    if (!vaultLens || !borrowTokenLens || !collateralTokenLens) {
-      console.error("contracts not set!");
-      return;
-    };
+  const loadBalances = useCallback(async () => {
+    if (!publicProvider || !address || !vaultLens || !borrowTokenLens || !collateralTokenLens) return;
 
-    if (vaultConfig?.sharesSymbol) {
-      setSharesSymbol(vaultConfig.sharesSymbol);
-    } else {
-      const symbol = await vaultLens.symbol();
-      setSharesSymbol(symbol);
+    try {
+      const ethBalanceRaw = await publicProvider.getBalance(address);
+      const currentEthBalance = parseFloat(formatEther(ethBalanceRaw));
+      setEthBalance(truncate(currentEthBalance, 4));
+
+      const [sharesBalanceRaw, borrowTokenBalanceRaw, collateralTokenBalanceRaw] = await Promise.all([
+        vaultLens.balanceOf(address),
+        borrowTokenLens.balanceOf(address),
+        collateralTokenLens.balanceOf(address),
+      ]);
+
+      const currentSharesBalance = parseFloat(formatUnits(sharesBalanceRaw, decimals));
+      const currentBorrowTokenBalance = parseFloat(formatUnits(borrowTokenBalanceRaw, decimals));
+      const currentCollateralTokenBalance = parseFloat(formatUnits(collateralTokenBalanceRaw, decimals));
+
+      setSharesBalance(truncate(currentSharesBalance, 4));
+      setBorrowTokenBalance(truncate(currentBorrowTokenBalance, 4));
+      setCollateralTokenBalance(truncate(currentCollateralTokenBalance, 4));
+
+    } catch (err) {
+      console.error('Error loading balances:', err);
     }
+  }, [publicProvider, address, vaultLens, borrowTokenLens, collateralTokenLens, decimals]);
 
-    if (vaultConfig?.collateralTokenSymbol) {
-      setCollateralTokenSymbol(vaultConfig.collateralTokenSymbol);
-    } else {
-      const symbol = await collateralTokenLens.symbol();
-      setCollateralTokenSymbol(symbol);
+  const loadVaultLimits = useCallback(async () => {
+    if (!publicProvider || !address || !vaultLens) return;
+
+    try {
+      const [
+        rawVaultMaxDeposit, rawVaultMaxRedeem, rawVaultMaxMint, rawVaultMaxWithdraw,
+        rawVaultMaxDepositCollateral, rawVaultMaxRedeemCollateral, rawVaultMaxMintCollateral, rawVaultMaxWithdrawCollateral,
+        rawTotalAssets
+      ] = await Promise.all([
+        vaultLens.maxDeposit(address),
+        vaultLens.maxRedeem(address),
+        vaultLens.maxMint(address),
+        vaultLens.maxWithdraw(address),
+        vaultLens.maxDepositCollateral(address),
+        vaultLens.maxRedeemCollateral(address),
+        vaultLens.maxMintCollateral(address),
+        vaultLens.maxWithdrawCollateral(address),
+        vaultLens.totalAssets()
+      ]);
+
+      setVaultMaxDeposit(truncate(parseFloat(formatUnits(rawVaultMaxDeposit, decimals)), 4));
+      setVaultMaxRedeem(truncate(parseFloat(formatUnits(rawVaultMaxRedeem, decimals)), 4));
+      setVaultMaxMint(truncate(parseFloat(formatUnits(rawVaultMaxMint, decimals)), 4));
+      setVaultMaxWithdraw(truncate(parseFloat(formatUnits(rawVaultMaxWithdraw, decimals)), 4));
+      setVaultMaxDepositCollateral(truncate(parseFloat(formatUnits(rawVaultMaxDepositCollateral, decimals)), 4));
+      setVaultMaxRedeemCollateral(truncate(parseFloat(formatUnits(rawVaultMaxRedeemCollateral, decimals)), 4));
+      setVaultMaxMintCollateral(truncate(parseFloat(formatUnits(rawVaultMaxMintCollateral, decimals)), 4));
+      setVaultMaxWithdrawCollateral(truncate(parseFloat(formatUnits(rawVaultMaxWithdrawCollateral, decimals)), 4));
+      setTotalAssets(parseFloat(formatUnits(rawTotalAssets, decimals)).toFixed(4));
+
+    } catch (err) {
+      console.error('Error loading vault limits:', err);
     }
+  }, [publicProvider, address, vaultLens, decimals]);
 
-    if (vaultConfig?.borrowTokenSymbol) {
-      setBorrowTokenSymbol(vaultConfig.borrowTokenSymbol);
-    } else {
-      const symbol = await borrowTokenLens.symbol();
-      setBorrowTokenSymbol(symbol);
+  const calculateMaxValues = useCallback(async () => {
+    if (!publicProvider || !address || !vaultLens || !borrowTokenLens || !collateralTokenLens) return;
+
+    try {
+      const isBorrowTokenWeth = borrowTokenAddress === WETH_ADDRESS;
+      const isCollateralTokenWeth = collateralTokenAddress === WETH_ADDRESS;
+
+      const ethBalanceNum = parseFloat(ethBalance);
+      const borrowTokenBalanceNum = parseFloat(borrowTokenBalance);
+      const sharesBalanceNum = parseFloat(sharesBalance);
+      const collateralTokenBalanceNum = parseFloat(collateralTokenBalance);
+
+      const vaultMaxDepositNum = parseFloat(vaultMaxDeposit);
+      const vaultMaxRedeemNum = parseFloat(vaultMaxRedeem);
+      const vaultMaxMintNum = parseFloat(vaultMaxMint);
+      const vaultMaxWithdrawNum = parseFloat(vaultMaxWithdraw);
+      const vaultMaxDepositCollateralNum = parseFloat(vaultMaxDepositCollateral);
+      const vaultMaxRedeemCollateralNum = parseFloat(vaultMaxRedeemCollateral);
+      const vaultMaxMintCollateralNum = parseFloat(vaultMaxMintCollateral);
+      const vaultMaxWithdrawCollateralNum = parseFloat(vaultMaxWithdrawCollateral);
+
+      const maxAvailableDeposit = Math.min(borrowTokenBalanceNum + (isBorrowTokenWeth ? ethBalanceNum : 0), vaultMaxDepositNum);
+      const maxAvailableRedeem = Math.min(sharesBalanceNum, vaultMaxRedeemNum);
+      const maxAvailableDepositCollateral = Math.min(collateralTokenBalanceNum + (isCollateralTokenWeth ? ethBalanceNum : 0), vaultMaxDepositCollateralNum);
+      const maxAvailableRedeemCollateral = Math.min(sharesBalanceNum, vaultMaxRedeemCollateralNum);
+
+      const borrowTokenBalanceRaw = parseUnits(borrowTokenBalanceNum.toString(), decimals);
+      const rawSharesForBorrowToken = await vaultLens.previewDeposit(borrowTokenBalanceRaw);
+      const sharesForBorrowToken = parseFloat(formatUnits(rawSharesForBorrowToken, decimals));
+      const rawSharesForEth = isBorrowTokenWeth ? await vaultLens.previewDeposit(await publicProvider.getBalance(address)) : 0n;
+      const sharesForEth = parseFloat(formatUnits(rawSharesForEth, decimals));
+      const maxAvailableMint = Math.min(sharesForBorrowToken + sharesForEth, vaultMaxMintNum);
+
+      const collateralTokenBalanceRaw = parseUnits(collateralTokenBalanceNum.toString(), decimals);
+      const rawSharesForCollateral = await vaultLens.previewDepositCollateral(collateralTokenBalanceRaw);
+      const sharesForCollateral = parseFloat(formatUnits(rawSharesForCollateral, decimals));
+      const rawSharesForEthCollateral = isCollateralTokenWeth ? await vaultLens.previewDepositCollateral(await publicProvider.getBalance(address)) : 0n;
+      const sharesForEthCollateral = parseFloat(formatUnits(rawSharesForEthCollateral, decimals));
+      const maxAvailableMintCollateral = Math.min(sharesForCollateral + sharesForEthCollateral, vaultMaxMintCollateralNum);
+
+      const sharesBalanceRaw = parseUnits(sharesBalanceNum.toString(), decimals);
+      const rawPreviewedRedeem = await vaultLens.previewRedeem(sharesBalanceRaw);
+      const previewedRedeem = parseFloat(formatUnits(rawPreviewedRedeem, decimals));
+      const maxAvailableWithdrawTokens = Math.min(previewedRedeem, vaultMaxWithdrawNum);
+
+      const rawPreviewedRedeemCollateral = await vaultLens.previewRedeemCollateral(sharesBalanceRaw);
+      const previewedRedeemCollateral = parseFloat(formatUnits(rawPreviewedRedeemCollateral, decimals));
+      const maxAvailableWithdrawCollateralTokens = Math.min(previewedRedeemCollateral, vaultMaxWithdrawCollateralNum);
+
+      setMaxDeposit(truncate(maxAvailableDeposit, 4));
+      setMaxRedeem(truncate(maxAvailableRedeem, 4));
+      setMaxMint(truncate(maxAvailableMint, 4));
+      setMaxWithdraw(truncate(maxAvailableWithdrawTokens, 4));
+      setMaxDepositCollateral(truncate(maxAvailableDepositCollateral, 4));
+      setMaxRedeemCollateral(truncate(maxAvailableRedeemCollateral, 4));
+      setMaxMintCollateral(truncate(maxAvailableMintCollateral, 4));
+      setMaxWithdrawCollateral(truncate(maxAvailableWithdrawCollateralTokens, 4));
+
+    } catch (err) {
+      console.error('Error calculating max values:', err);
     }
+  }, [publicProvider, address, vaultLens, borrowTokenLens, collateralTokenLens, decimals, 
+      ethBalance, borrowTokenBalance, sharesBalance, collateralTokenBalance, 
+      borrowTokenAddress, collateralTokenAddress, vaultMaxDeposit, vaultMaxRedeem, 
+      vaultMaxMint, vaultMaxWithdraw, vaultMaxDepositCollateral, vaultMaxRedeemCollateral, 
+      vaultMaxMintCollateral, vaultMaxWithdrawCollateral]);
 
-    if (vaultConfig?.leverage) {
-      setMaxLeverage(vaultConfig.leverage);
-    } else {
-      const rawLtv = await vaultLens.targetLTV();
-      const ltv = parseFloat(formatUnits(rawLtv, 18));
-      const leverage = ltvToLeverage(ltv);
-
-      setMaxLeverage(leverage);
-    }
-
-    if (vaultConfig?.lendingName) {
-      setLendingName(vaultConfig.lendingName);
-    } else {
-      setLendingName("Lending");
-    }
-
-    if (vaultConfig?.lendingAddress) {
-      setLendingAddress(vaultConfig.lendingAddress);
-    } else {
-      const lendingConnector = await vaultLens.lendingConnector();
-      const lending = LendingConnector__factory.connect(lendingConnector, publicProvider)
-      const lendingProtocol = await lending.lendingProtocol();
-
-      setLendingAddress(lendingProtocol);
-    }
-  };
-
+  // Load all possbile from config and params
   useEffect(() => {
-    setupCofig();
-    setupContracts();
+    loadConfigAndParams();
+  }, [loadConfigAndParams]);
 
-    if(contractsSet) {
-      loadSymbols();
+  // Initialize contracts
+  useEffect(() => {
+    if (vaultConfig) {
+      initializeContracts();
     }
-  }, [publicProvider, signer, isConnected, contractsSet]);
+  }, [vaultConfig, initializeContracts]);
+
+  // Load balances
+  useEffect(() => {
+    if (vaultLens && borrowTokenLens && collateralTokenLens) {
+      loadBalances();
+    }
+  }, [vaultLens, borrowTokenLens, collateralTokenLens, loadBalances]);
+
+  // Load vault limits
+  useEffect(() => {
+    if (vaultLens) {
+      loadVaultLimits();
+    }
+  }, [vaultLens, loadVaultLimits]);
+
+  // Calculate max values for user based on balances and vault limits
+  useEffect(() => {
+    if (ethBalance !== '0' || sharesBalance !== '0' || borrowTokenBalance !== '0' || collateralTokenBalance !== '0') {
+      if (vaultMaxDeposit !== '0' || vaultMaxRedeem !== '0' || vaultMaxMint !== '0' || vaultMaxWithdraw !== '0') {
+        calculateMaxValues();
+      }
+    }
+  }, [ethBalance, sharesBalance, borrowTokenBalance, collateralTokenBalance, 
+      vaultMaxDeposit, vaultMaxRedeem, vaultMaxMint, vaultMaxWithdraw, calculateMaxValues]);
+
+  // Refetch balances every 12 seconds
+  useAdaptiveInterval(loadBalances, {
+    initialDelay: 12000,
+    maxDelay: 60000,
+    multiplier: 2,
+    enabled: isConnected && !!vaultLens && !!borrowTokenLens && !!collateralTokenLens
+  });
+
+  // Refetch vault limits every 12 seconds
+  useAdaptiveInterval(loadVaultLimits, {
+    initialDelay: 12000,
+    maxDelay: 60000,
+    multiplier: 2,
+    enabled: isConnected && !!vaultLens
+  });
 
   return (
     <VaultContext.Provider
@@ -389,6 +404,19 @@ export const VaultContextProvider = ({ children, vaultAddress }: { children: Rea
         collateralTokenLens,
         decimals,
         vaultConfig,
+        ethBalance,
+        sharesBalance,
+        borrowTokenBalance,
+        collateralTokenBalance,
+        vaultMaxDeposit,
+        vaultMaxRedeem,
+        vaultMaxMint,
+        vaultMaxWithdraw,
+        vaultMaxDepositCollateral,
+        vaultMaxRedeemCollateral,
+        vaultMaxMintCollateral,
+        vaultMaxWithdrawCollateral,
+        totalAssets,
         maxDeposit,
         maxRedeem,
         maxMint,
@@ -396,15 +424,7 @@ export const VaultContextProvider = ({ children, vaultAddress }: { children: Rea
         maxDepositCollateral,
         maxRedeemCollateral,
         maxMintCollateral,
-        maxWithdrawCollateral,
-        updateMaxDeposit,
-        updateMaxRedeem,
-        updateMaxMint,
-        updateMaxWithdraw,
-        updateMaxDepositCollateral,
-        updateMaxRedeemCollateral,
-        updateMaxMintCollateral,
-        updateMaxWithdrawCollateral
+        maxWithdrawCollateral
       }}
     >
       {children}

@@ -1,155 +1,324 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { formatUnits } from "ethers";
-
 import { useAppContext } from "@/contexts";
 import { ltvToLeverage } from "@/utils";
+import { useAdaptiveInterval } from "@/hooks";
 import { Vault__factory, ERC20__factory } from "@/typechain-types";
-
-import { CopyAddress, Loader } from "@/components/ui";
-
+import { CopyAddress } from "@/components/ui";
+import { renderWithTransition } from "@/helpers/renderWithTransition";
 import vaultsConfig from "../../../vaults.config.json";
 
 interface VaultBlockProps {
   address: string;
 }
 
+interface StaticVaultData {
+  borrowTokenSymbol: string | null;
+  collateralTokenSymbol: string | null;
+  maxLeverage: string | null;
+  lendingName: string | null;
+}
+
+interface DynamicVaultData {
+  borrowAssets: bigint | null;
+  collateralAssets: bigint | null;
+}
+
+interface LoadingState {
+  isInitialLoad: boolean;
+  isLoadingTokens: boolean;
+  isLoadingAssets: boolean;
+  isLoadingLeverage: boolean;
+}
+
 export default function VaultBlock( {address} : VaultBlockProps ) {
-  const [borrowAssets, setBorrowAssets] = useState<bigint | null>(null);
-  const [collateralAssets, setCollateralAssets] = useState<bigint | null>(null);
-  const [borrowTokenSymbol, setBorrowTokenSymbol] = useState<string | null>(null);
-  const [collateralTokenSymbol, setCollateralTokenSymbol] = useState<string | null>(null);
-  const [maxLeverage, setMaxLeverage] = useState<string | null>(null);
-  const [lendingName, setLendingName] = useState<string | null>(null);
+  const [staticData, setStaticData] = useState<StaticVaultData>({
+    borrowTokenSymbol: null,
+    collateralTokenSymbol: null,
+    maxLeverage: null,
+    lendingName: null,
+  });
+
+  const [dynamicData, setDynamicData] = useState<DynamicVaultData>({
+    borrowAssets: null,
+    collateralAssets: null,
+  });
+
+  const [loadingState, setLoadingState] = useState<LoadingState>({
+    isInitialLoad: true,
+    isLoadingTokens: true,
+    isLoadingAssets: true,
+    isLoadingLeverage: true,
+  });
 
   const { publicProvider } = useAppContext();
 
+  const vaultConfig = useMemo(() => {
+    const chainId = "11155111";
+    const vaults = vaultsConfig[chainId]?.vaults || [];
+    return vaults.find(v => v.address.toLowerCase() === address.toLowerCase());
+  }, [address]);
+
+  const vaultContract = useMemo(() => {
+    if (!publicProvider) return null;
+    return Vault__factory.connect(address, publicProvider);
+  }, [address, publicProvider]);
+
   useEffect(() => {
-    const getVaultAbout = async () => {
-      const chainId = "11155111";
+    if (vaultConfig) {
+      const hasTokensFromConfig = !!(vaultConfig.collateralTokenSymbol && vaultConfig.borrowTokenSymbol);
+      const hasLeverageFromConfig = !!vaultConfig.leverage;
+      
+      if (hasTokensFromConfig || hasLeverageFromConfig) {
+        setLoadingState(prev => ({
+          ...prev,
+          isLoadingTokens: !hasTokensFromConfig,
+          isLoadingLeverage: !hasLeverageFromConfig,
+        }));
+        
+        setStaticData({
+          collateralTokenSymbol: vaultConfig.collateralTokenSymbol || null,
+          borrowTokenSymbol: vaultConfig.borrowTokenSymbol || null,
+          maxLeverage: vaultConfig.leverage || null,
+          lendingName: vaultConfig.lendingName || null,
+        });
+      }
+    }
+  }, [vaultConfig]);
 
-      const vaults = vaultsConfig[chainId]?.vaults || [];
-      const vault = vaults.find(v => v.address.toLowerCase() === address.toLowerCase());
+  const loadCollateralTokenSymbol = useCallback(async () => {
+    if (!vaultContract || !publicProvider || vaultConfig?.collateralTokenSymbol) return;
 
-      const vaultContractLens = Vault__factory.connect(address, publicProvider);
-
-      if (vault?.collateralTokenSymbol) {
-        setCollateralTokenSymbol(vault.collateralTokenSymbol);
+    try {
+      let symbol: string;
+      if (vaultConfig?.collateralTokenAddress) {
+        const contract = ERC20__factory.connect(vaultConfig.collateralTokenAddress, publicProvider);
+        symbol = await contract.symbol();
       } else {
-        if (vault?.collateralTokenAddress) {
-          const contract = ERC20__factory.connect(vault.collateralTokenAddress, publicProvider);
-          const symbol = await contract.symbol();
-          setCollateralTokenSymbol(symbol);
-        } else {
-          const tokenAddress = await vaultContractLens.collateralToken();
-          const contract = ERC20__factory.connect(tokenAddress, publicProvider);
-          const symbol = await contract.symbol();
-          setCollateralTokenSymbol(symbol);
-        }
+        const tokenAddress = await vaultContract.collateralToken();
+        const contract = ERC20__factory.connect(tokenAddress, publicProvider);
+        symbol = await contract.symbol();
       }
+      setStaticData(prev => ({ ...prev, collateralTokenSymbol: symbol }));
+    } catch (err) {
+      console.error('Error loading collateral token symbol:', err);
+    }
+  }, [vaultContract, vaultConfig, publicProvider]);
 
-      if (vault?.borrowTokenSymbol) {
-        setBorrowTokenSymbol(vault.borrowTokenSymbol);
+  // Load borrow token symbol
+  const loadBorrowTokenSymbol = useCallback(async () => {
+    if (!vaultContract || !publicProvider || vaultConfig?.borrowTokenSymbol) return;
+
+    try {
+      let symbol: string;
+      if (vaultConfig?.borrowTokenAddress) {
+        const contract = ERC20__factory.connect(vaultConfig.borrowTokenAddress, publicProvider);
+        symbol = await contract.symbol();
       } else {
-        if (vault?.borrowTokenAddress) {
-          const contract = ERC20__factory.connect(vault.borrowTokenAddress, publicProvider);
-          const symbol = await contract.symbol();
-          setBorrowTokenSymbol(symbol);
-        } else {
-          const tokenAddress = await vaultContractLens.borrowToken();
-          const contract = ERC20__factory.connect(tokenAddress, publicProvider);
-          const symbol = await contract.symbol();
-          setBorrowTokenSymbol(symbol);
-        }
+        const tokenAddress = await vaultContract.borrowToken();
+        const contract = ERC20__factory.connect(tokenAddress, publicProvider);
+        symbol = await contract.symbol();
       }
+      setStaticData(prev => ({ ...prev, borrowTokenSymbol: symbol }));
+    } catch (err) {
+      console.error('Error loading borrow token symbol:', err);
+    }
+  }, [vaultContract, vaultConfig, publicProvider]);
 
-      if (vault?.leverage) {
-        setMaxLeverage(vault.leverage);
-      } else {
-        const rawLtv = await vaultContractLens.targetLTV();
-        const ltv = parseFloat(formatUnits(rawLtv, 18)).toFixed(4);
-        const leverage = ltvToLeverage(parseFloat(ltv));
+  const loadMaxLeverage = useCallback(async () => {
+    if (!vaultContract || vaultConfig?.leverage) return;
 
-        setMaxLeverage(leverage);
-      }
+    try {
+      const rawLtv = await vaultContract.targetLTV();
+      const ltv = parseFloat(formatUnits(rawLtv, 18)).toFixed(4);
+      const leverage = ltvToLeverage(parseFloat(ltv));
+      setStaticData(prev => ({ ...prev, maxLeverage: leverage }));
+    } catch (err) {
+      console.error('Error loading max leverage:', err);
+    }
+  }, [vaultContract, vaultConfig]);
 
-      if(vault?.lendingName) {
-        setLendingName(vault.lendingName);
-      }
+  useEffect(() => {
+    if (vaultContract && publicProvider && !vaultConfig?.collateralTokenSymbol) {
+      loadCollateralTokenSymbol();
+    } else if (vaultConfig?.collateralTokenSymbol) {
+      setLoadingState(prev => ({ ...prev, isLoadingTokens: false }));
+    }
+  }, [vaultContract, publicProvider, vaultConfig, loadCollateralTokenSymbol]);
 
-      const [newBorrowAssets, newCollateralAssets] = await Promise.all([
-        vaultContractLens.getRealBorrowAssets(),
-        vaultContractLens.getRealCollateralAssets(),
+  useEffect(() => {
+    if (vaultContract && publicProvider && !vaultConfig?.borrowTokenSymbol) {
+      loadBorrowTokenSymbol();
+    } else if (vaultConfig?.borrowTokenSymbol) {
+      setLoadingState(prev => ({ ...prev, isLoadingTokens: false }));
+    }
+  }, [vaultContract, publicProvider, vaultConfig, loadBorrowTokenSymbol]);
+
+  useEffect(() => {
+    if (vaultContract && !vaultConfig?.leverage) {
+      loadMaxLeverage();
+    } else if (vaultConfig?.leverage) {
+      setLoadingState(prev => ({ ...prev, isLoadingLeverage: false }));
+    }
+  }, [vaultContract, vaultConfig, loadMaxLeverage]);
+
+  const loadBorrowAssets = useCallback(async () => {
+    if (!vaultContract) return;
+
+    try {
+      const borrowAssets = await vaultContract.getRealBorrowAssets();
+      setDynamicData(prev => ({ ...prev, borrowAssets }));
+    } catch (err) {
+      console.error('Error loading borrow assets:', err);
+    }
+  }, [vaultContract]);
+
+  const loadCollateralAssets = useCallback(async () => {
+    if (!vaultContract) return;
+
+    try {
+      const collateralAssets = await vaultContract.getRealCollateralAssets();
+      setDynamicData(prev => ({ ...prev, collateralAssets }));
+    } catch (err) {
+      console.error('Error loading collateral assets:', err);
+    }
+  }, [vaultContract]);
+
+  const fetchDynamicData = useCallback(async () => {
+    if (!vaultContract) return;
+
+    try {
+      setLoadingState(prev => ({
+        ...prev,
+        isInitialLoad: false,
+        isLoadingAssets: true,
+      }));
+
+      await Promise.all([
+        loadBorrowAssets(),
+        loadCollateralAssets(),
       ]);
 
-      setBorrowAssets(newBorrowAssets);
-      setCollateralAssets(newCollateralAssets);
+      setLoadingState(prev => ({ ...prev, isLoadingAssets: false }));
+    } catch (err) {
+      console.error('Error fetching dynamic vault data:', err);
+      setLoadingState(prev => ({ ...prev, isLoadingAssets: false }));
     }
+  }, [vaultContract, loadBorrowAssets, loadCollateralAssets]);
 
-    getVaultAbout();
-  }, [publicProvider]);
+  useEffect(() => {
+    if (vaultContract) {
+      loadBorrowAssets();
+    }
+  }, [vaultContract, loadBorrowAssets]);
+
+  useEffect(() => {
+    if (vaultContract) {
+      loadCollateralAssets();
+    }
+  }, [vaultContract, loadCollateralAssets]);
+
+  useAdaptiveInterval(fetchDynamicData, {
+    initialDelay: 12000,
+    enabled: !!vaultContract
+  });
+
+  const formattedCollateralAmount = useMemo(() => {
+    if (!dynamicData.collateralAssets) return null;
+    return parseFloat(formatUnits(dynamicData.collateralAssets, 18)).toFixed(4);
+  }, [dynamicData.collateralAssets]);
+
+  const formattedBorrowAmount = useMemo(() => {
+    if (!dynamicData.borrowAssets) return null;
+    return parseFloat(formatUnits(dynamicData.borrowAssets, 18)).toFixed(4);
+  }, [dynamicData.borrowAssets]);
+
+  const tokenPairDisplay = useMemo(() => {
+    if (staticData.collateralTokenSymbol && staticData.borrowTokenSymbol) {
+      return `${staticData.collateralTokenSymbol}/${staticData.borrowTokenSymbol}`;
+    }
+    return null;
+  }, [staticData.collateralTokenSymbol, staticData.borrowTokenSymbol]);
+
 
   return (
     <>
       <CopyAddress className="mb-2" address={address} />
-      <Link to={`/${address}`} className="wrapper block w-full bg-gray-50 transition-colors border border-gray-50 rounded-lg mb-12 last:mb-0 p-3">
+      <Link 
+        to={`/${address}`}
+        state={{ 
+          collateralTokenSymbol: staticData.collateralTokenSymbol,
+          borrowTokenSymbol: staticData.borrowTokenSymbol,
+          maxLeverage: staticData.maxLeverage,
+          lendingName: staticData.lendingName
+        }}
+        className="wrapper block w-full bg-gray-50 transition-colors border border-gray-50 rounded-lg mb-12 last:mb-0 p-3">
         <div className="w-full">
           <div className="w-full flex flex-row justify-between mb-2 hidden sm:flex">
           <div className="flex items-center text-base font-medium text-gray-900">
-            <div className="mr-2">
-              {collateralTokenSymbol && borrowTokenSymbol ? 
-              `${collateralTokenSymbol}/${borrowTokenSymbol}` :
-              <Loader />
-            }
+            <div className="mr-2 min-w-[60px]">
+              {renderWithTransition(
+                tokenPairDisplay,
+                loadingState.isLoadingTokens
+              )}
             </div>
             <div className="mr-2 font-normal">
-              {maxLeverage ? 
-              `x${maxLeverage}` :
-              <Loader />
-            }
+              {renderWithTransition(
+                staticData.maxLeverage ? `x${staticData.maxLeverage}` : null,
+                loadingState.isLoadingLeverage
+              )}
             </div>
-            <div className="font-normal">{lendingName ? lendingName : "Lending"}</div>
+            <div className="font-normal">{staticData.lendingName || "Lending"}</div>
           </div>
           </div>
           <div className="w-full mb-2 sm:hidden">
             <div className="flex text-base font-medium text-gray-900 mb-2">
-              {collateralTokenSymbol && borrowTokenSymbol ? 
-                `${collateralTokenSymbol}/${borrowTokenSymbol}` :
-                <Loader />
-              }
-              <div className="font-normal ml-2">{lendingName ? lendingName : "Lending"}</div>
+              <div className="min-w-[60px]">
+                {renderWithTransition(
+                  tokenPairDisplay,
+                  loadingState.isLoadingTokens
+                )}
+              </div>
+              <div className="font-normal ml-2">{staticData.lendingName || "Lending"}</div>
             </div>
             <div className="flex font-normal text-gray-700 text-sm">
               <div className="font-medium text-gray-700 mr-2">LTV: </div>
-              {maxLeverage ? 
-                `${maxLeverage}` :
-                <Loader />
-              }
+              <div className="min-w-[40px]">
+                {renderWithTransition(
+                  staticData.maxLeverage ? `${staticData.maxLeverage}` : null,
+                  loadingState.isLoadingLeverage
+                )}
+              </div>
             </div>
           </div>
         </div>
         <div className="w-full flex justify-between text-sm">
           <div className="font-medium text-gray-700">Collateral: </div>
-          <div className="font-normal text-gray-700">
-          {collateralAssets && collateralTokenSymbol ? 
-            <div className="flex">
-              <div className="font-normal text-gray-700 mr-2">{`${parseFloat(formatUnits(collateralAssets, 18)).toFixed(4)}`}</div>
-              <div className="font-medium text-gray-700">{collateralTokenSymbol}</div>
-            </div> :
-            <Loader />
-          }
-        </div>
+          <div className="font-normal text-gray-700 min-w-[100px] text-right">
+            {renderWithTransition(
+              formattedCollateralAmount && staticData.collateralTokenSymbol ? (
+                <div className="flex justify-end">
+                  <div className="font-normal text-gray-700 mr-2">{formattedCollateralAmount}</div>
+                  <div className="font-medium text-gray-700">{staticData.collateralTokenSymbol}</div>
+                </div>
+              ) : null,
+              loadingState.isLoadingAssets || loadingState.isLoadingTokens
+            )}
+          </div>
         </div>
         <div className="w-full flex justify-between text-sm">
           <div className="font-medium text-gray-700">Borrow: </div>
-          <div className="font-normal text-gray-700">
-            {borrowAssets && borrowTokenSymbol ?
-              <div className="flex">
-                <div className="font-normal text-gray-700 mr-2">{`${parseFloat(formatUnits(borrowAssets, 18)).toFixed(4)}`}</div>
-                <div className="font-medium text-gray-700">{borrowTokenSymbol}</div>
-              </div> :
-              <Loader />
-            }
+          <div className="font-normal text-gray-700 min-w-[100px] text-right">
+            {renderWithTransition(
+              formattedBorrowAmount && staticData.borrowTokenSymbol ? (
+                <div className="flex justify-end">
+                  <div className="font-normal text-gray-700 mr-2">{formattedBorrowAmount}</div>
+                  <div className="font-medium text-gray-700">{staticData.borrowTokenSymbol}</div>
+                </div>
+              ) : null,
+              loadingState.isLoadingAssets || loadingState.isLoadingTokens
+            )}
           </div>
         </div>
       </Link>

@@ -1,7 +1,5 @@
-import { useParams } from 'react-router-dom';
-
+import { useLocation, useParams } from 'react-router-dom';
 import { VaultContextProvider } from "@/contexts";
-
 import Balances from "@/components/vault/Balances";
 import Information from "@/components/vault/Information";
 import Tabs from "@/components/vault/Tabs";
@@ -11,15 +9,25 @@ import Addresses from '@/components/vault/Addresses';
 export default function Vault() {
   const { vaultAddress } = useParams<{ vaultAddress: string }>();
 
-  if(!vaultAddress) return;
+  if (!vaultAddress) return;
+
+  const location = useLocation();
+  const state = location.state || {};
+  
+  const params = {
+    collateralTokenSymbol: state.collateralTokenSymbol || null,
+    borrowTokenSymbol: state.borrowTokenSymbol || null,
+    maxLeverage: state.maxLeverage || null,
+    lendingName: state.lendingName || null,
+  };
 
   return (
-    <VaultContextProvider vaultAddress={vaultAddress}>
+    <VaultContextProvider vaultAddress={vaultAddress} params={params}>
       <Header />
       <Addresses />
-      <Information />
-      <Balances />
       <Tabs />
+      <Balances />
+      <Information />
     </VaultContextProvider>
   );
 }

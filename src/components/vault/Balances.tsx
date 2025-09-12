@@ -1,100 +1,85 @@
-import { useState } from 'react';
-import { formatUnits, formatEther } from 'ethers';
-
-import { useAppContext, useVaultContext } from '@/contexts';
-import { useAdaptiveInterval } from '@/hooks';
-import { truncate } from '@/utils';
-
-import { Loader } from '@/components/ui';
+import { useVaultContext } from '@/contexts';
+import { renderWithTransition } from '@/helpers/renderWithTransition';
 
 export default function Balances() {
-  const [sharesBalance, setSharesBalance] = useState<string | null>(null);
-  const [borrowTokenBalance, setBorrowTokenBalance] = useState<string | null>(null);
-  const [collateralTokenBalance, setCollateralTokenBalance] = useState<string | null>(null);
-  const [ethBalance, setEthBalance] = useState<string | null>(null);
-
-  const { isConnected, publicProvider, address } = useAppContext();
   const {
-    decimals, vaultLens, borrowTokenLens, collateralTokenLens,
-    sharesSymbol, borrowTokenSymbol, collateralTokenSymbol
+    ethBalance,
+    sharesBalance,
+    borrowTokenBalance,
+    collateralTokenBalance,
+    sharesSymbol,
+    borrowTokenSymbol,
+    collateralTokenSymbol
   } = useVaultContext();
-
-  const resetBalances = () => {
-    setSharesBalance('0');
-    setBorrowTokenBalance('0');
-    setCollateralTokenBalance('0');
-    setEthBalance('0');
-  };
-
-  const getBalances = async () => {
-    if (!publicProvider || !address || !vaultLens || !borrowTokenLens || !collateralTokenLens) return;
-
-    try {
-      const ethBalanceRaw = await publicProvider.getBalance(address);
-      const currentEthBalance = parseFloat(formatEther(ethBalanceRaw));
-      setEthBalance(truncate(currentEthBalance, 4));
-
-      const [
-        sharesBalanceRaw,
-        borrowTokenBalanceRaw,
-        collateralTokenBalanceRaw,
-      ] = await Promise.all([
-        vaultLens.balanceOf(address),
-        borrowTokenLens.balanceOf(address),
-        collateralTokenLens.balanceOf(address),
-      ]);
-
-      const currentSharesBalance = parseFloat(formatUnits(sharesBalanceRaw, decimals));
-      const currentBorrowTokenBalance = parseFloat(formatUnits(borrowTokenBalanceRaw, decimals));
-      const currentCollateralTokenBalance = parseFloat(formatUnits(collateralTokenBalanceRaw, decimals));
-
-      setSharesBalance(truncate(currentSharesBalance, 4));
-      setBorrowTokenBalance(truncate(currentBorrowTokenBalance, 4));
-      setCollateralTokenBalance(truncate(currentCollateralTokenBalance, 4));
-
-    } catch (err) {
-      console.error('Error fetching balances:', err);
-      resetBalances();
-    }
-  };
-
-  useAdaptiveInterval(getBalances, {
-    enabled: isConnected,
-  });
 
   return (
     <div className="relative rounded-lg bg-gray-50 p-3">
       <div className="flex flex-col w-full space-y-1">
-          <h3 className="text-lg font-medium text-gray-900">Your Balances</h3>
-          <div className="w-full flex justify-between text-sm text-gray-600">
-            <div>Ethers:</div>
-            <div className="flex">
-              <div className="mr-2">{ethBalance ? ethBalance : <Loader />}</div>
-              <div className="font-medium text-gray-700">ETH</div>
+        <h3 className="text-lg font-medium text-gray-900">Your Balances</h3>
+        <div className="w-full flex justify-between text-sm text-gray-600">
+          <div>Ethers:</div>
+          <div className="flex min-w-[100px] justify-end">
+            <div className="mr-2">
+              {renderWithTransition(
+                ethBalance,
+                !ethBalance || ethBalance === '0'
+              )}
             </div>
+            <div className="font-medium text-gray-700">ETH</div>
           </div>
-          <div className="w-full flex justify-between text-sm text-gray-600">
-            <div>Shares:</div>
-            <div className="flex">
-              <div className="mr-2">{sharesBalance ? sharesBalance : <Loader />}</div>
-              <div className="font-medium text-gray-700">{sharesSymbol ? sharesSymbol : <Loader />}</div>
+        </div>
+        <div className="w-full flex justify-between text-sm text-gray-600">
+          <div>Shares:</div>
+          <div className="flex min-w-[100px] justify-end">
+            <div className="mr-2">
+              {renderWithTransition(
+                sharesBalance,
+                !sharesBalance || sharesBalance === '0'
+              )}
             </div>
-          </div>
-          <div className="w-full flex justify-between text-sm text-gray-600">
-            <div>Borrow Token:</div>
-            <div className="flex">
-              <div className="mr-2">{borrowTokenBalance ? borrowTokenBalance : <Loader />}</div>
-              <div className="font-medium text-gray-700">{borrowTokenSymbol ? borrowTokenSymbol : <Loader />}</div>
-            </div>
-          </div>
-          <div className="w-full flex justify-between text-sm text-gray-600">
-            <div>Collateral Token:</div>
-            <div className="flex">
-              <div className="mr-2">{collateralTokenBalance ? collateralTokenBalance : <Loader />}</div>
-              <div className="font-medium text-gray-700">{collateralTokenSymbol ? collateralTokenSymbol : <Loader />}</div>
+            <div className="font-medium text-gray-700">
+              {renderWithTransition(
+                sharesSymbol,
+                !sharesSymbol
+              )}
             </div>
           </div>
         </div>
+        <div className="w-full flex justify-between text-sm text-gray-600">
+          <div>Borrow Token:</div>
+          <div className="flex min-w-[100px] justify-end">
+            <div className="mr-2">
+              {renderWithTransition(
+                borrowTokenBalance,
+                !borrowTokenBalance || borrowTokenBalance === '0'
+              )}
+            </div>
+            <div className="font-medium text-gray-700">
+              {renderWithTransition(
+                borrowTokenSymbol,
+                !borrowTokenSymbol
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="w-full flex justify-between text-sm text-gray-600">
+          <div>Collateral Token:</div>
+          <div className="flex min-w-[100px] justify-end">
+            <div className="mr-2">
+              {renderWithTransition(
+                collateralTokenBalance,
+                !collateralTokenBalance || collateralTokenBalance === '0'
+              )}
+            </div>
+            <div className="font-medium text-gray-700">
+              {renderWithTransition(
+                collateralTokenSymbol,
+                !collateralTokenSymbol
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,114 +1,117 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { formatUnits } from 'ethers';
-
-import { useAppContext, useVaultContext } from '@/contexts';
-import { useAdaptiveInterval } from '@/hooks';
+import { useVaultContext } from '@/contexts';
 import { truncate } from '@/utils';
+import { renderWithTransition } from '@/helpers/renderWithTransition';
 
-import { Loader } from '@/components/ui';
+interface LoadingState {
+  isLoadingTargetLtv: boolean;
+  isLoadingMaxSafeLtv: boolean;
+  isLoadingMinProfitLtv: boolean;
+}
 
 export default function Information() {
-  // const [error, setError] = useState<string | null>(null);
-
-  const [maxDeposit, setMaxDeposit] = useState<string | null>(null);
-  const [maxWithdraw, setMaxWithdraw] = useState<string | null>(null)
-  const [maxMint, setMaxMint] = useState<string | null>(null)
-  const [maxRedeem, setMaxRedeem] = useState<string | null>(null)
-  const [maxDepositCollateral, setMaxDepositCollateral] = useState<string | null>(null)
-  const [maxWithdrawCollateral, setMaxWithdrawCollateral] = useState<string | null>(null)
-  const [maxMintCollateral, setMaxMintCollateral] = useState<string | null>(null)
-  const [maxRedeemCollateral, setMaxRedeemCollateral] = useState<string | null>(null)
-  const [totalAssets, setTotalAssets] = useState<string | null>(null)
+  const [loadingState, setLoadingState] = useState<LoadingState>({
+    isLoadingTargetLtv: true,
+    isLoadingMaxSafeLtv: true,
+    isLoadingMinProfitLtv: true,
+  });
 
   const [targetLtv, setTargetLtv] = useState<string | null>(null);
   const [maxSafeLtv, setMaxSafeLtv] = useState<string | null>(null);
   const [minProfitLtv, setMinProfitLtv] = useState<string | null>(null);
 
-  const { address, isConnected } = useAppContext();
-  const { vaultLens, sharesSymbol, borrowTokenSymbol, collateralTokenSymbol, decimals, vaultConfig } = useVaultContext();
+  const { 
+    vaultLens, 
+    sharesSymbol, 
+    borrowTokenSymbol, 
+    collateralTokenSymbol, 
+    vaultConfig,
+    vaultMaxDeposit,
+    vaultMaxWithdraw,
+    vaultMaxMint,
+    vaultMaxRedeem,
+    vaultMaxDepositCollateral,
+    vaultMaxWithdrawCollateral,
+    vaultMaxMintCollateral,
+    vaultMaxRedeemCollateral,
+    totalAssets
+  } = useVaultContext();
 
-  const getVaultInformation = async () => {
-    if (!address || !vaultLens) return;
+  useEffect(() => {
+    if (vaultConfig) {
+      if (vaultConfig.targetLTV) {
+        setTargetLtv(vaultConfig.targetLTV);
+        setLoadingState(prev => ({ ...prev, isLoadingTargetLtv: false }));
+      }
+      if (vaultConfig.maxSafeLTV) {
+        setMaxSafeLtv(vaultConfig.maxSafeLTV);
+        setLoadingState(prev => ({ ...prev, isLoadingMaxSafeLtv: false }));
+      }
+      if (vaultConfig.minProfitLTV) {
+        setMinProfitLtv(vaultConfig.minProfitLTV);
+        setLoadingState(prev => ({ ...prev, isLoadingMinProfitLtv: false }));
+      }
+    }
+  }, [vaultConfig]);
 
-    // setError(null);
+  const loadTargetLtv = useCallback(async () => {
+    if (!vaultLens || !loadingState.isLoadingTargetLtv || vaultConfig?.targetLTV) return;
 
-    if (vaultConfig?.targetLTV) {
-      setTargetLtv(vaultConfig.targetLTV);
-    } else {
+    try {
       const rawTargetLtv = await vaultLens.targetLTV();
       const newTargetLtv = truncate(parseFloat(formatUnits(rawTargetLtv, 18)), 2);
       setTargetLtv(newTargetLtv);
+      setLoadingState(prev => ({ ...prev, isLoadingTargetLtv: false }));
+    } catch (err) {
+      console.error('Error loading target LTV:', err);
     }
+  }, [vaultLens, loadingState.isLoadingTargetLtv, vaultConfig]);
 
-    if (vaultConfig?.maxSafeLTV) {
-      setMaxSafeLtv(vaultConfig.maxSafeLTV);
-    } else {
+  const loadMaxSafeLtv = useCallback(async () => {
+    if (!vaultLens || !loadingState.isLoadingMaxSafeLtv || vaultConfig?.maxSafeLTV) return;
+
+    try {
       const rawMaxSafeLtv = await vaultLens.maxSafeLTV();
       const newMaxSafeLtv = truncate(parseFloat(formatUnits(rawMaxSafeLtv, 18)), 2);
       setMaxSafeLtv(newMaxSafeLtv);
+      setLoadingState(prev => ({ ...prev, isLoadingMaxSafeLtv: false }));
+    } catch (err) {
+      console.error('Error loading max safe LTV:', err);
     }
+  }, [vaultLens, loadingState.isLoadingMaxSafeLtv, vaultConfig]);
 
-    if (vaultConfig?.minProfitLTV) {
-      setMinProfitLtv(vaultConfig.minProfitLTV);
-    } else {
+  const loadMinProfitLtv = useCallback(async () => {
+    if (!vaultLens || !loadingState.isLoadingMinProfitLtv || vaultConfig?.minProfitLTV) return;
+
+    try {
       const rawMinProfitLtv = await vaultLens.minProfitLTV();
       const newMinProfitLtv = truncate(parseFloat(formatUnits(rawMinProfitLtv, 18)), 2);
       setMinProfitLtv(newMinProfitLtv);
-    }
-
-    try {
-      const [
-        maxDeposit, maxWithdraw, maxMint, maxRedeem, 
-        maxDepositCollateral, maxWithdrawCollateral, maxMintCollateral, maxRedeemCollateral,
-        assets
-      ] = await Promise.all([
-        vaultLens.maxDeposit(address),
-        vaultLens.maxWithdraw(address),
-        vaultLens.maxMint(address),
-        vaultLens.maxRedeem(address),
-        vaultLens.maxDepositCollateral(address),
-        vaultLens.maxWithdrawCollateral(address),
-        vaultLens.maxMintCollateral(address),
-        vaultLens.maxRedeemCollateral(address),
-        vaultLens.totalAssets()
-      ]);
-
-      setMaxDeposit(
-        truncate(parseFloat(formatUnits(maxDeposit, decimals)), 4)
-      );
-      setMaxWithdraw(
-        truncate(parseFloat(formatUnits(maxWithdraw, decimals)), 4)
-      );
-      setMaxMint(
-        truncate(parseFloat(formatUnits(maxMint, decimals)), 4)
-      );
-      setMaxRedeem(
-        truncate(parseFloat(formatUnits(maxRedeem, decimals)), 4)
-      );
-
-      setMaxDepositCollateral(
-        truncate(parseFloat(formatUnits(maxDepositCollateral, decimals)), 4)
-      );
-      setMaxWithdrawCollateral(
-        truncate(parseFloat(formatUnits(maxWithdrawCollateral, decimals)), 4)
-      );
-      setMaxMintCollateral(
-        truncate(parseFloat(formatUnits(maxMintCollateral, decimals)), 4)
-      );
-      setMaxRedeemCollateral(
-        truncate(parseFloat(formatUnits(maxRedeemCollateral, decimals)), 4)
-      );
-
-      setTotalAssets(parseFloat(formatUnits(assets, decimals)).toFixed(4));
+      setLoadingState(prev => ({ ...prev, isLoadingMinProfitLtv: false }));
     } catch (err) {
-      console.error('Error fetching vault info:', err);
-      // setError('An error occurred');
+      console.error('Error loading min profit LTV:', err);
     }
-  };
+  }, [vaultLens, loadingState.isLoadingMinProfitLtv, vaultConfig]);
 
-  useAdaptiveInterval(getVaultInformation, {
-    enabled: isConnected
-  });
+  useEffect(() => {
+    if (vaultLens && loadingState.isLoadingTargetLtv && !vaultConfig?.targetLTV) {
+      loadTargetLtv();
+    }
+  }, [vaultLens, loadingState.isLoadingTargetLtv, vaultConfig, loadTargetLtv]);
+
+  useEffect(() => {
+    if (vaultLens && loadingState.isLoadingMaxSafeLtv && !vaultConfig?.maxSafeLTV) {
+      loadMaxSafeLtv();
+    }
+  }, [vaultLens, loadingState.isLoadingMaxSafeLtv, vaultConfig, loadMaxSafeLtv]);
+
+  useEffect(() => {
+    if (vaultLens && loadingState.isLoadingMinProfitLtv && !vaultConfig?.minProfitLTV) {
+      loadMinProfitLtv();
+    }
+  }, [vaultLens, loadingState.isLoadingMinProfitLtv, vaultConfig, loadMinProfitLtv]);
+
 
   return (
     <div className="relative rounded-lg mb-4 bg-gray-50 p-3">
@@ -124,28 +127,48 @@ export default function Information() {
           <div className="flex flex-col items-end mr-2">
             <div className="mb-2">Collateral: </div>
             {[
-              [maxDepositCollateral, collateralTokenSymbol],
-              [maxWithdrawCollateral, collateralTokenSymbol],
-              [maxMintCollateral, sharesSymbol],
-              [maxRedeemCollateral, sharesSymbol]
+              [vaultMaxDepositCollateral, collateralTokenSymbol],
+              [vaultMaxWithdrawCollateral, collateralTokenSymbol],
+              [vaultMaxMintCollateral, sharesSymbol],
+              [vaultMaxRedeemCollateral, sharesSymbol]
             ].map((info, index) => (
               <div key={index} className='flex'>
-                <div className="mr-2">{info[0] ? info[0] : <Loader />}</div>
-                <div className="font-medium text-gray-700">{info[1] ? info[1] : <Loader />}</div>
+                <div className="mr-2 min-w-[60px] text-right">
+                  {renderWithTransition(
+                    info[0],
+                    !info[0] || info[0] === '0'
+                  )}
+                </div>
+                <div className="font-medium text-gray-700">
+                  {renderWithTransition(
+                    info[1],
+                    !info[1]
+                  )}
+                </div>
               </div>
             ))}
           </div>
           <div className="flex flex-col items-end">
             <div className="mb-2">Borrow: </div>
             {[
-              [maxDeposit, borrowTokenSymbol],
-              [maxWithdraw, borrowTokenSymbol],
-              [maxMint, sharesSymbol],
-              [maxRedeem, sharesSymbol]
+              [vaultMaxDeposit, borrowTokenSymbol],
+              [vaultMaxWithdraw, borrowTokenSymbol],
+              [vaultMaxMint, sharesSymbol],
+              [vaultMaxRedeem, sharesSymbol]
             ].map((info, index) => (
               <div key={index} className="flex">
-                <div className="mr-2">{info[0] ? info[0] : <Loader />}</div>
-                <div className="font-medium text-gray-700">{info[1] ? info[1] : <Loader />}</div>
+                <div className="mr-2 min-w-[60px] text-right">
+                  {renderWithTransition(
+                    info[0],
+                    !info[0] || info[0] === '0'
+                  )}
+                </div>
+                <div className="font-medium text-gray-700">
+                  {renderWithTransition(
+                    info[1],
+                    !info[1]
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -163,14 +186,24 @@ export default function Information() {
           <div className="flex flex-col items-end">
             <div className="font-medium text-gray-700">Max for Collateral</div>
             {[
-              [maxDepositCollateral, collateralTokenSymbol],
-              [maxWithdrawCollateral, collateralTokenSymbol],
-              [maxMintCollateral, sharesSymbol],
-              [maxRedeemCollateral, sharesSymbol]
+              [vaultMaxDepositCollateral, collateralTokenSymbol],
+              [vaultMaxWithdrawCollateral, collateralTokenSymbol],
+              [vaultMaxMintCollateral, sharesSymbol],
+              [vaultMaxRedeemCollateral, sharesSymbol]
             ].map((info, index) => (
               <div key={index} className='flex'>
-                <div className="mr-2">{info[0] ? info[0] : <Loader />}</div>
-                <div className="font-medium text-gray-700">{info[1] ? info[1] : <Loader />}</div>
+                <div className="mr-2 min-w-[60px] text-right">
+                  {renderWithTransition(
+                    info[0],
+                    !info[0] || info[0] === '0'
+                  )}
+                </div>
+                <div className="font-medium text-gray-700">
+                  {renderWithTransition(
+                    info[1],
+                    !info[1]
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -186,14 +219,24 @@ export default function Information() {
           <div className="flex flex-col items-end">
             <div className="font-medium text-gray-700">Max for Borrow</div>
             {[
-              [maxDeposit, borrowTokenSymbol],
-              [maxWithdraw, borrowTokenSymbol],
-              [maxMint, sharesSymbol],
-              [maxRedeem, sharesSymbol]
+              [vaultMaxDeposit, borrowTokenSymbol],
+              [vaultMaxWithdraw, borrowTokenSymbol],
+              [vaultMaxMint, sharesSymbol],
+              [vaultMaxRedeem, sharesSymbol]
             ].map((info, index) => (
               <div key={index} className="flex">
-                <div className="mr-2">{info[0] ? info[0] : <Loader />}</div>
-                <div className="font-medium text-gray-700">{info[1] ? info[1] : <Loader />}</div>
+                <div className="mr-2 min-w-[60px] text-right">
+                  {renderWithTransition(
+                    info[0],
+                    !info[0] || info[0] === '0'
+                  )}
+                </div>
+                <div className="font-medium text-gray-700">
+                  {renderWithTransition(
+                    info[1],
+                    !info[1]
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -201,22 +244,47 @@ export default function Information() {
       </div>
       <div className="w-full flex justify-between items-center text-sm mb-2">
         <div>TVL:</div>
-        <div className='flex'>
-          <div className="mr-2">{totalAssets ? totalAssets : <Loader />}</div>
-          <div className="font-medium text-gray-700">{borrowTokenSymbol ? <div>{borrowTokenSymbol}</div> : <Loader />}</div>
+        <div className='flex min-w-[100px] justify-end'>
+          <div className="mr-2">
+            {renderWithTransition(
+              totalAssets,
+              !totalAssets || totalAssets === '0'
+            )}
+          </div>
+          <div className="font-medium text-gray-700">
+            {renderWithTransition(
+              borrowTokenSymbol,
+              !borrowTokenSymbol
+            )}
+          </div>
         </div>
       </div>
       <div className="w-full flex justify-between items-center text-sm">
         <div>Target LTV:</div>
-        <div>{targetLtv ? <div>{targetLtv}</div> : <Loader />}</div>
+        <div className="min-w-[60px] text-right">
+          {renderWithTransition(
+            targetLtv,
+            loadingState.isLoadingTargetLtv
+          )}
+        </div>
       </div>
       <div className="w-full flex justify-between items-center text-sm">
         <div>Max Safe LTV:</div>
-        <div>{maxSafeLtv ? <div>{maxSafeLtv}</div> : <Loader />}</div>
+        <div className="min-w-[60px] text-right">
+          {renderWithTransition(
+            maxSafeLtv,
+            loadingState.isLoadingMaxSafeLtv
+          )}
+        </div>
       </div>
       <div className="w-full flex justify-between items-center text-sm">
         <div>Min Profit LTV:</div>
-        <div>{minProfitLtv ? <div>{minProfitLtv}</div> : <Loader />}</div>
+        <div className="min-w-[60px] text-right">
+          {renderWithTransition(
+            minProfitLtv,
+            loadingState.isLoadingMinProfitLtv
+          )}
+        </div>
       </div>
     </div>
   );

@@ -12,9 +12,6 @@ export default function Home() {
       {vaults.map((vault, index) => (
         <VaultBlock address={vault.address} key={index} />
       ))}
-      {vaults.map((vault, index) => (
-        <VaultBlock address={vault.address} key={index} />
-      ))}
     </div>
   );
 }

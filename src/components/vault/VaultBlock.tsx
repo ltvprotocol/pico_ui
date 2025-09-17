@@ -30,6 +30,9 @@ interface LoadingState {
   isLoadingTokens: boolean;
   isLoadingAssets: boolean;
   isLoadingLeverage: boolean;
+  hasLoadedTokens: boolean;
+  hasLoadedAssets: boolean;
+  hasLoadedLeverage: boolean;
 }
 
 export default function VaultBlock( {address} : VaultBlockProps ) {
@@ -50,6 +53,9 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
     isLoadingTokens: true,
     isLoadingAssets: true,
     isLoadingLeverage: true,
+    hasLoadedTokens: false,
+    hasLoadedAssets: false,
+    hasLoadedLeverage: false,
   });
 
   const { publicProvider } = useAppContext();
@@ -75,6 +81,8 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
           ...prev,
           isLoadingTokens: !hasTokensFromConfig,
           isLoadingLeverage: !hasLeverageFromConfig,
+          hasLoadedTokens: hasTokensFromConfig,
+          hasLoadedLeverage: hasLeverageFromConfig,
         }));
         
         setStaticData({
@@ -101,12 +109,12 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
         symbol = await contract.symbol();
       }
       setStaticData(prev => ({ ...prev, collateralTokenSymbol: symbol }));
+      setLoadingState(prev => ({ ...prev, hasLoadedTokens: true, isLoadingTokens: false }));
     } catch (err) {
       console.error('Error loading collateral token symbol:', err);
     }
   }, [vaultContract, vaultConfig, publicProvider]);
 
-  // Load borrow token symbol
   const loadBorrowTokenSymbol = useCallback(async () => {
     if (!vaultContract || !publicProvider || vaultConfig?.borrowTokenSymbol) return;
 
@@ -121,6 +129,7 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
         symbol = await contract.symbol();
       }
       setStaticData(prev => ({ ...prev, borrowTokenSymbol: symbol }));
+      setLoadingState(prev => ({ ...prev, hasLoadedTokens: true, isLoadingTokens: false }));
     } catch (err) {
       console.error('Error loading borrow token symbol:', err);
     }
@@ -134,6 +143,7 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
       const ltv = parseFloat(formatUnits(rawLtv, 18)).toFixed(4);
       const leverage = ltvToLeverage(parseFloat(ltv));
       setStaticData(prev => ({ ...prev, maxLeverage: leverage }));
+      setLoadingState(prev => ({ ...prev, hasLoadedLeverage: true, isLoadingLeverage: false }));
     } catch (err) {
       console.error('Error loading max leverage:', err);
     }
@@ -143,7 +153,7 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
     if (vaultContract && publicProvider && !vaultConfig?.collateralTokenSymbol) {
       loadCollateralTokenSymbol();
     } else if (vaultConfig?.collateralTokenSymbol) {
-      setLoadingState(prev => ({ ...prev, isLoadingTokens: false }));
+      setLoadingState(prev => ({ ...prev, isLoadingTokens: false, hasLoadedTokens: true }));
     }
   }, [vaultContract, publicProvider, vaultConfig, loadCollateralTokenSymbol]);
 
@@ -151,7 +161,7 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
     if (vaultContract && publicProvider && !vaultConfig?.borrowTokenSymbol) {
       loadBorrowTokenSymbol();
     } else if (vaultConfig?.borrowTokenSymbol) {
-      setLoadingState(prev => ({ ...prev, isLoadingTokens: false }));
+      setLoadingState(prev => ({ ...prev, isLoadingTokens: false, hasLoadedTokens: true }));
     }
   }, [vaultContract, publicProvider, vaultConfig, loadBorrowTokenSymbol]);
 
@@ -159,7 +169,7 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
     if (vaultContract && !vaultConfig?.leverage) {
       loadMaxLeverage();
     } else if (vaultConfig?.leverage) {
-      setLoadingState(prev => ({ ...prev, isLoadingLeverage: false }));
+      setLoadingState(prev => ({ ...prev, isLoadingLeverage: false, hasLoadedLeverage: true }));
     }
   }, [vaultContract, vaultConfig, loadMaxLeverage]);
 
@@ -169,6 +179,7 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
     try {
       const borrowAssets = await vaultContract.getRealBorrowAssets();
       setDynamicData(prev => ({ ...prev, borrowAssets }));
+      setLoadingState(prev => ({ ...prev, hasLoadedAssets: true }));
     } catch (err) {
       console.error('Error loading borrow assets:', err);
     }
@@ -180,6 +191,7 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
     try {
       const collateralAssets = await vaultContract.getRealCollateralAssets();
       setDynamicData(prev => ({ ...prev, collateralAssets }));
+      setLoadingState(prev => ({ ...prev, hasLoadedAssets: true }));
     } catch (err) {
       console.error('Error loading collateral assets:', err);
     }
@@ -192,7 +204,7 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
       setLoadingState(prev => ({
         ...prev,
         isInitialLoad: false,
-        isLoadingAssets: true,
+        isLoadingAssets: !prev.hasLoadedAssets,
       }));
 
       await Promise.all([
@@ -241,7 +253,6 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
     return null;
   }, [staticData.collateralTokenSymbol, staticData.borrowTokenSymbol]);
 
-
   return (
     <>
       <CopyAddress className="mb-2" address={address} />
@@ -260,13 +271,13 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
             <div className="mr-2 min-w-[60px]">
               {renderWithTransition(
                 tokenPairDisplay,
-                loadingState.isLoadingTokens
+                loadingState.isLoadingTokens && !loadingState.hasLoadedTokens
               )}
             </div>
             <div className="mr-2 font-normal">
               {renderWithTransition(
                 staticData.maxLeverage ? `x${staticData.maxLeverage}` : null,
-                loadingState.isLoadingLeverage
+                loadingState.isLoadingLeverage && !loadingState.hasLoadedLeverage
               )}
             </div>
             <div className="font-normal">{staticData.lendingName || "Lending"}</div>
@@ -277,7 +288,7 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
               <div className="min-w-[60px]">
                 {renderWithTransition(
                   tokenPairDisplay,
-                  loadingState.isLoadingTokens
+                  loadingState.isLoadingTokens && !loadingState.hasLoadedTokens
                 )}
               </div>
               <div className="font-normal ml-2">{staticData.lendingName || "Lending"}</div>
@@ -287,7 +298,7 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
               <div className="min-w-[40px]">
                 {renderWithTransition(
                   staticData.maxLeverage ? `${staticData.maxLeverage}` : null,
-                  loadingState.isLoadingLeverage
+                  loadingState.isLoadingLeverage && !loadingState.hasLoadedLeverage
                 )}
               </div>
             </div>
@@ -303,7 +314,8 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
                   <div className="font-medium text-gray-700">{staticData.collateralTokenSymbol}</div>
                 </div>
               ) : null,
-              loadingState.isLoadingAssets || loadingState.isLoadingTokens
+              (loadingState.isLoadingAssets && !loadingState.hasLoadedAssets) || 
+              (loadingState.isLoadingTokens && !loadingState.hasLoadedTokens)
             )}
           </div>
         </div>
@@ -317,7 +329,8 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
                   <div className="font-medium text-gray-700">{staticData.borrowTokenSymbol}</div>
                 </div>
               ) : null,
-              loadingState.isLoadingAssets || loadingState.isLoadingTokens
+              (loadingState.isLoadingAssets && !loadingState.hasLoadedAssets) || 
+              (loadingState.isLoadingTokens && !loadingState.hasLoadedTokens)
             )}
           </div>
         </div>

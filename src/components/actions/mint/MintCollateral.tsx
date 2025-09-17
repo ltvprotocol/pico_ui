@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { parseUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
 import { isUserRejected, wrapEth } from '@/utils';
-import { useAdaptiveInterval } from '@/hooks';
 import { ActionForm } from '@/components/ui';
 import { WETH } from '@/typechain-types';
 import { WETH_ADDRESS } from '@/constants';
@@ -14,18 +13,14 @@ export default function MintCollateral() {
 
   const [amount, setAmount] = useState('');
 
-  const { publicProvider, address, isConnected } = useAppContext();
+  const { publicProvider, address } = useAppContext();
 
   const {
     vaultAddress,
     sharesSymbol, collateralTokenSymbol, collateralTokenAddress,
     vault, collateralToken, vaultLens, collateralTokenLens,
-    decimals, maxMintCollateral, updateMaxMintCollateral
+    decimals, maxMintCollateral
   } = useVaultContext()
-
-  useAdaptiveInterval(updateMaxMintCollateral, {
-    enabled: isConnected
-  });
 
   const handleMint = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,7 +88,7 @@ export default function MintCollateral() {
       actionName='Mint'
       amount={amount}
       maxAmount={maxMintCollateral}
-      tokenSymbol={sharesSymbol}
+      tokenSymbol={sharesSymbol || ''}
       isLoading={loading}
       error={error}
       success={success}

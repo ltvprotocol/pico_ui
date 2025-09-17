@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { parseUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
 import { isUserRejected } from '@/utils';
-import { useAdaptiveInterval } from '@/hooks';
 import { ActionForm } from '@/components/ui';
 
 export default function RedeemBorrow() {
@@ -12,12 +11,8 @@ export default function RedeemBorrow() {
 
   const [amount, setAmount] = useState('');
 
-  const { address, isConnected } = useAppContext();
-  const { sharesSymbol, vault, decimals, maxRedeem, updateMaxRedeem } = useVaultContext()
-
-  useAdaptiveInterval(updateMaxRedeem, {
-    enabled: isConnected
-  });
+  const { address } = useAppContext();
+  const { sharesSymbol, vault, decimals, maxRedeem } = useVaultContext()
 
   const handleRedeem = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,7 +55,7 @@ export default function RedeemBorrow() {
       actionName='Redeem'
       amount={amount}
       maxAmount={maxRedeem}
-      tokenSymbol={sharesSymbol}
+      tokenSymbol={sharesSymbol || ''}
       isLoading={loading}
       error={error}
       success={success}

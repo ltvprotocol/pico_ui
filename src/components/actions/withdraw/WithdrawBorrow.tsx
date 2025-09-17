@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { parseUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
 import { isUserRejected } from '@/utils';
-import { useAdaptiveInterval } from '@/hooks';
 import { ActionForm } from '@/components/ui';
 
 export default function WithdrawBorrow() {
@@ -12,12 +11,8 @@ export default function WithdrawBorrow() {
 
   const [amount, setAmount] = useState('');
 
-  const { address, isConnected } = useAppContext();
-  const { borrowTokenSymbol, vault, decimals, maxWithdraw, updateMaxWithdraw } = useVaultContext();
-
-  useAdaptiveInterval(updateMaxWithdraw, {
-    enabled: isConnected
-  });
+  const { address } = useAppContext();
+  const { borrowTokenSymbol, vault, decimals, maxWithdraw } = useVaultContext();
 
   const handleWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +48,7 @@ export default function WithdrawBorrow() {
       actionName='Withdraw'
       amount={amount}
       maxAmount={maxWithdraw}
-      tokenSymbol={borrowTokenSymbol}
+      tokenSymbol={borrowTokenSymbol || ''}
       isLoading={loading}
       error={error}
       success={success}

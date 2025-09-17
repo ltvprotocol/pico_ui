@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { parseUnits } from 'ethers';
 import { useAppContext } from '@/contexts';
 import { isUserRejected, wrapEth } from '@/utils';
-import { useAdaptiveInterval } from '@/hooks';
 import { useVaultContext } from '@/contexts/VaultContext';
 import { ActionForm } from '@/components/ui';
 import { WETH_ADDRESS } from '@/constants';
@@ -15,18 +14,14 @@ export default function DepositBorrow() {
 
   const [amount, setAmount] = useState('');
 
-  const { publicProvider, address, isConnected } = useAppContext();
+  const { publicProvider, address } = useAppContext();
 
   const {
     vaultAddress,
     borrowTokenSymbol, borrowTokenAddress,
     vault, borrowToken, borrowTokenLens,
-    decimals, maxDeposit, updateMaxDeposit
+    decimals, maxDeposit
   } = useVaultContext()
-
-  useAdaptiveInterval(updateMaxDeposit, {
-    enabled: isConnected
-  });
 
   const handleDeposit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,7 +81,7 @@ export default function DepositBorrow() {
       actionName='Deposit'
       amount={amount}
       maxAmount={maxDeposit}
-      tokenSymbol={borrowTokenSymbol}
+      tokenSymbol={borrowTokenSymbol || ''}
       isLoading={loading}
       error={error}
       success={success}

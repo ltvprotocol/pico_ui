@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { parseUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
 import { isUserRejected } from '@/utils';
-import { useAdaptiveInterval } from '@/hooks';
 import { ActionForm } from '@/components/ui';
 
 export default function WithdrawCollateral() {
@@ -12,12 +11,8 @@ export default function WithdrawCollateral() {
 
   const [amount, setAmount] = useState('');
 
-  const { address, isConnected } = useAppContext();
-  const { collateralTokenSymbol, vault, decimals, maxWithdrawCollateral, updateMaxWithdrawCollateral } = useVaultContext();
-
-  useAdaptiveInterval(updateMaxWithdrawCollateral, {
-    enabled: isConnected
-  });
+  const { address } = useAppContext();
+  const { collateralTokenSymbol, vault, decimals, maxWithdrawCollateral } = useVaultContext();
 
   const handleWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +48,7 @@ export default function WithdrawCollateral() {
       actionName='Withdraw'
       amount={amount}
       maxAmount={maxWithdrawCollateral}
-      tokenSymbol={collateralTokenSymbol}
+      tokenSymbol={collateralTokenSymbol || ''}
       isLoading={loading}
       error={error}
       success={success}

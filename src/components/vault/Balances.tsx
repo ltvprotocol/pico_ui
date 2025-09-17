@@ -13,7 +13,7 @@ export default function Balances() {
   } = useVaultContext();
 
   return (
-    <div className="relative rounded-lg bg-gray-50 p-3">
+    <div className="relative rounded-lg bg-gray-50 p-3 mb-4">
       <div className="flex flex-col w-full space-y-1">
         <h3 className="text-lg font-medium text-gray-900">Your Balances</h3>
         <div className="w-full flex justify-between text-sm text-gray-600">

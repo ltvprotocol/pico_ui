@@ -114,7 +114,7 @@ export default function Information() {
 
 
   return (
-    <div className="relative rounded-lg mb-4 bg-gray-50 p-3">
+    <div className="relative rounded-lg bg-gray-50 p-3">
       <h3 className="text-lg font-medium text-gray-900">Vault Information</h3>
       <div className="w-full hidden sm:flex items-end justify-between text-sm text-gray-600 mb-2">
         <div>

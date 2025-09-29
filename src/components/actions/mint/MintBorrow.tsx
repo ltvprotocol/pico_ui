@@ -3,7 +3,7 @@ import { parseUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
 import { isUserRejected, wrapEth } from '@/utils';
 import { ActionForm } from '@/components/ui';
-import { WETH_ADDRESS } from '@/constants';
+import { isWETHAddress } from '@/constants';
 import { WETH } from '@/typechain-types';
 
 export default function MintBorrow() {
@@ -44,7 +44,7 @@ export default function MintBorrow() {
       const balance = await borrowTokenLens.balanceOf(address);
 
       if (balance < tokensNeededToMint) {
-        if (borrowTokenAddress === WETH_ADDRESS) {
+        if (isWETHAddress(borrowTokenAddress)) {
           const ethBalance = await publicProvider.getBalance(address);
           const wethMissing = tokensNeededToMint - balance;
           await wrapEth(borrowToken as WETH, wethMissing, ethBalance, setSuccess, setError);
@@ -62,9 +62,15 @@ export default function MintBorrow() {
         }
       }
 
-      const approveTx = await borrowToken.approve(vaultAddress, tokensNeededToMint);
-      await approveTx.wait();
-      setSuccess(`Successfully approved ${borrowTokenSymbol}.`);
+      const currentAllowance = await borrowTokenLens.allowance(address, vaultAddress);
+      
+      if (currentAllowance < tokensNeededToMint) {
+        const approveTx = await borrowToken.approve(vaultAddress, tokensNeededToMint);
+        await approveTx.wait();
+        setSuccess(`Successfully approved ${borrowTokenSymbol}.`);
+      } else {
+        setSuccess(`Already approved ${borrowTokenSymbol}.`);
+      }
 
       const mintTx = await vault.mint(mintAmount, address);
       await mintTx.wait();

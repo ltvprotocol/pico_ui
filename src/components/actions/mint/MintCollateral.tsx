@@ -4,7 +4,7 @@ import { useAppContext, useVaultContext } from '@/contexts';
 import { isUserRejected, wrapEth } from '@/utils';
 import { ActionForm } from '@/components/ui';
 import { WETH } from '@/typechain-types';
-import { WETH_ADDRESS } from '@/constants';
+import { isWETHAddress } from '@/constants';
 
 export default function MintCollateral() {
   const [loading, setLoading] = useState(false);
@@ -44,7 +44,7 @@ export default function MintCollateral() {
       const balance = await collateralTokenLens.balanceOf(address);
 
       if (balance < tokensNeededToMint) {
-        if (collateralTokenAddress === WETH_ADDRESS) {
+        if (isWETHAddress(collateralTokenAddress)) {
           const ethBalance = await publicProvider.getBalance(address);
           const wethMissing = tokensNeededToMint - balance;
           await wrapEth(collateralToken as WETH, wethMissing, ethBalance, setSuccess, setError);
@@ -62,9 +62,15 @@ export default function MintCollateral() {
         }
       }
 
-      const approveTx = await collateralToken.approve(vaultAddress, tokensNeededToMint);
-      await approveTx.wait();
-      setSuccess(`Successfully approved ${collateralTokenSymbol}.`);
+      const currentAllowance = await collateralTokenLens.allowance(address, vaultAddress);
+      
+      if (currentAllowance < tokensNeededToMint) {
+        const approveTx = await collateralToken.approve(vaultAddress, tokensNeededToMint);
+        await approveTx.wait();
+        setSuccess(`Successfully approved ${collateralTokenSymbol}.`);
+      } else {
+        setSuccess(`Already approved ${collateralTokenSymbol}.`);
+      }
 
       const mintTx = await vault.mintCollateral(mintAmount, address);
       await mintTx.wait();

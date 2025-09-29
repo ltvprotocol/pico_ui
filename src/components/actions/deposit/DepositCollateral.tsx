@@ -55,9 +55,15 @@ export default function DepositCollateral() {
         }
       }
 
-      const approveTx = await collateralToken.approve(vaultAddress, neededToDeposit);
-      await approveTx.wait();
-      setSuccess(`Successfully approved ${collateralTokenSymbol}.`);
+      const currentAllowance = await collateralTokenLens.allowance(address, vaultAddress);
+      
+      if (currentAllowance < neededToDeposit) {
+        const approveTx = await collateralToken.approve(vaultAddress, neededToDeposit);
+        await approveTx.wait();
+        setSuccess(`Successfully approved ${collateralTokenSymbol}.`);
+      } else {
+        setSuccess(`Already approved ${collateralTokenSymbol}.`);
+      }
 
       const depositTx = await vault.depositCollateral(neededToDeposit, address);
       await depositTx.wait();

@@ -55,9 +55,15 @@ export default function DepositBorrow() {
         }
       }
 
-      const approveTx = await borrowToken.approve(vaultAddress, neededToDeposit);
-      await approveTx.wait();
-      setSuccess(`Successfully approved ${borrowTokenSymbol}.`);
+      const currentAllowance = await borrowTokenLens.allowance(address, vaultAddress);
+      
+      if (currentAllowance < neededToDeposit) {
+        const approveTx = await borrowToken.approve(vaultAddress, neededToDeposit);
+        await approveTx.wait();
+        setSuccess(`Successfully approved ${borrowTokenSymbol}.`);
+      } else {
+        setSuccess(`Already approved ${borrowTokenSymbol}.`);
+      }
 
       const depositTx = await vault.deposit(neededToDeposit, address);
       await depositTx.wait();

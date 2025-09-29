@@ -19,7 +19,7 @@ export default function MintCollateral() {
     vaultAddress,
     sharesSymbol, collateralTokenSymbol, collateralTokenAddress,
     vault, collateralToken, vaultLens, collateralTokenLens,
-    decimals, maxMintCollateral
+    sharesDecimals, maxMintCollateral
   } = useVaultContext()
 
   const handleMint = async (e: React.FormEvent) => {
@@ -39,7 +39,7 @@ export default function MintCollateral() {
     ) return;
 
     try {
-      const mintAmount = parseUnits(amount, decimals);
+      const mintAmount = parseUnits(amount, sharesDecimals);
       const tokensNeededToMint = await vaultLens.previewMintCollateral(mintAmount);
       const balance = await collateralTokenLens.balanceOf(address);
 

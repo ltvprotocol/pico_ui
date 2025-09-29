@@ -12,7 +12,7 @@ export default function RedeemCollateral() {
   const [amount, setAmount] = useState('');
 
   const { address } = useAppContext();
-  const { sharesSymbol, vault, decimals, maxRedeemCollateral } = useVaultContext()
+  const { sharesSymbol, vault, sharesDecimals, maxRedeemCollateral } = useVaultContext()
 
   const handleRedeem = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,8 +24,8 @@ export default function RedeemCollateral() {
     setSuccess(null);
 
     try {
-      const amountToRedeem = parseUnits(amount, decimals);
-      const maxAvailable = parseUnits(maxRedeemCollateral, decimals);
+      const amountToRedeem = parseUnits(amount, sharesDecimals);
+      const maxAvailable = parseUnits(maxRedeemCollateral, sharesDecimals);
 
       if (maxAvailable < amountToRedeem) {
         setError('Amount higher than available.');

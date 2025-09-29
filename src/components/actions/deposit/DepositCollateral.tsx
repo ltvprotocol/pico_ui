@@ -4,7 +4,7 @@ import { useAppContext } from '@/contexts';
 import { isUserRejected, wrapEth } from '@/utils';
 import { useVaultContext } from '@/contexts/VaultContext';
 import { ActionForm } from '@/components/ui';
-import { WETH_ADDRESS } from '@/constants';
+import { isWETHAddress } from '@/constants';
 import { WETH } from '@/typechain-types';
 
 export default function DepositCollateral() {
@@ -20,7 +20,7 @@ export default function DepositCollateral() {
     vaultAddress,
     collateralTokenSymbol, collateralTokenAddress,
     vault, collateralToken, collateralTokenLens, 
-    decimals, maxDepositCollateral
+    collateralTokenDecimals, maxDepositCollateral
   } = useVaultContext();
 
   const handleDeposit = async (e: React.FormEvent) => {
@@ -33,11 +33,11 @@ export default function DepositCollateral() {
     if (!publicProvider || !collateralTokenLens || !collateralToken || !vault || !address) return;
 
     try {
-      const neededToDeposit = parseUnits(amount, decimals);
+      const neededToDeposit = parseUnits(amount, collateralTokenDecimals);
       const balance = await collateralTokenLens.balanceOf(address);
 
       if (balance < neededToDeposit) {
-        if (collateralTokenAddress === WETH_ADDRESS) {
+        if (isWETHAddress(collateralTokenAddress)) {
           const ethBalance = await publicProvider.getBalance(address);
           const wethMissing = neededToDeposit - balance;
           await wrapEth(collateralToken as WETH, wethMissing, ethBalance, setSuccess, setError);

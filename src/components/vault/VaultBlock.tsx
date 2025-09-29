@@ -25,14 +25,22 @@ interface DynamicVaultData {
   collateralAssets: bigint | null;
 }
 
+interface VaultDecimals {
+  sharesDecimals: bigint;
+  borrowTokenDecimals: bigint;
+  collateralTokenDecimals: bigint;
+}
+
 interface LoadingState {
   isInitialLoad: boolean;
   isLoadingTokens: boolean;
   isLoadingAssets: boolean;
   isLoadingLeverage: boolean;
+  isLoadingDecimals: boolean;
   hasLoadedTokens: boolean;
   hasLoadedAssets: boolean;
   hasLoadedLeverage: boolean;
+  hasLoadedDecimals: boolean;
 }
 
 export default function VaultBlock( {address} : VaultBlockProps ) {
@@ -48,14 +56,22 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
     collateralAssets: null,
   });
 
+  const [vaultDecimals, setVaultDecimals] = useState<VaultDecimals>({
+    sharesDecimals: 18n,
+    borrowTokenDecimals: 18n,
+    collateralTokenDecimals: 18n,
+  });
+
   const [loadingState, setLoadingState] = useState<LoadingState>({
     isInitialLoad: true,
     isLoadingTokens: true,
     isLoadingAssets: true,
     isLoadingLeverage: true,
+    isLoadingDecimals: true,
     hasLoadedTokens: false,
     hasLoadedAssets: false,
     hasLoadedLeverage: false,
+    hasLoadedDecimals: false,
   });
 
   const { publicProvider } = useAppContext();
@@ -75,8 +91,9 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
     if (vaultConfig) {
       const hasTokensFromConfig = !!(vaultConfig.collateralTokenSymbol && vaultConfig.borrowTokenSymbol);
       const hasLeverageFromConfig = !!vaultConfig.leverage;
+      const hasLendingNameFromConfig = !!vaultConfig.lendingName;
       
-      if (hasTokensFromConfig || hasLeverageFromConfig) {
+      if (hasTokensFromConfig || hasLeverageFromConfig || hasLendingNameFromConfig) {
         setLoadingState(prev => ({
           ...prev,
           isLoadingTokens: !hasTokensFromConfig,
@@ -125,6 +142,7 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
         symbol = await contract.symbol();
       } else {
         const tokenAddress = await vaultContract.borrowToken();
+        console.log('tokenAddress', tokenAddress);
         const contract = ERC20__factory.connect(tokenAddress, publicProvider);
         symbol = await contract.symbol();
       }
@@ -139,7 +157,9 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
     if (!vaultContract || vaultConfig?.leverage) return;
 
     try {
-      const rawLtv = await vaultContract.targetLTV();
+      const dividend = await vaultContract.targetLtvDividend();
+      const divider = await vaultContract.targetLtvDivider();
+      const rawLtv = (BigInt(dividend) * (10n ** 18n)) / BigInt(divider);
       const ltv = parseFloat(formatUnits(rawLtv, 18)).toFixed(4);
       const leverage = ltvToLeverage(parseFloat(ltv));
       setStaticData(prev => ({ ...prev, maxLeverage: leverage }));
@@ -148,6 +168,26 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
       console.error('Error loading max leverage:', err);
     }
   }, [vaultContract, vaultConfig]);
+
+  const loadDecimals = useCallback(async () => {
+    if (!vaultContract) return;
+
+    try {
+      const newSharesDecimals = await vaultContract.decimals();
+      const newBorrowTokenDecimals = await vaultContract.borrowTokenDecimals();
+      const newCollateralTokenDecimals = await vaultContract.collateralTokenDecimals();
+      
+      setVaultDecimals({
+        sharesDecimals: newSharesDecimals,
+        borrowTokenDecimals: newBorrowTokenDecimals,
+        collateralTokenDecimals: newCollateralTokenDecimals,
+      });
+      setLoadingState(prev => ({ ...prev, hasLoadedDecimals: true, isLoadingDecimals: false }));
+    } catch (err) {
+      console.error('Error loading decimals:', err);
+      setLoadingState(prev => ({ ...prev, hasLoadedDecimals: true, isLoadingDecimals: false }));
+    }
+  }, [vaultContract]);
 
   useEffect(() => {
     if (vaultContract && publicProvider && !vaultConfig?.collateralTokenSymbol) {
@@ -173,11 +213,17 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
     }
   }, [vaultContract, vaultConfig, loadMaxLeverage]);
 
+  useEffect(() => {
+    if (vaultContract) {
+      loadDecimals();
+    }
+  }, [vaultContract, loadDecimals]);
+
   const loadBorrowAssets = useCallback(async () => {
     if (!vaultContract) return;
 
     try {
-      const borrowAssets = await vaultContract.getRealBorrowAssets();
+      const borrowAssets = await vaultContract["totalAssets()"]();
       setDynamicData(prev => ({ ...prev, borrowAssets }));
       setLoadingState(prev => ({ ...prev, hasLoadedAssets: true }));
     } catch (err) {
@@ -189,7 +235,7 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
     if (!vaultContract) return;
 
     try {
-      const collateralAssets = await vaultContract.getRealCollateralAssets();
+      const collateralAssets = await vaultContract["totalAssetsCollateral()"]();
       setDynamicData(prev => ({ ...prev, collateralAssets }));
       setLoadingState(prev => ({ ...prev, hasLoadedAssets: true }));
     } catch (err) {
@@ -238,13 +284,13 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
 
   const formattedCollateralAmount = useMemo(() => {
     if (!dynamicData.collateralAssets) return null;
-    return parseFloat(formatUnits(dynamicData.collateralAssets, 18)).toFixed(4);
-  }, [dynamicData.collateralAssets]);
+    return parseFloat(formatUnits(dynamicData.collateralAssets, vaultDecimals.collateralTokenDecimals)).toFixed(4);
+  }, [dynamicData.collateralAssets, vaultDecimals.collateralTokenDecimals]);
 
   const formattedBorrowAmount = useMemo(() => {
     if (!dynamicData.borrowAssets) return null;
-    return parseFloat(formatUnits(dynamicData.borrowAssets, 18)).toFixed(4);
-  }, [dynamicData.borrowAssets]);
+    return parseFloat(formatUnits(dynamicData.borrowAssets, vaultDecimals.borrowTokenDecimals)).toFixed(4);
+  }, [dynamicData.borrowAssets, vaultDecimals.borrowTokenDecimals]);
 
   const tokenPairDisplay = useMemo(() => {
     if (staticData.collateralTokenSymbol && staticData.borrowTokenSymbol) {
@@ -305,7 +351,7 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
           </div>
         </div>
         <div className="w-full flex justify-between text-sm">
-          <div className="font-medium text-gray-700">Collateral: </div>
+          <div className="font-medium text-gray-700">TVL In Collateral Assets: </div>
           <div className="font-normal text-gray-700 min-w-[100px] text-right">
             {renderWithTransition(
               formattedCollateralAmount && staticData.collateralTokenSymbol ? (
@@ -320,7 +366,7 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
           </div>
         </div>
         <div className="w-full flex justify-between text-sm">
-          <div className="font-medium text-gray-700">Borrow: </div>
+          <div className="font-medium text-gray-700">TVL In Borrow Assets: </div>
           <div className="font-normal text-gray-700 min-w-[100px] text-right">
             {renderWithTransition(
               formattedBorrowAmount && staticData.borrowTokenSymbol ? (

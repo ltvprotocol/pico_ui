@@ -1,201 +1,17 @@
 [
   {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "receiver",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "assets",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "max",
-        "type": "uint256"
-      }
-    ],
-    "name": "ExceedsMaxDeposit",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "receiver",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "collateralAssets",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "max",
-        "type": "uint256"
-      }
-    ],
-    "name": "ExceedsMaxDepositCollateral",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "receiver",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "shares",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "max",
-        "type": "uint256"
-      }
-    ],
-    "name": "ExceedsMaxMint",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "receiver",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "shares",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "max",
-        "type": "uint256"
-      }
-    ],
-    "name": "ExceedsMaxMintCollateral",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "owner",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "shares",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "max",
-        "type": "uint256"
-      }
-    ],
-    "name": "ExceedsMaxRedeem",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "owner",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "shares",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "max",
-        "type": "uint256"
-      }
-    ],
-    "name": "ExceedsMaxRedeemCollateral",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "owner",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "assets",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "max",
-        "type": "uint256"
-      }
-    ],
-    "name": "ExceedsMaxWithdraw",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "owner",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "collateralAssets",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "max",
-        "type": "uint256"
-      }
-    ],
-    "name": "ExceedsMaxWithdrawCollateral",
-    "type": "error"
+    "inputs": [],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
   },
   {
     "inputs": [],
-    "name": "FunctionNotAllowed",
+    "name": "EOADelegateCall",
     "type": "error"
   },
   {
     "inputs": [],
     "name": "InvalidInitialization",
-    "type": "error"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint128",
-        "name": "targetLTV",
-        "type": "uint128"
-      },
-      {
-        "internalType": "uint128",
-        "name": "maxSafeLTV",
-        "type": "uint128"
-      },
-      {
-        "internalType": "uint128",
-        "name": "minProfitLTV",
-        "type": "uint128"
-      }
-    ],
-    "name": "InvalidLTVSet",
     "type": "error"
   },
   {
@@ -227,32 +43,26 @@
   },
   {
     "inputs": [],
-    "name": "ReentrancyGuardReentrantCall",
+    "name": "ZeroModulesProvider",
     "type": "error"
   },
   {
     "anonymous": false,
     "inputs": [
       {
-        "indexed": true,
+        "indexed": false,
         "internalType": "address",
-        "name": "owner",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "spender",
+        "name": "oldValue",
         "type": "address"
       },
       {
         "indexed": false,
-        "internalType": "uint256",
-        "name": "value",
-        "type": "uint256"
+        "internalType": "address",
+        "name": "newValue",
+        "type": "address"
       }
     ],
-    "name": "Approval",
+    "name": "EmergencyDeleveragerUpdated",
     "type": "event"
   },
   {
@@ -261,85 +71,55 @@
       {
         "indexed": false,
         "internalType": "address",
-        "name": "executor",
+        "name": "oldValue",
         "type": "address"
       },
       {
         "indexed": false,
-        "internalType": "int256",
-        "name": "deltaRealCollateralAssets",
-        "type": "int256"
-      },
-      {
-        "indexed": false,
-        "internalType": "int256",
-        "name": "deltaRealBorrowAssets",
-        "type": "int256"
+        "internalType": "address",
+        "name": "newValue",
+        "type": "address"
       }
     ],
-    "name": "AuctionExecuted",
+    "name": "FeeCollectorUpdated",
     "type": "event"
   },
   {
     "anonymous": false,
     "inputs": [
       {
-        "indexed": true,
+        "indexed": false,
         "internalType": "address",
-        "name": "sender",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "owner",
+        "name": "oldValue",
         "type": "address"
       },
       {
         "indexed": false,
-        "internalType": "uint256",
-        "name": "assets",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "shares",
-        "type": "uint256"
+        "internalType": "address",
+        "name": "newValue",
+        "type": "address"
       }
     ],
-    "name": "Deposit",
+    "name": "GovernorUpdated",
     "type": "event"
   },
   {
     "anonymous": false,
     "inputs": [
       {
-        "indexed": true,
+        "indexed": false,
         "internalType": "address",
-        "name": "sender",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "owner",
+        "name": "oldValue",
         "type": "address"
       },
       {
         "indexed": false,
-        "internalType": "uint256",
-        "name": "collateralAssets",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "shares",
-        "type": "uint256"
+        "internalType": "address",
+        "name": "newValue",
+        "type": "address"
       }
     ],
-    "name": "DepositCollateral",
+    "name": "GuardianUpdated",
     "type": "event"
   },
   {
@@ -360,18 +140,18 @@
     "inputs": [
       {
         "indexed": false,
-        "internalType": "uint128",
+        "internalType": "bool",
         "name": "oldValue",
-        "type": "uint128"
+        "type": "bool"
       },
       {
         "indexed": false,
-        "internalType": "uint128",
+        "internalType": "bool",
         "name": "newValue",
-        "type": "uint128"
+        "type": "bool"
       }
     ],
-    "name": "MaxSafeLTVChanged",
+    "name": "IsDepositDisabledChanged",
     "type": "event"
   },
   {
@@ -379,18 +159,261 @@
     "inputs": [
       {
         "indexed": false,
-        "internalType": "uint128",
+        "internalType": "bool",
         "name": "oldValue",
-        "type": "uint128"
+        "type": "bool"
       },
       {
         "indexed": false,
-        "internalType": "uint128",
+        "internalType": "bool",
         "name": "newValue",
-        "type": "uint128"
+        "type": "bool"
       }
     ],
-    "name": "MinProfitLTVChanged",
+    "name": "IsWhitelistActivatedChanged",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "oldValue",
+        "type": "bool"
+      },
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "newValue",
+        "type": "bool"
+      }
+    ],
+    "name": "IsWithdrawDisabledChanged",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "oldValue",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes",
+        "name": "oldLendingConnectorData",
+        "type": "bytes"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "newValue",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes",
+        "name": "newLendingConnectorData",
+        "type": "bytes"
+      }
+    ],
+    "name": "LendingConnectorUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "oldDividend",
+        "type": "uint16"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "oldDivider",
+        "type": "uint16"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "newDividend",
+        "type": "uint16"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "newDivider",
+        "type": "uint16"
+      }
+    ],
+    "name": "MaxDeleverageFeeChanged",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "oldDividend",
+        "type": "uint16"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "oldDivider",
+        "type": "uint16"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "newDividend",
+        "type": "uint16"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "newDivider",
+        "type": "uint16"
+      }
+    ],
+    "name": "MaxGrowthFeeChanged",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "oldDividend",
+        "type": "uint16"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "oldDivider",
+        "type": "uint16"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "newDividend",
+        "type": "uint16"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "newDivider",
+        "type": "uint16"
+      }
+    ],
+    "name": "MaxSafeLtvChanged",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "oldValue",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "newValue",
+        "type": "uint256"
+      }
+    ],
+    "name": "MaxTotalAssetsInUnderlyingChanged",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "oldDividend",
+        "type": "uint16"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "oldDivider",
+        "type": "uint16"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "newDividend",
+        "type": "uint16"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "newDivider",
+        "type": "uint16"
+      }
+    ],
+    "name": "MinProfitLtvChanged",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "oldValue",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "newValue",
+        "type": "address"
+      }
+    ],
+    "name": "ModulesUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "oldValue",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes",
+        "name": "oldOracleConnectorData",
+        "type": "bytes"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "newValue",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes",
+        "name": "newOracleConnectorData",
+        "type": "bytes"
+      }
+    ],
+    "name": "OracleConnectorUpdated",
     "type": "event"
   },
   {
@@ -417,184 +440,99 @@
     "inputs": [
       {
         "indexed": false,
-        "internalType": "int256",
-        "name": "oldFutureBorrowAssets",
-        "type": "int256"
-      },
-      {
-        "indexed": false,
-        "internalType": "int256",
-        "name": "oldFutureCollateralAssets",
-        "type": "int256"
-      },
-      {
-        "indexed": false,
-        "internalType": "int256",
-        "name": "oldFutureRewardBorrowAssets",
-        "type": "int256"
-      },
-      {
-        "indexed": false,
-        "internalType": "int256",
-        "name": "oldFutureRewardCollateralAssets",
-        "type": "int256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "oldStartAuction",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "int256",
-        "name": "newFutureBorrowAssets",
-        "type": "int256"
-      },
-      {
-        "indexed": false,
-        "internalType": "int256",
-        "name": "newFutureCollateralAssets",
-        "type": "int256"
-      },
-      {
-        "indexed": false,
-        "internalType": "int256",
-        "name": "newFutureRewardBorrowAssets",
-        "type": "int256"
-      },
-      {
-        "indexed": false,
-        "internalType": "int256",
-        "name": "newFutureRewardCollateralAssets",
-        "type": "int256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "newStartAuction",
-        "type": "uint256"
-      }
-    ],
-    "name": "StateUpdated",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "uint128",
+        "internalType": "address",
         "name": "oldValue",
-        "type": "uint128"
+        "type": "address"
       },
       {
         "indexed": false,
-        "internalType": "uint128",
+        "internalType": "bytes",
+        "name": "oldSlippageConnectorData",
+        "type": "bytes"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
         "name": "newValue",
-        "type": "uint128"
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "bytes",
+        "name": "newSlippageConnectorData",
+        "type": "bytes"
       }
     ],
-    "name": "TargetLTVChanged",
+    "name": "SlippageConnectorUpdated",
     "type": "event"
   },
   {
     "anonymous": false,
     "inputs": [
       {
-        "indexed": true,
-        "internalType": "address",
-        "name": "from",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "to",
-        "type": "address"
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "oldDividend",
+        "type": "uint16"
       },
       {
         "indexed": false,
-        "internalType": "uint256",
-        "name": "value",
-        "type": "uint256"
+        "internalType": "uint16",
+        "name": "oldDivider",
+        "type": "uint16"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "newDividend",
+        "type": "uint16"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint16",
+        "name": "newDivider",
+        "type": "uint16"
       }
     ],
-    "name": "Transfer",
+    "name": "TargetLtvChanged",
     "type": "event"
   },
   {
     "anonymous": false,
     "inputs": [
       {
-        "indexed": true,
+        "indexed": false,
         "internalType": "address",
-        "name": "sender",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "receiver",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "owner",
+        "name": "oldValue",
         "type": "address"
       },
       {
         "indexed": false,
-        "internalType": "uint256",
-        "name": "assets",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "shares",
-        "type": "uint256"
+        "internalType": "address",
+        "name": "newValue",
+        "type": "address"
       }
     ],
-    "name": "Withdraw",
+    "name": "VaultBalanceAsLendingConnectorUpdated",
     "type": "event"
   },
   {
     "anonymous": false,
     "inputs": [
       {
-        "indexed": true,
+        "indexed": false,
         "internalType": "address",
-        "name": "sender",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "receiver",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "owner",
+        "name": "oldValue",
         "type": "address"
       },
       {
         "indexed": false,
-        "internalType": "uint256",
-        "name": "collateralAssets",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "shares",
-        "type": "uint256"
+        "internalType": "address",
+        "name": "newValue",
+        "type": "address"
       }
     ],
-    "name": "WithdrawCollateral",
+    "name": "WhitelistRegistryUpdated",
     "type": "event"
   },
   {
@@ -611,45 +549,6 @@
         "internalType": "bool",
         "name": "",
         "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "int256",
-        "name": "deltaBorrowAssets",
-        "type": "int256"
-      },
-      {
-        "internalType": "bool",
-        "name": "isSharesPositiveHint",
-        "type": "bool"
-      },
-      {
-        "internalType": "uint256",
-        "name": "supply",
-        "type": "uint256"
-      }
-    ],
-    "name": "_previewLowLevelBorrowHint",
-    "outputs": [
-      {
-        "internalType": "int256",
-        "name": "",
-        "type": "int256"
-      },
-      {
-        "internalType": "int256",
-        "name": "",
-        "type": "int256"
-      },
-      {
-        "internalType": "int256",
-        "name": "",
-        "type": "int256"
       }
     ],
     "stateMutability": "view",
@@ -722,6 +621,45 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "asset",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "assetCollateral",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "auctionDuration",
+    "outputs": [
+      {
+        "internalType": "uint24",
+        "name": "",
+        "type": "uint24"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "address",
@@ -755,12 +693,38 @@
   },
   {
     "inputs": [],
+    "name": "boolSlot",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "borrowToken",
     "outputs": [
       {
         "internalType": "contract IERC20",
         "name": "",
         "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "borrowTokenDecimals",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
       }
     ],
     "stateMutability": "view",
@@ -780,6 +744,19 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "collateralTokenDecimals",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "uint256",
@@ -788,6 +765,25 @@
       }
     ],
     "name": "convertToAssets",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "shares",
+        "type": "uint256"
+      }
+    ],
+    "name": "convertToAssetsCollateral",
     "outputs": [
       {
         "internalType": "uint256",
@@ -818,6 +814,25 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "assets",
+        "type": "uint256"
+      }
+    ],
+    "name": "convertToSharesCollateral",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "decimals",
     "outputs": [
@@ -828,6 +843,29 @@
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "closeAmountBorrow",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint16",
+        "name": "deleverageFeeDividend",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "deleverageFeeDivider",
+        "type": "uint16"
+      }
+    ],
+    "name": "deleverageAndWithdraw",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -858,7 +896,7 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "collateralAssets",
+        "name": "assets",
         "type": "uint256"
       },
       {
@@ -879,10 +917,23 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "emergencyDeleverager",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "int256",
-        "name": "deltaUserBorrowAssets",
+        "name": "deltaFutureBorrowAssets",
         "type": "int256"
       }
     ],
@@ -901,7 +952,7 @@
     "inputs": [
       {
         "internalType": "int256",
-        "name": "deltaUserCollateralAssets",
+        "name": "deltaFutureCollateralAssets",
         "type": "int256"
       }
     ],
@@ -924,7 +975,7 @@
         "type": "int256"
       }
     ],
-    "name": "executeLowLevelBorrow",
+    "name": "executeLowLevelRebalanceBorrow",
     "outputs": [
       {
         "internalType": "int256",
@@ -953,7 +1004,7 @@
         "type": "bool"
       }
     ],
-    "name": "executeLowLevelBorrowHint",
+    "name": "executeLowLevelRebalanceBorrowHint",
     "outputs": [
       {
         "internalType": "int256",
@@ -977,7 +1028,7 @@
         "type": "int256"
       }
     ],
-    "name": "executeLowLevelCollateral",
+    "name": "executeLowLevelRebalanceCollateral",
     "outputs": [
       {
         "internalType": "int256",
@@ -1006,7 +1057,7 @@
         "type": "bool"
       }
     ],
-    "name": "executeLowLevelCollateralHint",
+    "name": "executeLowLevelRebalanceCollateralHint",
     "outputs": [
       {
         "internalType": "int256",
@@ -1030,7 +1081,7 @@
         "type": "int256"
       }
     ],
-    "name": "executeLowLevelShares",
+    "name": "executeLowLevelRebalanceShares",
     "outputs": [
       {
         "internalType": "int256",
@@ -1113,12 +1164,12 @@
   },
   {
     "inputs": [],
-    "name": "getPriceBorrowOracle",
+    "name": "getLendingConnector",
     "outputs": [
       {
-        "internalType": "uint256",
+        "internalType": "contract ILendingConnector",
         "name": "",
-        "type": "uint256"
+        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -1126,12 +1177,12 @@
   },
   {
     "inputs": [],
-    "name": "getPriceCollateralOracle",
+    "name": "governor",
     "outputs": [
       {
-        "internalType": "uint256",
+        "internalType": "address",
         "name": "",
-        "type": "uint256"
+        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -1139,25 +1190,12 @@
   },
   {
     "inputs": [],
-    "name": "getRealBorrowAssets",
+    "name": "guardian",
     "outputs": [
       {
-        "internalType": "uint256",
+        "internalType": "address",
         "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getRealCollateralAssets",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
+        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -1167,6 +1205,16 @@
     "inputs": [
       {
         "components": [
+          {
+            "internalType": "string",
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "internalType": "string",
+            "name": "symbol",
+            "type": "string"
+          },
           {
             "internalType": "address",
             "name": "collateralToken",
@@ -1183,19 +1231,34 @@
             "type": "address"
           },
           {
-            "internalType": "uint128",
-            "name": "maxSafeLTV",
-            "type": "uint128"
+            "internalType": "uint16",
+            "name": "maxSafeLtvDividend",
+            "type": "uint16"
           },
           {
-            "internalType": "uint128",
-            "name": "minProfitLTV",
-            "type": "uint128"
+            "internalType": "uint16",
+            "name": "maxSafeLtvDivider",
+            "type": "uint16"
           },
           {
-            "internalType": "uint128",
-            "name": "targetLTV",
-            "type": "uint128"
+            "internalType": "uint16",
+            "name": "minProfitLtvDividend",
+            "type": "uint16"
+          },
+          {
+            "internalType": "uint16",
+            "name": "minProfitLtvDivider",
+            "type": "uint16"
+          },
+          {
+            "internalType": "uint16",
+            "name": "targetLtvDividend",
+            "type": "uint16"
+          },
+          {
+            "internalType": "uint16",
+            "name": "targetLtvDivider",
+            "type": "uint16"
           },
           {
             "internalType": "contract ILendingConnector",
@@ -1208,39 +1271,164 @@
             "type": "address"
           },
           {
-            "internalType": "uint256",
-            "name": "maxGrowthFee",
-            "type": "uint256"
+            "internalType": "uint16",
+            "name": "maxGrowthFeeDividend",
+            "type": "uint16"
+          },
+          {
+            "internalType": "uint16",
+            "name": "maxGrowthFeeDivider",
+            "type": "uint16"
           },
           {
             "internalType": "uint256",
             "name": "maxTotalAssetsInUnderlying",
             "type": "uint256"
+          },
+          {
+            "internalType": "contract ISlippageConnector",
+            "name": "slippageConnector",
+            "type": "address"
+          },
+          {
+            "internalType": "uint16",
+            "name": "maxDeleverageFeeDividend",
+            "type": "uint16"
+          },
+          {
+            "internalType": "uint16",
+            "name": "maxDeleverageFeeDivider",
+            "type": "uint16"
+          },
+          {
+            "internalType": "contract ILendingConnector",
+            "name": "vaultBalanceAsLendingConnector",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "owner",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "guardian",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "governor",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "emergencyDeleverager",
+            "type": "address"
+          },
+          {
+            "internalType": "uint24",
+            "name": "auctionDuration",
+            "type": "uint24"
+          },
+          {
+            "internalType": "bytes",
+            "name": "lendingConnectorData",
+            "type": "bytes"
+          },
+          {
+            "internalType": "bytes",
+            "name": "oracleConnectorData",
+            "type": "bytes"
+          },
+          {
+            "internalType": "bytes",
+            "name": "slippageConnectorData",
+            "type": "bytes"
+          },
+          {
+            "internalType": "bytes",
+            "name": "vaultBalanceAsLendingConnectorData",
+            "type": "bytes"
           }
         ],
-        "internalType": "struct State.StateInitData",
-        "name": "stateInitData",
+        "internalType": "struct StateInitData",
+        "name": "initData",
         "type": "tuple"
       },
       {
-        "internalType": "address",
-        "name": "initialOwner",
+        "internalType": "contract IModules",
+        "name": "modules",
         "type": "address"
-      },
-      {
-        "internalType": "string",
-        "name": "_name",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "_symbol",
-        "type": "string"
       }
     ],
     "name": "initialize",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "isDepositDisabled",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "isVaultDeleveraged",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "isWhitelistActivated",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "isWithdrawDisabled",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "lastSeenTokenPrice",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -1251,6 +1439,45 @@
         "internalType": "contract ILendingConnector",
         "name": "",
         "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "lendingConnectorGetterData",
+    "outputs": [
+      {
+        "internalType": "bytes",
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "maxDeleverageFeeDividend",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "maxDeleverageFeeDivider",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
       }
     ],
     "stateMutability": "view",
@@ -1289,6 +1516,71 @@
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "maxGrowthFeeDividend",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "maxGrowthFeeDivider",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "maxLowLevelRebalanceBorrow",
+    "outputs": [
+      {
+        "internalType": "int256",
+        "name": "",
+        "type": "int256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "maxLowLevelRebalanceCollateral",
+    "outputs": [
+      {
+        "internalType": "int256",
+        "name": "",
+        "type": "int256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "maxLowLevelRebalanceShares",
+    "outputs": [
+      {
+        "internalType": "int256",
+        "name": "",
+        "type": "int256"
       }
     ],
     "stateMutability": "view",
@@ -1372,12 +1664,25 @@
   },
   {
     "inputs": [],
-    "name": "maxSafeLTV",
+    "name": "maxSafeLtvDividend",
     "outputs": [
       {
-        "internalType": "uint128",
+        "internalType": "uint16",
         "name": "",
-        "type": "uint128"
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "maxSafeLtvDivider",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
       }
     ],
     "stateMutability": "view",
@@ -1436,12 +1741,25 @@
   },
   {
     "inputs": [],
-    "name": "minProfitLTV",
+    "name": "minProfitLtvDividend",
     "outputs": [
       {
-        "internalType": "uint128",
+        "internalType": "uint16",
         "name": "",
-        "type": "uint128"
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "minProfitLtvDivider",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
       }
     ],
     "stateMutability": "view",
@@ -1464,7 +1782,7 @@
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "assets",
+        "name": "",
         "type": "uint256"
       }
     ],
@@ -1488,11 +1806,24 @@
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "collateralAssets",
+        "name": "",
         "type": "uint256"
       }
     ],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "modules",
+    "outputs": [
+      {
+        "internalType": "contract IModules",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -1516,6 +1847,19 @@
         "internalType": "contract IOracleConnector",
         "name": "",
         "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "oracleConnectorGetterData",
+    "outputs": [
+      {
+        "internalType": "bytes",
+        "name": "",
+        "type": "bytes"
       }
     ],
     "stateMutability": "view",
@@ -1557,7 +1901,7 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "collateralAssets",
+        "name": "assets",
         "type": "uint256"
       }
     ],
@@ -1565,7 +1909,7 @@
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "shares",
+        "name": "",
         "type": "uint256"
       }
     ],
@@ -1618,7 +1962,7 @@
         "type": "int256"
       }
     ],
-    "name": "previewLowLevelBorrow",
+    "name": "previewLowLevelRebalanceBorrow",
     "outputs": [
       {
         "internalType": "int256",
@@ -1647,13 +1991,8 @@
         "type": "bool"
       }
     ],
-    "name": "previewLowLevelBorrowHint",
+    "name": "previewLowLevelRebalanceBorrowHint",
     "outputs": [
-      {
-        "internalType": "int256",
-        "name": "",
-        "type": "int256"
-      },
       {
         "internalType": "int256",
         "name": "",
@@ -1676,7 +2015,7 @@
         "type": "int256"
       }
     ],
-    "name": "previewLowLevelCollateral",
+    "name": "previewLowLevelRebalanceCollateral",
     "outputs": [
       {
         "internalType": "int256",
@@ -1705,13 +2044,8 @@
         "type": "bool"
       }
     ],
-    "name": "previewLowLevelCollateralHint",
+    "name": "previewLowLevelRebalanceCollateralHint",
     "outputs": [
-      {
-        "internalType": "int256",
-        "name": "",
-        "type": "int256"
-      },
       {
         "internalType": "int256",
         "name": "",
@@ -1734,7 +2068,7 @@
         "type": "int256"
       }
     ],
-    "name": "previewLowLevelShares",
+    "name": "previewLowLevelRebalanceShares",
     "outputs": [
       {
         "internalType": "int256",
@@ -1762,7 +2096,7 @@
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "assets",
+        "name": "",
         "type": "uint256"
       }
     ],
@@ -1781,7 +2115,7 @@
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "collateralAssets",
+        "name": "",
         "type": "uint256"
       }
     ],
@@ -1800,7 +2134,7 @@
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "assets",
+        "name": "",
         "type": "uint256"
       }
     ],
@@ -1819,7 +2153,7 @@
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "assets",
+        "name": "",
         "type": "uint256"
       }
     ],
@@ -1838,7 +2172,7 @@
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "shares",
+        "name": "",
         "type": "uint256"
       }
     ],
@@ -1857,7 +2191,7 @@
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "shares",
+        "name": "",
         "type": "uint256"
       }
     ],
@@ -1886,7 +2220,7 @@
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "assets",
+        "name": "",
         "type": "uint256"
       }
     ],
@@ -1915,7 +2249,7 @@
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "collateralAssets",
+        "name": "",
         "type": "uint256"
       }
     ],
@@ -1945,9 +2279,53 @@
   {
     "inputs": [
       {
-        "internalType": "contract ILendingConnector",
+        "internalType": "bool",
+        "name": "value",
+        "type": "bool"
+      }
+    ],
+    "name": "setIsDepositDisabled",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bool",
+        "name": "activate",
+        "type": "bool"
+      }
+    ],
+    "name": "setIsWhitelistActivated",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bool",
+        "name": "value",
+        "type": "bool"
+      }
+    ],
+    "name": "setIsWithdrawDisabled",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
         "name": "_lendingConnector",
         "type": "address"
+      },
+      {
+        "internalType": "bytes",
+        "name": "lendingConnectorData",
+        "type": "bytes"
       }
     ],
     "name": "setLendingConnector",
@@ -1958,9 +2336,32 @@
   {
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "_maxGrowthFee",
-        "type": "uint256"
+        "internalType": "uint16",
+        "name": "dividend",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "divider",
+        "type": "uint16"
+      }
+    ],
+    "name": "setMaxDeleverageFee",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "dividend",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "divider",
+        "type": "uint16"
       }
     ],
     "name": "setMaxGrowthFee",
@@ -1971,12 +2372,17 @@
   {
     "inputs": [
       {
-        "internalType": "uint128",
-        "name": "value",
-        "type": "uint128"
+        "internalType": "uint16",
+        "name": "dividend",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "divider",
+        "type": "uint16"
       }
     ],
-    "name": "setMaxSafeLTV",
+    "name": "setMaxSafeLtv",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1997,12 +2403,17 @@
   {
     "inputs": [
       {
-        "internalType": "uint128",
-        "name": "value",
-        "type": "uint128"
+        "internalType": "uint16",
+        "name": "dividend",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "divider",
+        "type": "uint16"
       }
     ],
-    "name": "setMinProfitLTV",
+    "name": "setMinProfitLtv",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -2010,17 +2421,30 @@
   {
     "inputs": [
       {
-        "internalType": "contract ILendingConnector",
-        "name": "_lendingConnector",
+        "internalType": "contract IModules",
+        "name": "_modules",
+        "type": "address"
+      }
+    ],
+    "name": "setModules",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_oracleConnector",
         "type": "address"
       },
       {
-        "internalType": "contract IOracleConnector",
-        "name": "_oracleConnector",
-        "type": "address"
+        "internalType": "bytes",
+        "name": "oracleConnectorData",
+        "type": "bytes"
       }
     ],
-    "name": "setMissingSlots",
+    "name": "setOracleConnector",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -2028,14 +2452,94 @@
   {
     "inputs": [
       {
-        "internalType": "uint128",
-        "name": "value",
-        "type": "uint128"
+        "internalType": "address",
+        "name": "_slippageConnector",
+        "type": "address"
+      },
+      {
+        "internalType": "bytes",
+        "name": "slippageConnectorData",
+        "type": "bytes"
       }
     ],
-    "name": "setTargetLTV",
+    "name": "setSlippageConnector",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint16",
+        "name": "dividend",
+        "type": "uint16"
+      },
+      {
+        "internalType": "uint16",
+        "name": "divider",
+        "type": "uint16"
+      }
+    ],
+    "name": "setTargetLtv",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_vaultBalanceAsLendingConnector",
+        "type": "address"
+      },
+      {
+        "internalType": "bytes",
+        "name": "vaultBalanceAsLendingConnectorGetterData",
+        "type": "bytes"
+      }
+    ],
+    "name": "setVaultBalanceAsLendingConnector",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "value",
+        "type": "address"
+      }
+    ],
+    "name": "setWhitelistRegistry",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "slippageConnector",
+    "outputs": [
+      {
+        "internalType": "contract ISlippageConnector",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "slippageConnectorGetterData",
+    "outputs": [
+      {
+        "internalType": "bytes",
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -2043,9 +2547,9 @@
     "name": "startAuction",
     "outputs": [
       {
-        "internalType": "uint256",
+        "internalType": "uint56",
         "name": "",
-        "type": "uint256"
+        "type": "uint56"
       }
     ],
     "stateMutability": "view",
@@ -2066,12 +2570,25 @@
   },
   {
     "inputs": [],
-    "name": "targetLTV",
+    "name": "targetLtvDividend",
     "outputs": [
       {
-        "internalType": "uint128",
+        "internalType": "uint16",
         "name": "",
-        "type": "uint128"
+        "type": "uint16"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "targetLtvDivider",
+    "outputs": [
+      {
+        "internalType": "uint16",
+        "name": "",
+        "type": "uint16"
       }
     ],
     "stateMutability": "view",
@@ -2080,6 +2597,57 @@
   {
     "inputs": [],
     "name": "totalAssets",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bool",
+        "name": "isDeposit",
+        "type": "bool"
+      }
+    ],
+    "name": "totalAssets",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalAssetsCollateral",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bool",
+        "name": "isDeposit",
+        "type": "bool"
+      }
+    ],
+    "name": "totalAssetsCollateral",
     "outputs": [
       {
         "internalType": "uint256",
@@ -2107,7 +2675,7 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "recipient",
+        "name": "to",
         "type": "address"
       },
       {
@@ -2131,12 +2699,12 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "sender",
+        "name": "from",
         "type": "address"
       },
       {
         "internalType": "address",
-        "name": "recipient",
+        "name": "to",
         "type": "address"
       },
       {
@@ -2172,6 +2740,84 @@
   {
     "inputs": [
       {
+        "internalType": "address",
+        "name": "newEmergencyDeleverager",
+        "type": "address"
+      }
+    ],
+    "name": "updateEmergencyDeleverager",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "newGovernor",
+        "type": "address"
+      }
+    ],
+    "name": "updateGovernor",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "newGuardian",
+        "type": "address"
+      }
+    ],
+    "name": "updateGuardian",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "vaultBalanceAsLendingConnector",
+    "outputs": [
+      {
+        "internalType": "contract ILendingConnector",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "vaultBalanceAsLendingConnectorGetterData",
+    "outputs": [
+      {
+        "internalType": "bytes",
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "whitelistRegistry",
+    "outputs": [
+      {
+        "internalType": "contract IWhitelistRegistry",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "uint256",
         "name": "assets",
         "type": "uint256"
@@ -2202,7 +2848,7 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "collateralAssets",
+        "name": "assets",
         "type": "uint256"
       },
       {

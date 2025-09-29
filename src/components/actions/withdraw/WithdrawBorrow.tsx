@@ -12,7 +12,7 @@ export default function WithdrawBorrow() {
   const [amount, setAmount] = useState('');
 
   const { address } = useAppContext();
-  const { borrowTokenSymbol, vault, decimals, maxWithdraw } = useVaultContext();
+  const { borrowTokenSymbol, vault, borrowTokenDecimals, maxWithdraw } = useVaultContext();
 
   const handleWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +24,7 @@ export default function WithdrawBorrow() {
     if (!vault || !address) return;
 
     try {
-      const amountToWithdraw = parseUnits(amount, decimals);
+      const amountToWithdraw = parseUnits(amount, borrowTokenDecimals);
 
       const withdrawTx = await vault.withdraw(amountToWithdraw, address, address);
       await withdrawTx.wait();

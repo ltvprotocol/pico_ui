@@ -12,7 +12,7 @@ export default function WithdrawCollateral() {
   const [amount, setAmount] = useState('');
 
   const { address } = useAppContext();
-  const { collateralTokenSymbol, vault, decimals, maxWithdrawCollateral } = useVaultContext();
+  const { collateralTokenSymbol, vault, collateralTokenDecimals, maxWithdrawCollateral } = useVaultContext();
 
   const handleWithdraw = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +24,7 @@ export default function WithdrawCollateral() {
     if (!vault || !address) return;
 
     try {
-      const amountToWithdraw = parseUnits(amount, decimals);
+      const amountToWithdraw = parseUnits(amount, collateralTokenDecimals);
 
       const withdrawTx = await vault.withdrawCollateral(amountToWithdraw, address, address);
       await withdrawTx.wait();

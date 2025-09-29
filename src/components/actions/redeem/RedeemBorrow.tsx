@@ -12,7 +12,7 @@ export default function RedeemBorrow() {
   const [amount, setAmount] = useState('');
 
   const { address } = useAppContext();
-  const { sharesSymbol, vault, decimals, maxRedeem } = useVaultContext()
+  const { sharesSymbol, vault, sharesDecimals, maxRedeem } = useVaultContext()
 
   const handleRedeem = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,8 +24,8 @@ export default function RedeemBorrow() {
     setSuccess(null);
 
     try {
-      const amountToRedeem = parseUnits(amount, decimals);
-      const maxAvailable = parseUnits(maxRedeem, decimals);
+      const amountToRedeem = parseUnits(amount, sharesDecimals);
+      const maxAvailable = parseUnits(maxRedeem, sharesDecimals);
 
       if (maxAvailable < amountToRedeem) {
         setError('Amount higher than available.');

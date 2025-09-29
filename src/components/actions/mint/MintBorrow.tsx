@@ -19,7 +19,7 @@ export default function MintBorrow() {
     vaultAddress,
     sharesSymbol, borrowTokenSymbol, borrowTokenAddress,
     vault, borrowToken, vaultLens, borrowTokenLens,
-    decimals, maxMint
+    sharesDecimals, maxMint
   } = useVaultContext();
 
   const handleMint = async (e: React.FormEvent) => {
@@ -39,7 +39,7 @@ export default function MintBorrow() {
     ) return;
 
     try {
-      const mintAmount = parseUnits(amount, decimals);
+      const mintAmount = parseUnits(amount, sharesDecimals);
       const tokensNeededToMint = await vaultLens.previewMint(mintAmount);
       const balance = await borrowTokenLens.balanceOf(address);
 

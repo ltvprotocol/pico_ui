@@ -5,6 +5,7 @@
         "address": "0xe2a7f267124ac3e4131f27b9159c78c521a44f3c",
         "collateralTokenAddress": "0x8f7b2044F9aA6fbf495c1cC3bDE120dF9032aE43",
         "borrowTokenAddress": "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
+        "lendingAddress": "0x1Dcd756db287354c4607D5d57621cdfb4456E2d4",
         "sharesSymbol": "GME",
         "collateralTokenSymbol": "MAE",
         "borrowTokenSymbol": "WETH",
@@ -12,8 +13,29 @@
         "targetLTV": "0.75",
         "maxSafeLTV": "0.90",
         "minProfitLTV": "0.50",
-        "lendingName": "HodlMyBeer",
-        "lendingAddress": "0x1Dcd756db287354c4607D5d57621cdfb4456E2d4"
+        "lendingName": "HodlMyBeer"
+      },
+      {
+        "address": "0xAa707a2a0e38DE55cA0b61dd32468e357b55b15f",
+        "collateralTokenAddress": "0xC558DBdd856501FCd9aaF1E62eae57A9F0629a3c",
+        "borrowTokenAddress": "0x29f2D40B0605204364af54EC677bD022dA425d03",
+        "lendingAddress": "0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951",
+        "sharesSymbol": "WETH_WBTC_x4_AAVEV3",
+        "collateralTokenSymbol": "WETH",
+        "borrowTokenSymbol": "WBTC",
+        "leverage": "4",
+        "lendingName": "AAVE V3"
+      },
+      {
+        "address": "0x9A1Fc3ff25083f33373Bbf9617E12892FF19E07A",
+        "collateralTokenAddress": "0x2D5ee574e710219a521449679A4A7f2B43f046ad",
+        "borrowTokenAddress": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+        "lendingAddress": "0xd011EE229E7459ba1ddd22631eF7bF528d424A14",
+        "sharesSymbol": "WETH_USDC_x3_Morpho",
+        "collateralTokenSymbol": "USDC",
+        "borrowTokenSymbol": "WETH",
+        "leverage": "3",
+        "lendingName": "Morpho"
       }
     ]
   },

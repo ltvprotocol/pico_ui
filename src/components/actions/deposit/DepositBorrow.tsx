@@ -4,7 +4,7 @@ import { useAppContext } from '@/contexts';
 import { isUserRejected, wrapEth } from '@/utils';
 import { useVaultContext } from '@/contexts/VaultContext';
 import { ActionForm } from '@/components/ui';
-import { WETH_ADDRESS } from '@/constants';
+import { isWETHAddress } from '@/constants';
 import { WETH } from '@/typechain-types';
 
 export default function DepositBorrow() {
@@ -20,7 +20,7 @@ export default function DepositBorrow() {
     vaultAddress,
     borrowTokenSymbol, borrowTokenAddress,
     vault, borrowToken, borrowTokenLens,
-    decimals, maxDeposit
+    borrowTokenDecimals, maxDeposit
   } = useVaultContext()
 
   const handleDeposit = async (e: React.FormEvent) => {
@@ -33,11 +33,11 @@ export default function DepositBorrow() {
     if (!publicProvider || !borrowTokenLens || !borrowToken || !vault || !address) return;
 
     try {
-      const neededToDeposit = parseUnits(amount, decimals);
+      const neededToDeposit = parseUnits(amount, borrowTokenDecimals);
       const balance = await borrowTokenLens.balanceOf(address);
 
       if (balance < neededToDeposit) {
-        if (borrowTokenAddress === WETH_ADDRESS) {
+        if (isWETHAddress(borrowTokenAddress)) {
           const ethBalance = await publicProvider.getBalance(address);
           const wethMissing = neededToDeposit - balance;
           await wrapEth(borrowToken as WETH, wethMissing, ethBalance, setSuccess, setError);

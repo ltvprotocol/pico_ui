@@ -3,21 +3,7 @@ import { formatUnits } from 'ethers';
 import { useVaultContext } from '@/contexts';
 import { truncate } from '@/utils';
 import { renderWithTransition } from '@/helpers/renderWithTransition';
-
-// Custom Tooltip Component
-const Tooltip = ({ children, content, isVisible }: { children: React.ReactNode, content: string, isVisible: boolean }) => {
-  return (
-    <div className="relative inline-block">
-      {children}
-      {isVisible && (
-        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-white text-black text-sm rounded-lg shadow-lg border border-gray-200 whitespace-nowrap z-50">
-          {content}
-          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-white"></div>
-        </div>
-      )}
-    </div>
-  );
-};
+import { renderSymbolWithPlaceholder } from '@/helpers/renderSymbolWithPlaceholder';
 
 interface LoadingState {
   isLoadingTargetLtv: boolean;
@@ -35,7 +21,6 @@ export default function Information() {
   const [targetLtv, setTargetLtv] = useState<string | null>(null);
   const [maxSafeLtv, setMaxSafeLtv] = useState<string | null>(null);
   const [minProfitLtv, setMinProfitLtv] = useState<string | null>(null);
-  const [hoveredElement, setHoveredElement] = useState<string | null>(null);
 
   const { 
     vaultLens, 
@@ -54,26 +39,6 @@ export default function Information() {
     totalAssets
   } = useVaultContext();
 
-  // Helper function to get display symbol with tooltip
-  const getDisplaySymbol = (symbol: string | null, isShares: boolean = false, elementId: string) => {
-    if (!symbol) return null;
-    
-    if (isShares && symbol.length > 6) {
-      return (
-        <Tooltip content={symbol} isVisible={hoveredElement === elementId}>
-          <span 
-            className="cursor-pointer" 
-            onMouseEnter={() => setHoveredElement(elementId)}
-            onMouseLeave={() => setHoveredElement(null)}
-          >
-            Shares
-          </span>
-        </Tooltip>
-      );
-    }
-    
-    return symbol;
-  };
 
   useEffect(() => {
     if (vaultConfig) {
@@ -172,8 +137,8 @@ export default function Information() {
             {[
               [vaultMaxDepositCollateral, collateralTokenSymbol],
               [vaultMaxWithdrawCollateral, collateralTokenSymbol],
-              [vaultMaxMintCollateral, getDisplaySymbol(sharesSymbol, true, 'mint-collateral')],
-              [vaultMaxRedeemCollateral, getDisplaySymbol(sharesSymbol, true, 'redeem-collateral')]
+              [vaultMaxMintCollateral, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'mint-collateral', isLoading: !sharesSymbol })],
+              [vaultMaxRedeemCollateral, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'redeem-collateral', isLoading: !sharesSymbol })]
             ].map((info, index) => (
               <div key={index} className='flex'>
                 <div className="mr-2 min-w-[60px] text-right">
@@ -196,8 +161,8 @@ export default function Information() {
             {[
               [vaultMaxDeposit, borrowTokenSymbol],
               [vaultMaxWithdraw, borrowTokenSymbol],
-              [vaultMaxMint, getDisplaySymbol(sharesSymbol, true, 'mint-borrow')],
-              [vaultMaxRedeem, getDisplaySymbol(sharesSymbol, true, 'redeem-borrow')]
+              [vaultMaxMint, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'mint-borrow', isLoading: !sharesSymbol })],
+              [vaultMaxRedeem, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'redeem-borrow', isLoading: !sharesSymbol })]
             ].map((info, index) => (
               <div key={index} className="flex">
                 <div className="mr-2 min-w-[60px] text-right">
@@ -231,8 +196,8 @@ export default function Information() {
             {[
               [vaultMaxDepositCollateral, collateralTokenSymbol],
               [vaultMaxWithdrawCollateral, collateralTokenSymbol],
-              [vaultMaxMintCollateral, getDisplaySymbol(sharesSymbol, true, 'mobile-mint-collateral')],
-              [vaultMaxRedeemCollateral, getDisplaySymbol(sharesSymbol, true, 'mobile-redeem-collateral')]
+              [vaultMaxMintCollateral, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'mobile-mint-collateral', isLoading: !sharesSymbol })],
+              [vaultMaxRedeemCollateral, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'mobile-redeem-collateral', isLoading: !sharesSymbol })]
             ].map((info, index) => (
               <div key={index} className='flex'>
                 <div className="mr-2 min-w-[60px] text-right">
@@ -264,8 +229,8 @@ export default function Information() {
             {[
               [vaultMaxDeposit, borrowTokenSymbol],
               [vaultMaxWithdraw, borrowTokenSymbol],
-              [vaultMaxMint, getDisplaySymbol(sharesSymbol, true, 'mobile-mint-borrow')],
-              [vaultMaxRedeem, getDisplaySymbol(sharesSymbol, true, 'mobile-redeem-borrow')]
+              [vaultMaxMint, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'mobile-mint-borrow', isLoading: !sharesSymbol })],
+              [vaultMaxRedeem, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'mobile-redeem-borrow', isLoading: !sharesSymbol })]
             ].map((info, index) => (
               <div key={index} className="flex">
                 <div className="mr-2 min-w-[60px] text-right">

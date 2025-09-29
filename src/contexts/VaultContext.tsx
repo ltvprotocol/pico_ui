@@ -4,7 +4,7 @@ import { useAppContext } from '@/contexts/AppContext';
 import { Vault, WETH, ERC20, Vault__factory, WETH__factory, ERC20__factory, LendingConnector__factory } from '@/typechain-types';
 import { truncate, ltvToLeverage } from '@/utils';
 import vaultsConfig from '../../vaults.config.json';
-import { isWETHAddress } from '@/constants';
+import { isWETHAddress, GAS_RESERVE_ETH } from '@/constants';
 import { useAdaptiveInterval } from '@/hooks';
 
 interface VaultConfig {
@@ -287,6 +287,10 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
       const sharesBalanceNum = parseFloat(sharesBalance);
       const collateralTokenBalanceNum = parseFloat(collateralTokenBalance);
 
+      // Calculate available ETH for WETH operations (subtract gas reserve)
+      const availableEthForBorrow = isBorrowTokenWeth ? Math.max(0, ethBalanceNum - GAS_RESERVE_ETH) : 0;
+      const availableEthForCollateral = isCollateralTokenWeth ? Math.max(0, ethBalanceNum - GAS_RESERVE_ETH) : 0;
+
       const vaultMaxDepositNum = parseFloat(vaultMaxDeposit);
       const vaultMaxRedeemNum = parseFloat(vaultMaxRedeem);
       const vaultMaxMintNum = parseFloat(vaultMaxMint);
@@ -296,22 +300,28 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
       const vaultMaxMintCollateralNum = parseFloat(vaultMaxMintCollateral);
       const vaultMaxWithdrawCollateralNum = parseFloat(vaultMaxWithdrawCollateral);
 
-      const maxAvailableDeposit = Math.min(borrowTokenBalanceNum + (isBorrowTokenWeth ? ethBalanceNum : 0), vaultMaxDepositNum);
+      const maxAvailableDeposit = Math.min(borrowTokenBalanceNum + availableEthForBorrow, vaultMaxDepositNum);
       const maxAvailableRedeem = Math.min(sharesBalanceNum, vaultMaxRedeemNum);
-      const maxAvailableDepositCollateral = Math.min(collateralTokenBalanceNum + (isCollateralTokenWeth ? ethBalanceNum : 0), vaultMaxDepositCollateralNum);
+      const maxAvailableDepositCollateral = Math.min(collateralTokenBalanceNum + availableEthForCollateral, vaultMaxDepositCollateralNum);
       const maxAvailableRedeemCollateral = Math.min(sharesBalanceNum, vaultMaxRedeemCollateralNum);
 
       const borrowTokenBalanceRaw = parseUnits(borrowTokenBalanceNum.toString(), borrowTokenDecimals);
       const rawSharesForBorrowToken = await vaultLens.previewDeposit(borrowTokenBalanceRaw);
       const sharesForBorrowToken = parseFloat(formatUnits(rawSharesForBorrowToken, sharesDecimals));
-      const rawSharesForEth = isBorrowTokenWeth ? await vaultLens.previewDeposit(await publicProvider.getBalance(address)) : 0n;
+      
+      // Calculate shares for available ETH (with gas reserve subtracted)
+      const availableEthForBorrowRaw = isBorrowTokenWeth ? parseUnits(availableEthForBorrow.toString(), 18) : 0n;
+      const rawSharesForEth = isBorrowTokenWeth ? await vaultLens.previewDeposit(availableEthForBorrowRaw) : 0n;
       const sharesForEth = parseFloat(formatUnits(rawSharesForEth, sharesDecimals));
       const maxAvailableMint = Math.min(sharesForBorrowToken + sharesForEth, vaultMaxMintNum);
 
       const collateralTokenBalanceRaw = parseUnits(collateralTokenBalanceNum.toString(), collateralTokenDecimals);
       const rawSharesForCollateral = await vaultLens.previewDepositCollateral(collateralTokenBalanceRaw);
       const sharesForCollateral = parseFloat(formatUnits(rawSharesForCollateral, sharesDecimals));
-      const rawSharesForEthCollateral = isCollateralTokenWeth ? await vaultLens.previewDepositCollateral(await publicProvider.getBalance(address)) : 0n;
+      
+      // Calculate shares for available ETH (with gas reserve subtracted)
+      const availableEthForCollateralRaw = isCollateralTokenWeth ? parseUnits(availableEthForCollateral.toString(), 18) : 0n;
+      const rawSharesForEthCollateral = isCollateralTokenWeth ? await vaultLens.previewDepositCollateral(availableEthForCollateralRaw) : 0n;
       const sharesForEthCollateral = parseFloat(formatUnits(rawSharesForEthCollateral, sharesDecimals));
       const maxAvailableMintCollateral = Math.min(sharesForCollateral + sharesForEthCollateral, vaultMaxMintCollateralNum);
 

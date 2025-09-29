@@ -12,6 +12,9 @@ export const isWETHAddress = (address: string): boolean => {
   return result;
 };
 
+// Gas reserve in ETH (0.002 ETH = 2,000,000,000,000,000 wei)
+export const GAS_RESERVE_ETH = 0.002;
+
 export const SEPOLIA_CHAIN_ID = 11155111n;
 export const SEPOLIA_CHAIN_ID_HEX = '0xaa36a7'; // 11155111 in hex
 

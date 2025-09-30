@@ -1,4 +1,5 @@
 import { useAppContext } from '@/contexts';
+import { CopyAddress } from './ui/CopyAddress';
 
 export default function ConnectWallet() {
   const { 
@@ -115,19 +116,10 @@ export default function ConnectWallet() {
               </button>
             </div>
           </div>
-          <div className="flex items-center justify-between bg-gray-50 p-3 rounded-md mt-4">
+          <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
             <div className="flex flex-col">
-              <div>
-                <h3 className="text-lg font-medium text-gray-900">Wallet Address:</h3>
-              </div>
-              <div>
-                <span className="hidden sm:block text-sm text-gray-700 break-all">
-                  {address}
-                </span>
-                <span className="block sm:hidden text-sm text-gray-700 break-all">
-                  {address ? `${address.slice(0, 6)}...${address.slice(-12)}` : ''}
-                </span>
-              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-1">Wallet Address:</h3>
+              <CopyAddress address={address ? address : ""} />
             </div>
           </div>
         </div>

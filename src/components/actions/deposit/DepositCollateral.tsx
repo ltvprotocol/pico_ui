@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { parseUnits } from 'ethers';
-import { VAULT_ADDRESS } from '@/constants';
 import { useAppContext } from '@/contexts';
-import { isUserRejected } from '@/utils';
-import { useAdaptiveInterval } from '@/hooks';
+import { isUserRejected, wrapEth } from '@/utils';
 import { useVaultContext } from '@/contexts/VaultContext';
 import { ActionForm } from '@/components/ui';
+import { isWETHAddress } from '@/constants';
+import { WETH } from '@/typechain-types';
 
 export default function DepositCollateral() {
   const [loading, setLoading] = useState(false);
@@ -14,17 +14,14 @@ export default function DepositCollateral() {
 
   const [amount, setAmount] = useState('');
 
-  const { publicProvider, address, isConnected } = useAppContext();
+  const { publicProvider, address } = useAppContext();
 
   const {
-    collateralTokenSymbol,
+    vaultAddress,
+    collateralTokenSymbol, collateralTokenAddress,
     vault, collateralToken, collateralTokenLens, 
-    decimals, maxDepositCollateral, updateMaxDepositCollateral
+    collateralTokenDecimals, maxDepositCollateral
   } = useVaultContext();
-
-  useAdaptiveInterval(updateMaxDepositCollateral, {
-    enabled: isConnected
-  });
 
   const handleDeposit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,18 +33,37 @@ export default function DepositCollateral() {
     if (!publicProvider || !collateralTokenLens || !collateralToken || !vault || !address) return;
 
     try {
-      const neededToDeposit = parseUnits(amount, decimals);
-      const collateralBalance = await collateralTokenLens.balanceOf(address);
+      const neededToDeposit = parseUnits(amount, collateralTokenDecimals);
+      const balance = await collateralTokenLens.balanceOf(address);
 
-      if (collateralBalance < neededToDeposit) {
-        setError('Not enough tokens to deposit.');
-        console.error('Not enough tokens to deposit');
-        return;
+      if (balance < neededToDeposit) {
+        if (isWETHAddress(collateralTokenAddress)) {
+          const ethBalance = await publicProvider.getBalance(address);
+          const wethMissing = neededToDeposit - balance;
+          await wrapEth(collateralToken as WETH, wethMissing, ethBalance, setSuccess, setError);
+
+          const newBalance = await collateralTokenLens.balanceOf(address);
+          if (newBalance < neededToDeposit) {
+            setError('Not enough WETH after wrapping.');
+            console.error('Not enough WETH after wrapping');
+            return;
+          }
+        } else {
+          setError('Not enough tokens to deposit.');
+          console.error('Not enough tokens to deposit');
+          return;
+        }
       }
 
-      const approveTx = await collateralToken.approve(VAULT_ADDRESS, neededToDeposit);
-      await approveTx.wait();
-      setSuccess(`Successfully approved ${collateralTokenSymbol}.`);
+      const currentAllowance = await collateralTokenLens.allowance(address, vaultAddress);
+      
+      if (currentAllowance < neededToDeposit) {
+        const approveTx = await collateralToken.approve(vaultAddress, neededToDeposit);
+        await approveTx.wait();
+        setSuccess(`Successfully approved ${collateralTokenSymbol}.`);
+      } else {
+        setSuccess(`Already approved ${collateralTokenSymbol}.`);
+      }
 
       const depositTx = await vault.depositCollateral(neededToDeposit, address);
       await depositTx.wait();
@@ -71,7 +87,7 @@ export default function DepositCollateral() {
       actionName='Deposit'
       amount={amount}
       maxAmount={maxDepositCollateral}
-      tokenSymbol={collateralTokenSymbol}
+      tokenSymbol={collateralTokenSymbol || ''}
       isLoading={loading}
       error={error}
       success={success}

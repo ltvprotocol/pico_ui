@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { parseUnits } from 'ethers';
-import { VAULT_ADDRESS } from '@/constants';
 import { useAppContext, useVaultContext } from '@/contexts';
-import { isUserRejected } from '@/utils';
-import { useAdaptiveInterval } from '@/hooks';
+import { isUserRejected, wrapEth } from '@/utils';
 import { ActionForm } from '@/components/ui';
+import { WETH } from '@/typechain-types';
+import { isWETHAddress } from '@/constants';
 
 export default function MintCollateral() {
   const [loading, setLoading] = useState(false);
@@ -13,17 +13,14 @@ export default function MintCollateral() {
 
   const [amount, setAmount] = useState('');
 
-  const { publicProvider, address, isConnected } = useAppContext();
+  const { publicProvider, address } = useAppContext();
 
   const {
-    sharesSymbol, collateralTokenSymbol,
+    vaultAddress,
+    sharesSymbol, collateralTokenSymbol, collateralTokenAddress,
     vault, collateralToken, vaultLens, collateralTokenLens,
-    decimals, maxMintCollateral, updateMaxMintCollateral
+    sharesDecimals, maxMintCollateral
   } = useVaultContext()
-
-  useAdaptiveInterval(updateMaxMintCollateral, {
-    enabled: isConnected
-  });
 
   const handleMint = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,19 +39,38 @@ export default function MintCollateral() {
     ) return;
 
     try {
-      const mintAmount = parseUnits(amount, decimals);
-      const neededToMint = await vaultLens.previewMintCollateral(mintAmount);
-      const collateralBalance = await collateralTokenLens.balanceOf(address);
+      const mintAmount = parseUnits(amount, sharesDecimals);
+      const tokensNeededToMint = await vaultLens.previewMintCollateral(mintAmount);
+      const balance = await collateralTokenLens.balanceOf(address);
 
-      if (collateralBalance < neededToMint) {
-        setError('Not enough to mint.');
-        console.error('Not enough to mint');
-        return;
+      if (balance < tokensNeededToMint) {
+        if (isWETHAddress(collateralTokenAddress)) {
+          const ethBalance = await publicProvider.getBalance(address);
+          const wethMissing = tokensNeededToMint - balance;
+          await wrapEth(collateralToken as WETH, wethMissing, ethBalance, setSuccess, setError);
+
+          const newBalance = await collateralTokenLens.balanceOf(address);
+          if (newBalance < tokensNeededToMint) {
+            setError('Not enough WETH after wrapping.');
+            console.error('Not enough WETH after wrapping');
+            return;
+          }
+        } else {
+          setError('Not enough tokens to mint.');
+          console.error('Not enough tokens to mint');
+          return;
+        }
       }
 
-      const approveTx = await collateralToken.approve(VAULT_ADDRESS, neededToMint);
-      await approveTx.wait();
-      setSuccess(`Successfully approved ${collateralTokenSymbol}.`);
+      const currentAllowance = await collateralTokenLens.allowance(address, vaultAddress);
+      
+      if (currentAllowance < tokensNeededToMint) {
+        const approveTx = await collateralToken.approve(vaultAddress, tokensNeededToMint);
+        await approveTx.wait();
+        setSuccess(`Successfully approved ${collateralTokenSymbol}.`);
+      } else {
+        setSuccess(`Already approved ${collateralTokenSymbol}.`);
+      }
 
       const mintTx = await vault.mintCollateral(mintAmount, address);
       await mintTx.wait();
@@ -78,7 +94,7 @@ export default function MintCollateral() {
       actionName='Mint'
       amount={amount}
       maxAmount={maxMintCollateral}
-      tokenSymbol={sharesSymbol}
+      tokenSymbol={sharesSymbol || ''}
       isLoading={loading}
       error={error}
       success={success}

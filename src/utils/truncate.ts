@@ -1,5 +1,5 @@
-export function truncateTo4Decimals(value: number): string {
+export function truncate(value: number, decimalPlaces: number): string {
   const factor = 10_000;
   const truncated = Math.floor(value * factor) / factor;
-  return truncated.toFixed(4);
-}
+  return truncated.toFixed(decimalPlaces);
+};

@@ -1,5 +1,6 @@
 import React from 'react';
 import { allowOnlyNumbers, isButtonDisabled } from '@/utils';
+import { renderSymbolWithPlaceholder } from '@/helpers/renderSymbolWithPlaceholder';
 
 type ActionFormProps = {
   actionName: string;
@@ -27,10 +28,10 @@ export const ActionForm: React.FC<ActionFormProps> = ({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="amount" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-2">
           Amount to {actionName}
         </label>
-        <div className="mt-1 relative rounded-md shadow-sm">
+        <div className="relative rounded-md shadow-sm">
           <input
             type="text"
             name="amount"
@@ -53,11 +54,27 @@ export const ActionForm: React.FC<ActionFormProps> = ({
             >
               MAX
             </button>
-            <span className="text-gray-500 sm:text-sm">{tokenSymbol}</span>
+            <span className="text-gray-500 sm:text-sm">
+              {renderSymbolWithPlaceholder({
+                symbol: tokenSymbol,
+                placeholder: 'Shares',
+                elementId: 'action-form-symbol',
+                isLoading: !tokenSymbol
+              })}
+            </span>
           </div>
         </div>
-        <div className="mt-1 text-sm text-gray-500">
-          Max Available: {!maxAmount ? 'Loading...' : `${maxAmount} ${tokenSymbol}`}
+        <div className="flex gap-1 mt-1 text-sm text-gray-500">
+          Max Available: {!maxAmount ? 'Loading...' : (
+            <>
+              {maxAmount} {renderSymbolWithPlaceholder({
+                symbol: tokenSymbol,
+                placeholder: 'Shares',
+                elementId: 'action-form-max-available',
+                isLoading: !tokenSymbol
+              })}
+            </>
+          )}
         </div>
       </div>
       <button

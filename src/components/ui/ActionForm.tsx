@@ -64,7 +64,7 @@ export const ActionForm: React.FC<ActionFormProps> = ({
             </span>
           </div>
         </div>
-        <div className="mt-1 text-sm text-gray-500">
+        <div className="flex gap-1 mt-1 text-sm text-gray-500">
           Max Available: {!maxAmount ? 'Loading...' : (
             <>
               {maxAmount} {renderSymbolWithPlaceholder({

@@ -182,6 +182,16 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
   }, [wallets, isConnected, isAutoConnecting, connectWallet]);
 
   useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (isAutoConnecting && wallets.length === 0) {
+        setIsAutoConnecting(false);
+      }
+    }, 1000);
+
+    return () => clearTimeout(timeout);
+  }, [isAutoConnecting, wallets.length]);
+
+  useEffect(() => {
     if (!rawProvider) return;
 
     const eip1193Provider = rawProvider as unknown as {

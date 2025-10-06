@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { formatUnits } from "ethers";
 import { useAppContext } from "@/contexts";
-import { ltvToLeverage } from "@/utils";
+import { ltvToLeverage, truncate } from "@/utils";
 import { useAdaptiveInterval } from "@/hooks";
 import { Vault__factory, ERC20__factory } from "@/typechain-types";
 import { CopyAddress } from "@/components/ui";
@@ -159,8 +159,7 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
     try {
       const dividend = await vaultContract.targetLtvDividend();
       const divider = await vaultContract.targetLtvDivider();
-      const rawLtv = (BigInt(dividend) * (10n ** 18n)) / BigInt(divider);
-      const ltv = parseFloat(formatUnits(rawLtv, 18)).toFixed(4);
+      const ltv = truncate(Number(dividend) / Number(divider), 2);
       const leverage = ltvToLeverage(parseFloat(ltv));
       setStaticData(prev => ({ ...prev, maxLeverage: leverage }));
       setLoadingState(prev => ({ ...prev, hasLoadedLeverage: true, isLoadingLeverage: false }));

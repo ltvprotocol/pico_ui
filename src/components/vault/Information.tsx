@@ -21,11 +21,11 @@ export default function Information() {
   const [maxSafeLtv, setMaxSafeLtv] = useState<string | null>(null);
   const [minProfitLtv, setMinProfitLtv] = useState<string | null>(null);
 
-  const { 
-    vaultLens, 
-    sharesSymbol, 
-    borrowTokenSymbol, 
-    collateralTokenSymbol, 
+  const {
+    vaultLens,
+    sharesSymbol,
+    borrowTokenSymbol,
+    collateralTokenSymbol,
     vaultConfig,
     vaultMaxDeposit,
     vaultMaxWithdraw,

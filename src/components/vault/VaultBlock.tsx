@@ -43,7 +43,7 @@ interface LoadingState {
   hasLoadedDecimals: boolean;
 }
 
-export default function VaultBlock( {address} : VaultBlockProps ) {
+export default function VaultBlock({ address }: VaultBlockProps) {
   const [staticData, setStaticData] = useState<StaticVaultData>({
     borrowTokenSymbol: null,
     collateralTokenSymbol: null,
@@ -92,7 +92,7 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
       const hasTokensFromConfig = !!(vaultConfig.collateralTokenSymbol && vaultConfig.borrowTokenSymbol);
       const hasLeverageFromConfig = !!vaultConfig.leverage;
       const hasLendingNameFromConfig = !!vaultConfig.lendingName;
-      
+
       if (hasTokensFromConfig || hasLeverageFromConfig || hasLendingNameFromConfig) {
         setLoadingState(prev => ({
           ...prev,
@@ -101,7 +101,7 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
           hasLoadedTokens: hasTokensFromConfig,
           hasLoadedLeverage: hasLeverageFromConfig,
         }));
-        
+
         setStaticData({
           collateralTokenSymbol: vaultConfig.collateralTokenSymbol || null,
           borrowTokenSymbol: vaultConfig.borrowTokenSymbol || null,
@@ -175,7 +175,7 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
       const newSharesDecimals = await vaultContract.decimals();
       const newBorrowTokenDecimals = await vaultContract.borrowTokenDecimals();
       const newCollateralTokenDecimals = await vaultContract.collateralTokenDecimals();
-      
+
       setVaultDecimals({
         sharesDecimals: newSharesDecimals,
         borrowTokenDecimals: newBorrowTokenDecimals,
@@ -301,9 +301,9 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
   return (
     <>
       <CopyAddress className="mb-2" address={address} />
-      <Link 
+      <Link
         to={`/${address}`}
-        state={{ 
+        state={{
           collateralTokenSymbol: staticData.collateralTokenSymbol,
           borrowTokenSymbol: staticData.borrowTokenSymbol,
           maxLeverage: staticData.maxLeverage,
@@ -312,21 +312,21 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
         className="wrapper block w-full bg-gray-50 transition-colors border border-gray-50 rounded-lg mb-12 last:mb-0 p-3">
         <div className="w-full">
           <div className="w-full flex flex-row justify-between mb-2 hidden sm:flex">
-          <div className="flex items-center text-base font-medium text-gray-900">
-            <div className="mr-2 min-w-[60px]">
-              {renderWithTransition(
-                tokenPairDisplay,
-                loadingState.isLoadingTokens && !loadingState.hasLoadedTokens
-              )}
+            <div className="flex items-center text-base font-medium text-gray-900">
+              <div className="mr-2 min-w-[60px]">
+                {renderWithTransition(
+                  tokenPairDisplay,
+                  loadingState.isLoadingTokens && !loadingState.hasLoadedTokens
+                )}
+              </div>
+              <div className="mr-2 font-normal">
+                {renderWithTransition(
+                  staticData.maxLeverage ? `x${staticData.maxLeverage}` : null,
+                  loadingState.isLoadingLeverage && !loadingState.hasLoadedLeverage
+                )}
+              </div>
+              <div className="font-normal">{staticData.lendingName || "Lending"}</div>
             </div>
-            <div className="mr-2 font-normal">
-              {renderWithTransition(
-                staticData.maxLeverage ? `x${staticData.maxLeverage}` : null,
-                loadingState.isLoadingLeverage && !loadingState.hasLoadedLeverage
-              )}
-            </div>
-            <div className="font-normal">{staticData.lendingName || "Lending"}</div>
-          </div>
           </div>
           <div className="w-full mb-2 sm:hidden">
             <div className="flex text-base font-medium text-gray-900 mb-2">
@@ -359,7 +359,7 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
                   <div className="font-medium text-gray-700">{staticData.collateralTokenSymbol}</div>
                 </div>
               ) : null,
-              (loadingState.isLoadingAssets && !loadingState.hasLoadedAssets) || 
+              (loadingState.isLoadingAssets && !loadingState.hasLoadedAssets) ||
               (loadingState.isLoadingTokens && !loadingState.hasLoadedTokens)
             )}
           </div>
@@ -374,7 +374,7 @@ export default function VaultBlock( {address} : VaultBlockProps ) {
                   <div className="font-medium text-gray-700">{staticData.borrowTokenSymbol}</div>
                 </div>
               ) : null,
-              (loadingState.isLoadingAssets && !loadingState.hasLoadedAssets) || 
+              (loadingState.isLoadingAssets && !loadingState.hasLoadedAssets) ||
               (loadingState.isLoadingTokens && !loadingState.hasLoadedTokens)
             )}
           </div>

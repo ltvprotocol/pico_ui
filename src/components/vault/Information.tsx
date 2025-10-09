@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { formatUnits } from 'ethers';
 import { useVaultContext } from '@/contexts';
 import { truncate } from '@/utils';
 import { renderWithTransition } from '@/helpers/renderWithTransition';
@@ -63,8 +62,7 @@ export default function Information() {
     try {
       const dividend = await vaultLens.targetLtvDividend();
       const divider = await vaultLens.targetLtvDivider();
-      const rawTargetLtv = (BigInt(dividend) * (10n ** 18n)) / BigInt(divider);
-      const newTargetLtv = truncate(parseFloat(formatUnits(rawTargetLtv, 18)), 2);
+      const newTargetLtv = truncate(Number(dividend) / Number(divider), 2);
       setTargetLtv(newTargetLtv);
       setLoadingState(prev => ({ ...prev, isLoadingTargetLtv: false }));
     } catch (err) {
@@ -78,8 +76,7 @@ export default function Information() {
     try {
       const dividend = await vaultLens.maxSafeLtvDividend();
       const divider = await vaultLens.maxSafeLtvDivider();
-      const rawMaxSafeLtv = (BigInt(dividend) * (10n ** 18n)) / BigInt(divider);
-      const newMaxSafeLtv = truncate(parseFloat(formatUnits(rawMaxSafeLtv, 18)), 2);
+      const newMaxSafeLtv = truncate(Number(dividend) / Number(divider), 2);
       setMaxSafeLtv(newMaxSafeLtv);
       setLoadingState(prev => ({ ...prev, isLoadingMaxSafeLtv: false }));
     } catch (err) {
@@ -93,8 +90,7 @@ export default function Information() {
     try {
       const dividend = await vaultLens.minProfitLtvDividend();
       const divider = await vaultLens.minProfitLtvDivider();
-      const rawMinProfitLtv = (BigInt(dividend) * (10n ** 18n)) / BigInt(divider);
-      const newMinProfitLtv = truncate(parseFloat(formatUnits(rawMinProfitLtv, 18)), 2);
+      const newMinProfitLtv = truncate(Number(dividend) / Number(divider), 2);
       setMinProfitLtv(newMinProfitLtv);
       setLoadingState(prev => ({ ...prev, isLoadingMinProfitLtv: false }));
     } catch (err) {

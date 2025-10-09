@@ -198,8 +198,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
       if (!params.maxLeverage && !vaultConfig?.leverage) {
         const dividend = await vaultLensInstance.targetLtvDividend();
         const divider = await vaultLensInstance.targetLtvDivider();
-        const rawLtv = (BigInt(dividend) * (10n ** 18n)) / BigInt(divider);
-        const ltv = parseFloat(formatUnits(rawLtv, newDecimals)).toFixed(4);
+        const ltv = truncate(Number(dividend) / Number(divider), 2);
         const leverage = ltvToLeverage(parseFloat(ltv));
         setMaxLeverage(leverage);
       }

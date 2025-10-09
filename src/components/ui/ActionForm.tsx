@@ -1,6 +1,7 @@
 import React from 'react';
-import { allowOnlyNumbers, isButtonDisabled } from '@/utils';
+import { allowOnlyNumbers, isButtonDisabled, formatForInput } from '@/utils';
 import { renderSymbolWithPlaceholder } from '@/helpers/renderSymbolWithPlaceholder';
+import { NumberDisplay } from '@/components/ui';
 
 type ActionFormProps = {
   actionName: string;
@@ -49,7 +50,7 @@ export const ActionForm: React.FC<ActionFormProps> = ({
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
             <button
               type="button"
-              onClick={() => setAmount(maxAmount)}
+              onClick={() => setAmount(formatForInput(maxAmount))}
               className="text-sm text-indigo-600 hover:text-indigo-500 mr-2"
             >
               MAX
@@ -67,7 +68,7 @@ export const ActionForm: React.FC<ActionFormProps> = ({
         <div className="flex gap-1 mt-1 text-sm text-gray-500">
           Max Available: {!maxAmount ? 'Loading...' : (
             <>
-              {maxAmount} {renderSymbolWithPlaceholder({
+              <NumberDisplay value={maxAmount} /> {renderSymbolWithPlaceholder({
                 symbol: tokenSymbol,
                 placeholder: 'Shares',
                 elementId: 'action-form-max-available',

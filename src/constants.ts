@@ -1,3 +1,5 @@
+import { parseEther } from "ethers";
+
 export const WETH_ADDRESS = '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14';
 
 const WETH_ADDRESSES = [
@@ -14,9 +16,12 @@ export const isWETHAddress = (address: string): boolean => {
 
 // Gas reserve in ETH (0.002 ETH = 2,000,000,000,000,000 wei)
 export const GAS_RESERVE_ETH = 0.002;
+export const GAS_RESERVE_ETH_STR = "0.002";
+export const GAS_RESERVE_WEI = parseEther(GAS_RESERVE_ETH_STR);
 
 export const SEPOLIA_CHAIN_ID = 11155111n;
 export const SEPOLIA_CHAIN_ID_HEX = '0xaa36a7'; // 11155111 in hex
+export const SEPOLIA_CHAIN_ID_STRING = "11155111";
 
 export const SEPOLIA_NETWORK = {
   chainId: SEPOLIA_CHAIN_ID_HEX,

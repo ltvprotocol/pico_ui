@@ -1,6 +1,7 @@
 import { useVaultContext } from '@/contexts';
 import { renderWithTransition } from '@/helpers/renderWithTransition';
 import { renderSymbolWithPlaceholder } from '@/helpers/renderSymbolWithPlaceholder';
+import { NumberDisplay } from '@/components/ui';
 
 export default function Balances() {
   const {
@@ -13,7 +14,6 @@ export default function Balances() {
     collateralTokenSymbol
   } = useVaultContext();
 
-
   return (
     <div className="relative rounded-lg bg-gray-50 p-3 mb-4">
       <div className="flex flex-col w-full">
@@ -23,7 +23,7 @@ export default function Balances() {
           <div className="flex min-w-[100px] justify-end">
             <div className="mr-2">
               {renderWithTransition(
-                ethBalance,
+                <NumberDisplay value={ethBalance} />,
                 !ethBalance || ethBalance === '0'
               )}
             </div>
@@ -35,7 +35,7 @@ export default function Balances() {
           <div className="flex min-w-[100px] justify-end">
             <div className="mr-2">
               {renderWithTransition(
-                sharesBalance,
+                <NumberDisplay value={sharesBalance} />,
                 !sharesBalance || sharesBalance === '0'
               )}
             </div>
@@ -54,7 +54,7 @@ export default function Balances() {
           <div className="flex min-w-[100px] justify-end">
             <div className="mr-2">
               {renderWithTransition(
-                borrowTokenBalance,
+                <NumberDisplay value={borrowTokenBalance} />,
                 !borrowTokenBalance || borrowTokenBalance === '0'
               )}
             </div>
@@ -71,7 +71,7 @@ export default function Balances() {
           <div className="flex min-w-[100px] justify-end">
             <div className="mr-2">
               {renderWithTransition(
-                collateralTokenBalance,
+                <NumberDisplay value={collateralTokenBalance} />,
                 !collateralTokenBalance || collateralTokenBalance === '0'
               )}
             </div>

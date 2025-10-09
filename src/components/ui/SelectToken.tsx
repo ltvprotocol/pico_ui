@@ -1,4 +1,5 @@
 import React from 'react';
+import { TokenType } from '@/types/actions';
 
 type SelectTokenProps = {
   label: string;
@@ -15,7 +16,7 @@ export const SelectToken: React.FC<SelectTokenProps> = ({
   selected,
   onSelect,
 }) => {
-  const tabClass = (tab: "borrow" | "collateral") =>
+  const tabClass = (tab: TokenType) =>
   `flex-1 py-2 px-4 rounded-lg font-medium transition-colors focus:outline-none focus:ring-0 ${
     selected === tab
       ? 'bg-indigo-600 text-white'

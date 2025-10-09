@@ -282,7 +282,6 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
       const dShares = Number(sharesDecimals);
       const dBorrow = Number(borrowTokenDecimals);
       const dColl = Number(collateralTokenDecimals);
-      console.log('Decimals:', { dShares, dBorrow, dColl });
 
       const ethBalanceWei = parseEther(ethBalance);
       const borrowTokenBalanceWei = parseUnits(borrowTokenBalance, dBorrow);

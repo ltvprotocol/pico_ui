@@ -13,7 +13,6 @@ export default function Balances() {
     collateralTokenSymbol
   } = useVaultContext();
 
-
   return (
     <div className="relative rounded-lg bg-gray-50 p-3 mb-4">
       <div className="flex flex-col w-full">

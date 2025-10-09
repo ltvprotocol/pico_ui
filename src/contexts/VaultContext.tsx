@@ -2,7 +2,7 @@ import { createContext, ReactNode, useContext, useEffect, useState, useCallback 
 import { formatUnits, formatEther, parseUnits, ZeroAddress } from 'ethers'
 import { useAppContext } from '@/contexts/AppContext';
 import { Vault, WETH, ERC20, Vault__factory, WETH__factory, ERC20__factory, LendingConnector__factory } from '@/typechain-types';
-import { truncate, ltvToLeverage } from '@/utils';
+import { ltvToLeverage } from '@/utils';
 import vaultsConfig from '../../vaults.config.json';
 import { isWETHAddress, GAS_RESERVE_ETH } from '@/constants';
 import { useAdaptiveInterval } from '@/hooks';
@@ -66,6 +66,9 @@ interface VaultContextType {
   maxRedeemCollateral: string;
   maxMintCollateral: string;
   maxWithdrawCollateral: string;
+  // Refresh functions
+  refreshBalances: () => Promise<void>;
+  refreshVaultLimits: () => Promise<void>;
 };
 
 const VaultContext = createContext<VaultContextType | undefined>(undefined);
@@ -198,8 +201,8 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
       if (!params.maxLeverage && !vaultConfig?.leverage) {
         const dividend = await vaultLensInstance.targetLtvDividend();
         const divider = await vaultLensInstance.targetLtvDivider();
-        const ltv = truncate(Number(dividend) / Number(divider), 2);
-        const leverage = ltvToLeverage(parseFloat(ltv));
+        const ltv = Number(dividend) / Number(divider);
+        const leverage = ltvToLeverage(ltv);
         setMaxLeverage(leverage);
       }
 
@@ -217,8 +220,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
 
     try {
       const ethBalanceRaw = await publicProvider.getBalance(address);
-      const currentEthBalance = parseFloat(formatEther(ethBalanceRaw));
-      setEthBalance(truncate(currentEthBalance, 4));
+      setEthBalance(formatEther(ethBalanceRaw));
 
       const [sharesBalanceRaw, borrowTokenBalanceRaw, collateralTokenBalanceRaw] = await Promise.all([
         vaultLens.balanceOf(address),
@@ -226,13 +228,9 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         collateralTokenLens.balanceOf(address),
       ]);
 
-      const currentSharesBalance = parseFloat(formatUnits(sharesBalanceRaw, sharesDecimals));
-      const currentBorrowTokenBalance = parseFloat(formatUnits(borrowTokenBalanceRaw, borrowTokenDecimals));
-      const currentCollateralTokenBalance = parseFloat(formatUnits(collateralTokenBalanceRaw, collateralTokenDecimals));
-
-      setSharesBalance(truncate(currentSharesBalance, 4));
-      setBorrowTokenBalance(truncate(currentBorrowTokenBalance, 4));
-      setCollateralTokenBalance(truncate(currentCollateralTokenBalance, 4));
+      setSharesBalance(formatUnits(sharesBalanceRaw, sharesDecimals));
+      setBorrowTokenBalance(formatUnits(borrowTokenBalanceRaw, borrowTokenDecimals));
+      setCollateralTokenBalance(formatUnits(collateralTokenBalanceRaw, collateralTokenDecimals));
 
     } catch (err) {
       console.error('Error loading balances:', err);
@@ -259,15 +257,15 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         vaultLens["totalAssets()"]()
       ]);
 
-      setVaultMaxDeposit(truncate(parseFloat(formatUnits(rawVaultMaxDeposit, borrowTokenDecimals)), 4));
-      setVaultMaxRedeem(truncate(parseFloat(formatUnits(rawVaultMaxRedeem, sharesDecimals)), 4));
-      setVaultMaxMint(truncate(parseFloat(formatUnits(rawVaultMaxMint, sharesDecimals)), 4));
-      setVaultMaxWithdraw(truncate(parseFloat(formatUnits(rawVaultMaxWithdraw, borrowTokenDecimals)), 4));
-      setVaultMaxDepositCollateral(truncate(parseFloat(formatUnits(rawVaultMaxDepositCollateral, collateralTokenDecimals)), 4));
-      setVaultMaxRedeemCollateral(truncate(parseFloat(formatUnits(rawVaultMaxRedeemCollateral, sharesDecimals)), 4));
-      setVaultMaxMintCollateral(truncate(parseFloat(formatUnits(rawVaultMaxMintCollateral, sharesDecimals)), 4));
-      setVaultMaxWithdrawCollateral(truncate(parseFloat(formatUnits(rawVaultMaxWithdrawCollateral, collateralTokenDecimals)), 4));
-      setTotalAssets(parseFloat(formatUnits(rawTotalAssets, borrowTokenDecimals)).toFixed(4));
+      setVaultMaxDeposit(formatUnits(rawVaultMaxDeposit, borrowTokenDecimals));
+      setVaultMaxRedeem(formatUnits(rawVaultMaxRedeem, sharesDecimals));
+      setVaultMaxMint(formatUnits(rawVaultMaxMint, sharesDecimals));
+      setVaultMaxWithdraw(formatUnits(rawVaultMaxWithdraw, borrowTokenDecimals));
+      setVaultMaxDepositCollateral(formatUnits(rawVaultMaxDepositCollateral, collateralTokenDecimals));
+      setVaultMaxRedeemCollateral(formatUnits(rawVaultMaxRedeemCollateral, sharesDecimals));
+      setVaultMaxMintCollateral(formatUnits(rawVaultMaxMintCollateral, sharesDecimals));
+      setVaultMaxWithdrawCollateral(formatUnits(rawVaultMaxWithdrawCollateral, collateralTokenDecimals));
+      setTotalAssets(formatUnits(rawTotalAssets, borrowTokenDecimals));
 
     } catch (err) {
       console.error('Error loading vault limits:', err);
@@ -304,7 +302,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
       const maxAvailableDepositCollateral = Math.min(collateralTokenBalanceNum + availableEthForCollateral, vaultMaxDepositCollateralNum);
       const maxAvailableRedeemCollateral = Math.min(sharesBalanceNum, vaultMaxRedeemCollateralNum);
 
-      const borrowTokenBalanceRaw = parseUnits(borrowTokenBalanceNum.toString(), borrowTokenDecimals);
+      const borrowTokenBalanceRaw = parseUnits(borrowTokenBalance, borrowTokenDecimals);
       const rawSharesForBorrowToken = await vaultLens.previewDeposit(borrowTokenBalanceRaw);
       const sharesForBorrowToken = parseFloat(formatUnits(rawSharesForBorrowToken, sharesDecimals));
       
@@ -314,7 +312,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
       const sharesForEth = parseFloat(formatUnits(rawSharesForEth, sharesDecimals));
       const maxAvailableMint = Math.min(sharesForBorrowToken + sharesForEth, vaultMaxMintNum);
 
-      const collateralTokenBalanceRaw = parseUnits(collateralTokenBalanceNum.toString(), collateralTokenDecimals);
+      const collateralTokenBalanceRaw = parseUnits(collateralTokenBalance, collateralTokenDecimals);
       const rawSharesForCollateral = await vaultLens.previewDepositCollateral(collateralTokenBalanceRaw);
       const sharesForCollateral = parseFloat(formatUnits(rawSharesForCollateral, sharesDecimals));
       
@@ -324,23 +322,23 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
       const sharesForEthCollateral = parseFloat(formatUnits(rawSharesForEthCollateral, sharesDecimals));
       const maxAvailableMintCollateral = Math.min(sharesForCollateral + sharesForEthCollateral, vaultMaxMintCollateralNum);
 
-      const sharesBalanceRaw = parseUnits(sharesBalanceNum.toString(), sharesDecimals);
+      const sharesBalanceRaw = parseUnits(sharesBalance, sharesDecimals);
       const rawPreviewedRedeem = await vaultLens.previewRedeem(sharesBalanceRaw);
-      const previewedRedeem = parseFloat(formatUnits(rawPreviewedRedeem, sharesDecimals));
+      const previewedRedeem = parseFloat(formatUnits(rawPreviewedRedeem, borrowTokenDecimals));
       const maxAvailableWithdrawTokens = Math.min(previewedRedeem, vaultMaxWithdrawNum);
 
       const rawPreviewedRedeemCollateral = await vaultLens.previewRedeemCollateral(sharesBalanceRaw);
-      const previewedRedeemCollateral = parseFloat(formatUnits(rawPreviewedRedeemCollateral, sharesDecimals));
+      const previewedRedeemCollateral = parseFloat(formatUnits(rawPreviewedRedeemCollateral, collateralTokenDecimals));
       const maxAvailableWithdrawCollateralTokens = Math.min(previewedRedeemCollateral, vaultMaxWithdrawCollateralNum);
 
-      setMaxDeposit(truncate(maxAvailableDeposit, 4));
-      setMaxRedeem(truncate(maxAvailableRedeem, 4));
-      setMaxMint(truncate(maxAvailableMint, 4));
-      setMaxWithdraw(truncate(maxAvailableWithdrawTokens, 4));
-      setMaxDepositCollateral(truncate(maxAvailableDepositCollateral, 4));
-      setMaxRedeemCollateral(truncate(maxAvailableRedeemCollateral, 4));
-      setMaxMintCollateral(truncate(maxAvailableMintCollateral, 4));
-      setMaxWithdrawCollateral(truncate(maxAvailableWithdrawCollateralTokens, 4));
+      setMaxDeposit(maxAvailableDeposit.toString());
+      setMaxRedeem(maxAvailableRedeem.toString());
+      setMaxMint(maxAvailableMint.toString());
+      setMaxWithdraw(maxAvailableWithdrawTokens.toString());
+      setMaxDepositCollateral(maxAvailableDepositCollateral.toString());
+      setMaxRedeemCollateral(maxAvailableRedeemCollateral.toString());
+      setMaxMintCollateral(maxAvailableMintCollateral.toString());
+      setMaxWithdrawCollateral(maxAvailableWithdrawCollateralTokens.toString());
 
     } catch (err) {
       console.error('Error calculating max values:', err);
@@ -447,7 +445,9 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         maxDepositCollateral,
         maxRedeemCollateral,
         maxMintCollateral,
-        maxWithdrawCollateral
+        maxWithdrawCollateral,
+        refreshBalances: loadBalances,
+        refreshVaultLimits: loadVaultLimits
       }}
     >
       {children}

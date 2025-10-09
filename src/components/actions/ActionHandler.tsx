@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { parseUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
 import { isUserRejected, wrapEth } from '@/utils';
@@ -32,6 +32,12 @@ export default function ActionHandler({ actionType, tokenType }: ActionHandlerPr
 
   const { publicProvider, address } = useAppContext();
 
+  useEffect(() => {
+    setAmount('');
+    setError(null);
+    setSuccess(null);
+  }, [tokenType, actionType]);
+
   const config = ACTION_CONFIGS[actionType];
   const isBorrow = tokenType === 'borrow';
 
@@ -59,6 +65,8 @@ export default function ActionHandler({ actionType, tokenType }: ActionHandlerPr
     maxMintCollateral,
     maxWithdrawCollateral,
     maxRedeemCollateral,
+    refreshBalances,
+    refreshVaultLimits,
   } = useVaultContext();
 
   const tokenSymbol = isBorrow ? borrowTokenSymbol : collateralTokenSymbol;
@@ -169,23 +177,19 @@ export default function ActionHandler({ actionType, tokenType }: ActionHandlerPr
 
         let tokensNeeded: bigint;
 
-        if (config.usesShares) {
-          // Mint: convert shares to tokens needed
+        if (actionType === "mint") {
           tokensNeeded = isBorrow
             ? await vaultLens.previewMint(parsedAmount)
             : await vaultLens.previewMintCollateral(parsedAmount);
         } else {
-          // Deposit: amount is already in tokens
           tokensNeeded = parsedAmount;
         }
 
         const balance = await tokenLens.balanceOf(address);
 
-        // Handle WETH wrapping if needed
         const hasEnough = await handleWrapIfNeeded(tokensNeeded, balance);
         if (!hasEnough) return;
 
-        // Handle approval
         const approved = await handleApproval(tokensNeeded);
         if (!approved) return;
       } else if (actionType === 'redeem') {
@@ -198,6 +202,11 @@ export default function ActionHandler({ actionType, tokenType }: ActionHandlerPr
       }
 
       await executeVaultMethod(parsedAmount);
+
+      await Promise.all([
+        refreshBalances(),
+        refreshVaultLimits()
+      ]);
 
       setAmount('');
       setSuccess(`${actionType.charAt(0).toUpperCase() + actionType.slice(1)} successful!`);

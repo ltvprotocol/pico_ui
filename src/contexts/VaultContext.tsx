@@ -1,10 +1,10 @@
 import { createContext, ReactNode, useContext, useEffect, useState, useCallback } from 'react'
-import { formatUnits, formatEther, parseUnits, ZeroAddress } from 'ethers'
+import { formatUnits, formatEther, parseUnits, ZeroAddress, parseEther } from 'ethers'
 import { useAppContext } from '@/contexts/AppContext';
 import { Vault, WETH, ERC20, Vault__factory, WETH__factory, ERC20__factory, LendingConnector__factory } from '@/typechain-types';
 import { ltvToLeverage } from '@/utils';
 import vaultsConfig from '../../vaults.config.json';
-import { isWETHAddress, GAS_RESERVE_ETH } from '@/constants';
+import { isWETHAddress, GAS_RESERVE_WEI, SEPOLIA_CHAIN_ID_STRING } from '@/constants';
 import { useAdaptiveInterval } from '@/hooks';
 
 interface VaultConfig {
@@ -121,7 +121,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   const { publicProvider, signer, isConnected, address } = useAppContext();
 
   const loadConfigAndParams = useCallback(() => {
-    const chainId = "11155111";
+    const chainId = SEPOLIA_CHAIN_ID_STRING; // Forcing Sepolia for now. In future - get from AppContext
     const vaults = vaultsConfig[chainId]?.vaults || [];
     const config = vaults.find(v => v.address.toLowerCase() === vaultAddress.toLowerCase());
     setVaultConfig(config);
@@ -279,75 +279,125 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
       const isBorrowTokenWeth = isWETHAddress(borrowTokenAddress);
       const isCollateralTokenWeth = isWETHAddress(collateralTokenAddress);
 
-      const ethBalanceNum = parseFloat(ethBalance);
-      const borrowTokenBalanceNum = parseFloat(borrowTokenBalance);
-      const sharesBalanceNum = parseFloat(sharesBalance);
-      const collateralTokenBalanceNum = parseFloat(collateralTokenBalance);
+      const dShares = Number(sharesDecimals);
+      const dBorrow = Number(borrowTokenDecimals);
+      const dColl = Number(collateralTokenDecimals);
+      console.log('Decimals:', { dShares, dBorrow, dColl });
 
-      // Calculate available ETH for WETH operations (subtract gas reserve)
-      const availableEthForBorrow = isBorrowTokenWeth ? Math.max(0, ethBalanceNum - GAS_RESERVE_ETH) : 0;
-      const availableEthForCollateral = isCollateralTokenWeth ? Math.max(0, ethBalanceNum - GAS_RESERVE_ETH) : 0;
+      const ethBalanceWei = parseEther(ethBalance);
+      const borrowTokenBalanceWei = parseUnits(borrowTokenBalance, dBorrow);
+      const sharesBalanceWei = parseUnits(sharesBalance, dShares);
+      const collateralTokenBalanceWei = parseUnits(collateralTokenBalance, dColl);
 
-      const vaultMaxDepositNum = parseFloat(vaultMaxDeposit);
-      const vaultMaxRedeemNum = parseFloat(vaultMaxRedeem);
-      const vaultMaxMintNum = parseFloat(vaultMaxMint);
-      const vaultMaxWithdrawNum = parseFloat(vaultMaxWithdraw);
-      const vaultMaxDepositCollateralNum = parseFloat(vaultMaxDepositCollateral);
-      const vaultMaxRedeemCollateralNum = parseFloat(vaultMaxRedeemCollateral);
-      const vaultMaxMintCollateralNum = parseFloat(vaultMaxMintCollateral);
-      const vaultMaxWithdrawCollateralNum = parseFloat(vaultMaxWithdrawCollateral);
+      const vaultMaxDepositWei = parseUnits(vaultMaxDeposit, dBorrow);
+      const vaultMaxRedeemWei = parseUnits(vaultMaxRedeem, dShares);
+      const vaultMaxMintWei = parseUnits(vaultMaxMint, dShares);
+      const vaultMaxWithdrawWei = parseUnits(vaultMaxWithdraw, dBorrow);
+      const vaultMaxDepositCollateralWei = parseUnits(vaultMaxDepositCollateral, dColl);
+      const vaultMaxRedeemCollateralWei = parseUnits(vaultMaxRedeemCollateral, dShares);
+      const vaultMaxMintCollateralWei = parseUnits(vaultMaxMintCollateral, dShares);
+      const vaultMaxWithdrawCollateralWei = parseUnits(vaultMaxWithdrawCollateral, dColl);
 
-      const maxAvailableDeposit = Math.min(borrowTokenBalanceNum + availableEthForBorrow, vaultMaxDepositNum);
-      const maxAvailableRedeem = Math.min(sharesBalanceNum, vaultMaxRedeemNum);
-      const maxAvailableDepositCollateral = Math.min(collateralTokenBalanceNum + availableEthForCollateral, vaultMaxDepositCollateralNum);
-      const maxAvailableRedeemCollateral = Math.min(sharesBalanceNum, vaultMaxRedeemCollateralNum);
+      const max0n = (x: bigint) => (x > 0n ? x : 0n);
+      const minBN = (a: bigint, b: bigint) => (a < b ? a : b);
 
-      const borrowTokenBalanceRaw = parseUnits(borrowTokenBalance, borrowTokenDecimals);
-      const rawSharesForBorrowToken = await vaultLens.previewDeposit(borrowTokenBalanceRaw);
-      const sharesForBorrowToken = parseFloat(formatUnits(rawSharesForBorrowToken, sharesDecimals));
-      
-      // Calculate shares for available ETH (with gas reserve subtracted)
-      const availableEthForBorrowRaw = isBorrowTokenWeth ? parseUnits(availableEthForBorrow.toString(), 18) : 0n;
-      const rawSharesForEth = isBorrowTokenWeth ? await vaultLens.previewDeposit(availableEthForBorrowRaw) : 0n;
-      const sharesForEth = parseFloat(formatUnits(rawSharesForEth, sharesDecimals));
-      const maxAvailableMint = Math.min(sharesForBorrowToken + sharesForEth, vaultMaxMintNum);
+      const availableEthForBorrowWei =
+        isBorrowTokenWeth ? max0n(ethBalanceWei - GAS_RESERVE_WEI) : 0n;
+      const availableEthForCollateralWei =
+        isCollateralTokenWeth ? max0n(ethBalanceWei - GAS_RESERVE_WEI) : 0n;
 
-      const collateralTokenBalanceRaw = parseUnits(collateralTokenBalance, collateralTokenDecimals);
-      const rawSharesForCollateral = await vaultLens.previewDepositCollateral(collateralTokenBalanceRaw);
-      const sharesForCollateral = parseFloat(formatUnits(rawSharesForCollateral, sharesDecimals));
-      
-      // Calculate shares for available ETH (with gas reserve subtracted)
-      const availableEthForCollateralRaw = isCollateralTokenWeth ? parseUnits(availableEthForCollateral.toString(), 18) : 0n;
-      const rawSharesForEthCollateral = isCollateralTokenWeth ? await vaultLens.previewDepositCollateral(availableEthForCollateralRaw) : 0n;
-      const sharesForEthCollateral = parseFloat(formatUnits(rawSharesForEthCollateral, sharesDecimals));
-      const maxAvailableMintCollateral = Math.min(sharesForCollateral + sharesForEthCollateral, vaultMaxMintCollateralNum);
+      // ---- DEPOSIT (borrow side) ----
+      const depositBudgetWei = isBorrowTokenWeth
+        ? borrowTokenBalanceWei + availableEthForBorrowWei
+        : borrowTokenBalanceWei;
 
-      const sharesBalanceRaw = parseUnits(sharesBalance, sharesDecimals);
-      const rawPreviewedRedeem = await vaultLens.previewRedeem(sharesBalanceRaw);
-      const previewedRedeem = parseFloat(formatUnits(rawPreviewedRedeem, borrowTokenDecimals));
-      const maxAvailableWithdrawTokens = Math.min(previewedRedeem, vaultMaxWithdrawNum);
+      const maxAvailableDepositWei = minBN(depositBudgetWei, vaultMaxDepositWei);
+      const maxAvailableDeposit = formatUnits(maxAvailableDepositWei, dBorrow);
 
-      const rawPreviewedRedeemCollateral = await vaultLens.previewRedeemCollateral(sharesBalanceRaw);
-      const previewedRedeemCollateral = parseFloat(formatUnits(rawPreviewedRedeemCollateral, collateralTokenDecimals));
-      const maxAvailableWithdrawCollateralTokens = Math.min(previewedRedeemCollateral, vaultMaxWithdrawCollateralNum);
+      // ---- REDEEM (shares) ----
+      const maxAvailableRedeemWei = minBN(sharesBalanceWei, vaultMaxRedeemWei);
+      const maxAvailableRedeem = formatUnits(maxAvailableRedeemWei, dShares);
 
-      setMaxDeposit(maxAvailableDeposit.toString());
-      setMaxRedeem(maxAvailableRedeem.toString());
-      setMaxMint(maxAvailableMint.toString());
-      setMaxWithdraw(maxAvailableWithdrawTokens.toString());
-      setMaxDepositCollateral(maxAvailableDepositCollateral.toString());
-      setMaxRedeemCollateral(maxAvailableRedeemCollateral.toString());
-      setMaxMintCollateral(maxAvailableMintCollateral.toString());
-      setMaxWithdrawCollateral(maxAvailableWithdrawCollateralTokens.toString());
+      // ---- MINT ----
+      const rawSharesForBorrowToken = await vaultLens.previewDeposit(borrowTokenBalanceWei);
+      const rawSharesForEth = isBorrowTokenWeth
+        ? await vaultLens.previewDeposit(availableEthForBorrowWei)
+        : 0n;
+
+      const mintBudgetSharesWei = rawSharesForBorrowToken + rawSharesForEth;
+      const maxAvailableMintWei = minBN(mintBudgetSharesWei, vaultMaxMintWei);
+      const maxAvailableMint = formatUnits(maxAvailableMintWei, dShares);
+
+      // ---- DEPOSIT COLLATERAL ----
+      const depositCollateralBudgetWei = isCollateralTokenWeth
+        ? collateralTokenBalanceWei + availableEthForCollateralWei
+        : collateralTokenBalanceWei;
+
+      const maxAvailableDepositCollateralWei = minBN(
+        depositCollateralBudgetWei,
+        vaultMaxDepositCollateralWei
+      );
+      const maxAvailableDepositCollateral = formatUnits(maxAvailableDepositCollateralWei, dColl);
+
+      // ---- REDEEM (shares) ----
+      const maxAvailableRedeemCollateralWei = minBN(
+        sharesBalanceWei,
+        vaultMaxRedeemCollateralWei
+      );
+      const maxAvailableRedeemCollateral = formatUnits(maxAvailableRedeemCollateralWei, dShares);
+
+      // ---- MINT COLLATERAL (shares) ----
+      const rawSharesForCollateral = await vaultLens.previewDepositCollateral(collateralTokenBalanceWei);
+      const rawSharesForEthCollateral = isCollateralTokenWeth
+        ? await vaultLens.previewDepositCollateral(availableEthForCollateralWei)
+        : 0n;
+
+      const mintCollateralBudgetSharesWei = rawSharesForCollateral + rawSharesForEthCollateral;
+      const maxAvailableMintCollateralWei = minBN(
+        mintCollateralBudgetSharesWei,
+        vaultMaxMintCollateralWei
+      );
+      const maxAvailableMintCollateral = formatUnits(maxAvailableMintCollateralWei, dShares);
+
+      // ---- WITHDRAW (borrow/collateral) ----
+      const rawPreviewedRedeemBorrow = await vaultLens.previewRedeem(sharesBalanceWei);
+      const maxAvailableWithdrawTokensWei = minBN(
+        rawPreviewedRedeemBorrow,
+        vaultMaxWithdrawWei
+      );
+      const maxAvailableWithdrawTokens = formatUnits(maxAvailableWithdrawTokensWei, dBorrow);
+
+      const rawPreviewedRedeemCollateral = await vaultLens.previewRedeemCollateral(sharesBalanceWei);
+      const maxAvailableWithdrawCollateralTokensWei = minBN(
+        rawPreviewedRedeemCollateral,
+        vaultMaxWithdrawCollateralWei
+      );
+      const maxAvailableWithdrawCollateralTokens = formatUnits(
+        maxAvailableWithdrawCollateralTokensWei,
+        dColl
+      );
+
+      setMaxDeposit(maxAvailableDeposit);
+      setMaxRedeem(maxAvailableRedeem);
+      setMaxMint(maxAvailableMint);
+      setMaxWithdraw(maxAvailableWithdrawTokens);
+      setMaxDepositCollateral(maxAvailableDepositCollateral);
+      setMaxRedeemCollateral(maxAvailableRedeemCollateral);
+      setMaxMintCollateral(maxAvailableMintCollateral);
+      setMaxWithdrawCollateral(maxAvailableWithdrawCollateralTokens);
 
     } catch (err) {
       console.error('Error calculating max values:', err);
     }
-  }, [publicProvider, address, vaultLens, borrowTokenLens, collateralTokenLens, sharesDecimals, borrowTokenDecimals, collateralTokenDecimals, 
-      ethBalance, borrowTokenBalance, sharesBalance, collateralTokenBalance, 
-      borrowTokenAddress, collateralTokenAddress, vaultMaxDeposit, vaultMaxRedeem, 
-      vaultMaxMint, vaultMaxWithdraw, vaultMaxDepositCollateral, vaultMaxRedeemCollateral, 
-      vaultMaxMintCollateral, vaultMaxWithdrawCollateral]);
+  }, [
+    publicProvider, address, vaultLens, borrowTokenLens, collateralTokenLens,
+    sharesDecimals, borrowTokenDecimals, collateralTokenDecimals,
+    ethBalance, borrowTokenBalance, sharesBalance, collateralTokenBalance,
+    borrowTokenAddress, collateralTokenAddress,
+    vaultMaxDeposit, vaultMaxRedeem, vaultMaxMint, vaultMaxWithdraw,
+    vaultMaxDepositCollateral, vaultMaxRedeemCollateral,
+    vaultMaxMintCollateral, vaultMaxWithdrawCollateral
+  ]);
 
   // Load all possbile from config and params
   useEffect(() => {
@@ -379,13 +429,13 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   useEffect(() => {
     if (ethBalance !== '0' || sharesBalance !== '0' || borrowTokenBalance !== '0' || collateralTokenBalance !== '0') {
       if (vaultMaxDeposit !== '0' || vaultMaxRedeem !== '0' || vaultMaxMint !== '0' || vaultMaxWithdraw !== '0' ||
-          vaultMaxDepositCollateral !== '0' || vaultMaxRedeemCollateral !== '0' || vaultMaxMintCollateral !== '0' || vaultMaxWithdrawCollateral !== '0') {
+        vaultMaxDepositCollateral !== '0' || vaultMaxRedeemCollateral !== '0' || vaultMaxMintCollateral !== '0' || vaultMaxWithdrawCollateral !== '0') {
         calculateMaxValues();
       }
     }
-  }, [ethBalance, sharesBalance, borrowTokenBalance, collateralTokenBalance, 
-      vaultMaxDeposit, vaultMaxRedeem, vaultMaxMint, vaultMaxWithdraw, 
-      vaultMaxDepositCollateral, vaultMaxRedeemCollateral, vaultMaxMintCollateral, vaultMaxWithdrawCollateral, calculateMaxValues]);
+  }, [ethBalance, sharesBalance, borrowTokenBalance, collateralTokenBalance,
+    vaultMaxDeposit, vaultMaxRedeem, vaultMaxMint, vaultMaxWithdraw,
+    vaultMaxDepositCollateral, vaultMaxRedeemCollateral, vaultMaxMintCollateral, vaultMaxWithdrawCollateral, calculateMaxValues]);
 
   // Refetch balances every 12 seconds
   useAdaptiveInterval(loadBalances, {
@@ -407,7 +457,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
     <VaultContext.Provider
       value={{
         vaultAddress,
-        collateralTokenAddress, 
+        collateralTokenAddress,
         borrowTokenAddress,
         lendingAddress,
         lendingName,

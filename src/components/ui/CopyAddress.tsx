@@ -32,20 +32,20 @@ export function CopyAddress({ className, address} : CopyAddressProps ) {
     <div className={className}>
       <div className="flex items-center">
         <div className="text-sm mr-2">
-          <div className="hidden sm:block text-sm text-gray-700 break-all">
+          <a href={`https://sepolia.etherscan.io/address/${address}`} target="_blank" className="hidden sm:block text-sm text-gray-700 break-all hover:underline">
             {renderWithTransition(
               address,
               isLoading,
               `w-[321.18px]`
             )}
-          </div>
-          <div className="block sm:hidden text-sm text-gray-700 break-all">
+          </a>
+          <a href={`https://sepolia.etherscan.io/address/${address}`} target="_blank" className="block sm:hidden text-sm text-gray-700 break-all hover:underline">
             {renderWithTransition(
               address ? `${address.slice(0, 6)}...${address.slice(-12)}` : '',
               isLoading,
               `w-[151.65px]`
             )}
-          </div>
+          </a>
         </div>
         <button
           className="bg-transparent m-0 p-0 pb-1 hover:border-none border-none outline-none focus:outline-none focus:ring-0 disabled:opacity-50"

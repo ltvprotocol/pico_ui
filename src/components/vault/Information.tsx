@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useVaultContext } from '@/contexts';
-import { truncate } from '@/utils';
 import { renderWithTransition } from '@/helpers/renderWithTransition';
 import { renderSymbolWithPlaceholder } from '@/helpers/renderSymbolWithPlaceholder';
+import { NumberDisplay } from '@/components/ui';
+import { formatLtv } from '@/utils';
 
 interface LoadingState {
   isLoadingTargetLtv: boolean;
@@ -62,7 +63,7 @@ export default function Information() {
     try {
       const dividend = await vaultLens.targetLtvDividend();
       const divider = await vaultLens.targetLtvDivider();
-      const newTargetLtv = truncate(Number(dividend) / Number(divider), 2);
+      const newTargetLtv = (Number(dividend) / Number(divider)).toString();
       setTargetLtv(newTargetLtv);
       setLoadingState(prev => ({ ...prev, isLoadingTargetLtv: false }));
     } catch (err) {
@@ -76,7 +77,7 @@ export default function Information() {
     try {
       const dividend = await vaultLens.maxSafeLtvDividend();
       const divider = await vaultLens.maxSafeLtvDivider();
-      const newMaxSafeLtv = truncate(Number(dividend) / Number(divider), 2);
+      const newMaxSafeLtv = (Number(dividend) / Number(divider)).toString();
       setMaxSafeLtv(newMaxSafeLtv);
       setLoadingState(prev => ({ ...prev, isLoadingMaxSafeLtv: false }));
     } catch (err) {
@@ -90,7 +91,7 @@ export default function Information() {
     try {
       const dividend = await vaultLens.minProfitLtvDividend();
       const divider = await vaultLens.minProfitLtvDivider();
-      const newMinProfitLtv = truncate(Number(dividend) / Number(divider), 2);
+      const newMinProfitLtv = (Number(dividend) / Number(divider)).toString();
       setMinProfitLtv(newMinProfitLtv);
       setLoadingState(prev => ({ ...prev, isLoadingMinProfitLtv: false }));
     } catch (err) {
@@ -139,7 +140,7 @@ export default function Information() {
               <div key={index} className='flex'>
                 <div className="mr-2 min-w-[60px] text-right">
                   {renderWithTransition(
-                    info[0],
+                    <NumberDisplay value={info[0] as string} />,
                     !info[0] || info[0] === '0'
                   )}
                 </div>
@@ -163,7 +164,7 @@ export default function Information() {
               <div key={index} className="flex">
                 <div className="mr-2 min-w-[60px] text-right">
                   {renderWithTransition(
-                    info[0],
+                    <NumberDisplay value={info[0] as string} />,
                     !info[0] || info[0] === '0'
                   )}
                 </div>
@@ -198,7 +199,7 @@ export default function Information() {
               <div key={index} className='flex'>
                 <div className="mr-2 min-w-[60px] text-right">
                   {renderWithTransition(
-                    info[0],
+                    <NumberDisplay value={info[0] as string} />,
                     !info[0] || info[0] === '0'
                   )}
                 </div>
@@ -231,7 +232,7 @@ export default function Information() {
               <div key={index} className="flex">
                 <div className="mr-2 min-w-[60px] text-right">
                   {renderWithTransition(
-                    info[0],
+                    <NumberDisplay value={info[0] as string} />,
                     !info[0] || info[0] === '0'
                   )}
                 </div>
@@ -251,7 +252,7 @@ export default function Information() {
         <div className='flex min-w-[100px] justify-end'>
           <div className="mr-2">
             {renderWithTransition(
-              totalAssets,
+              <NumberDisplay value={totalAssets} />,
               !totalAssets || totalAssets === '0'
             )}
           </div>
@@ -267,7 +268,7 @@ export default function Information() {
         <div>Target LTV:</div>
         <div className="min-w-[60px] text-right">
           {renderWithTransition(
-            targetLtv,
+            targetLtv ? formatLtv(targetLtv) : null,
             loadingState.isLoadingTargetLtv
           )}
         </div>
@@ -276,7 +277,7 @@ export default function Information() {
         <div>Max Safe LTV:</div>
         <div className="min-w-[60px] text-right">
           {renderWithTransition(
-            maxSafeLtv,
+            maxSafeLtv ? formatLtv(maxSafeLtv) : null,
             loadingState.isLoadingMaxSafeLtv
           )}
         </div>
@@ -285,7 +286,7 @@ export default function Information() {
         <div>Min Profit LTV:</div>
         <div className="min-w-[60px] text-right">
           {renderWithTransition(
-            minProfitLtv,
+            minProfitLtv ? formatLtv(minProfitLtv) : null,
             loadingState.isLoadingMinProfitLtv
           )}
         </div>

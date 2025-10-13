@@ -13,6 +13,7 @@ type ActionFormProps = {
   success: string | null;
   setAmount: React.Dispatch<React.SetStateAction<string>>;
   handleSubmit: (e: React.FormEvent) => Promise<void>;
+  setIsMaxSelected: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 export const ActionForm: React.FC<ActionFormProps> = ({
@@ -24,8 +25,25 @@ export const ActionForm: React.FC<ActionFormProps> = ({
   error,
   success,
   setAmount,
-  handleSubmit
+  handleSubmit,
+  setIsMaxSelected
 }) => {
+  const setMaxAmount = () => {
+    setAmount(formatForInput(maxAmount));
+    setIsMaxSelected(true);
+  }
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = allowOnlyNumbers(e.target.value);
+    setAmount(value);
+
+    if (value === maxAmount) {
+      setIsMaxSelected(true);
+    } else {
+      setIsMaxSelected(false);
+    }
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
@@ -38,7 +56,7 @@ export const ActionForm: React.FC<ActionFormProps> = ({
             name="amount"
             id="amount"
             value={amount}
-            onChange={(e) => setAmount(allowOnlyNumbers(e.target.value))}
+            onChange={handleChange}
             autoComplete="off"
             className="block w-full pr-24 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             placeholder="0.0"
@@ -50,7 +68,7 @@ export const ActionForm: React.FC<ActionFormProps> = ({
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
             <button
               type="button"
-              onClick={() => setAmount(formatForInput(maxAmount))}
+              onClick={setMaxAmount}
               className="text-sm text-indigo-600 hover:text-indigo-500 mr-2"
             >
               MAX

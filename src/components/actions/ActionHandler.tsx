@@ -29,6 +29,7 @@ export default function ActionHandler({ actionType, tokenType }: ActionHandlerPr
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [amount, setAmount] = useState('');
+  const [isMaxSelected, setIsMaxSelected] = useState(false);
 
   const { publicProvider, address } = useAppContext();
 
@@ -140,7 +141,7 @@ export default function ActionHandler({ actionType, tokenType }: ActionHandlerPr
     let tx;
 
     if (actionType === 'deposit') {
-      tx = isBorrow 
+      tx = isBorrow
         ? await vault.deposit(parsedAmount, address)
         : await vault.depositCollateral(parsedAmount, address);
     } else if (actionType === 'mint') {
@@ -158,6 +159,35 @@ export default function ActionHandler({ actionType, tokenType }: ActionHandlerPr
     }
 
     await tx?.wait();
+  };
+
+  const refetchMaxBeforeTx = async (): Promise<bigint | undefined> => {
+    if (!vaultLens || !address) return 0n;
+
+    try {
+      if (actionType === 'redeem') {
+        const userSharesBalance = await vaultLens.balanceOf(address);
+        const vaultMaxRedeem = isBorrow
+          ? await vaultLens.maxRedeem(address)
+          : await vaultLens.maxRedeemCollateral(address);
+
+        return userSharesBalance < vaultMaxRedeem
+          ? userSharesBalance
+          : vaultMaxRedeem;
+      } else if (actionType === 'withdraw') {
+        const vaultMaxWithdraw = isBorrow
+          ? await vaultLens.maxWithdraw(address)
+          : await vaultLens.maxWithdrawCollateral(address);
+
+        return vaultMaxWithdraw;
+      }
+
+      console.error('Invalid action type (expected redeem or withdraw):', actionType);
+      return;
+    } catch (err) {
+      console.error('Error refetching max amount before tx:', err);
+      return;
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -192,16 +222,25 @@ export default function ActionHandler({ actionType, tokenType }: ActionHandlerPr
 
         const approved = await handleApproval(tokensNeeded);
         if (!approved) return;
-      } else if (actionType === 'redeem') {
-        const maxAvailableParsed = parseUnits(maxAmount, displayDecimals);
-        if (maxAvailableParsed < parsedAmount) {
+      }
+
+      if (isMaxSelected && (actionType === 'redeem' || actionType === 'withdraw')) {
+        const maxBeforeTx = await refetchMaxBeforeTx();
+
+        if (!maxBeforeTx) {
+          setError('Error refetching max amount before tx.');
+          console.error('Error refetching max amount before tx.');
+          return;
+        } else if (maxBeforeTx < parsedAmount) {
           setError('Amount higher than available.');
           console.error('Amount higher than available');
           return;
         }
-      }
 
-      await executeVaultMethod(parsedAmount);
+        await executeVaultMethod(maxBeforeTx);
+      } else {
+        await executeVaultMethod(parsedAmount);
+      }
 
       await Promise.all([
         refreshBalances(),
@@ -233,7 +272,7 @@ export default function ActionHandler({ actionType, tokenType }: ActionHandlerPr
       success={success}
       setAmount={setAmount}
       handleSubmit={handleSubmit}
+      setIsMaxSelected={setIsMaxSelected}
     />
   );
 }
-

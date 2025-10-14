@@ -36,7 +36,8 @@ export default function Information() {
     vaultMaxWithdrawCollateral,
     vaultMaxMintCollateral,
     vaultMaxRedeemCollateral,
-    totalAssets
+    totalAssets,
+    currentLtv
   } = useVaultContext();
 
 
@@ -262,6 +263,15 @@ export default function Information() {
               !borrowTokenSymbol
             )}
           </div>
+        </div>
+      </div>
+      <div className="w-full flex justify-between items-center text-sm mb-2">
+        <div>Current LTV:</div>
+        <div className="min-w-[60px] text-right">
+          {renderWithTransition(
+            currentLtv ? formatLtv(currentLtv) : null,
+            !currentLtv
+          )}
         </div>
       </div>
       <div className="w-full flex justify-between items-center text-sm">

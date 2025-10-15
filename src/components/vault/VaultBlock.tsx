@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { formatUnits } from "ethers";
 import { useAppContext } from "@/contexts";
-import { ltvToLeverage } from "@/utils";
+import { ltvToLeverage, fetchApy, fetchPointsRate } from "@/utils";
 import { useAdaptiveInterval } from "@/hooks";
 import { Vault__factory, ERC20__factory } from "@/typechain-types";
 import { CopyAddress, NumberDisplay } from "@/components/ui";
@@ -56,6 +56,12 @@ export default function VaultBlock({ address }: VaultBlockProps) {
     collateralAssets: null,
   });
 
+  const [apyData, setApyData] = useState<{ apy: number | null; pointsRate: number | null }>({
+    apy: null,
+    pointsRate: null,
+  });
+  const [isLoadingApy, setIsLoadingApy] = useState<boolean>(false);
+
   const [vaultDecimals, setVaultDecimals] = useState<VaultDecimals>({
     sharesDecimals: 18n,
     borrowTokenDecimals: 18n,
@@ -75,6 +81,27 @@ export default function VaultBlock({ address }: VaultBlockProps) {
   });
 
   const { publicProvider } = useAppContext();
+
+  const loadApyAndPointsRate = useCallback(async () => {
+    try {
+      setIsLoadingApy(true);
+      const [apyResult, pointsRateResult] = await Promise.all([
+        fetchApy(address),
+        fetchPointsRate(address)
+      ]);
+      
+      setApyData({
+        apy: apyResult,
+        pointsRate: pointsRateResult,
+      });
+    } catch (err) {
+      console.error('Error loading APY and points rate:', err);
+    } finally {
+      setIsLoadingApy(false);
+    }
+  }, [address]);
+
+  const memoizedApyData = useMemo(() => apyData, [apyData.apy, apyData.pointsRate]);
 
   const vaultConfig = useMemo(() => {
     const chainId = "11155111";
@@ -281,6 +308,10 @@ export default function VaultBlock({ address }: VaultBlockProps) {
     enabled: !!vaultContract
   });
 
+  useEffect(() => {
+    loadApyAndPointsRate();
+  }, [loadApyAndPointsRate]);
+
   const formattedCollateralAmount = useMemo(() => {
     if (!dynamicData.collateralAssets) return null;
     return formatUnits(dynamicData.collateralAssets, vaultDecimals.collateralTokenDecimals);
@@ -307,7 +338,9 @@ export default function VaultBlock({ address }: VaultBlockProps) {
           collateralTokenSymbol: staticData.collateralTokenSymbol,
           borrowTokenSymbol: staticData.borrowTokenSymbol,
           maxLeverage: staticData.maxLeverage,
-          lendingName: staticData.lendingName
+          lendingName: staticData.lendingName,
+          apy: memoizedApyData.apy,
+          pointsRate: memoizedApyData.pointsRate
         }}
         className="wrapper block w-full bg-gray-50 transition-colors border border-gray-50 rounded-lg mb-12 last:mb-0 p-3">
         <div className="w-full">
@@ -380,6 +413,24 @@ export default function VaultBlock({ address }: VaultBlockProps) {
               ) : null,
               (loadingState.isLoadingAssets && !loadingState.hasLoadedAssets) ||
               (loadingState.isLoadingTokens && !loadingState.hasLoadedTokens)
+            )}
+          </div>
+        </div>
+        <div className="w-full flex justify-between text-sm">
+          <div className="font-medium text-gray-700">APY: </div>
+          <div className="font-normal text-gray-700 min-w-[60px] text-right">
+            {renderWithTransition(
+              memoizedApyData.apy !== null ? `${memoizedApyData.apy.toFixed(2)}%` : null,
+              isLoadingApy || memoizedApyData.apy === null
+            )}
+          </div>
+        </div>
+        <div className="w-full flex justify-between text-sm">
+          <div className="font-medium text-gray-700">Points Rate: </div>
+          <div className="font-normal text-gray-700 min-w-[60px] text-right">
+            {renderWithTransition(
+              memoizedApyData.pointsRate !== null ? `${memoizedApyData.pointsRate}/day` : null,
+              isLoadingApy || memoizedApyData.pointsRate === null
             )}
           </div>
         </div>

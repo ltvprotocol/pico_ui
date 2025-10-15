@@ -19,6 +19,8 @@ export default function Vault() {
     borrowTokenSymbol: state.borrowTokenSymbol || null,
     maxLeverage: state.maxLeverage || null,
     lendingName: state.lendingName || null,
+    apy: state.apy || null,
+    pointsRate: state.pointsRate || null,
   };
 
   return (

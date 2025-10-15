@@ -36,7 +36,9 @@ export default function Information() {
     vaultMaxWithdrawCollateral,
     vaultMaxMintCollateral,
     vaultMaxRedeemCollateral,
-    totalAssets
+    totalAssets,
+    apy,
+    pointsRate
   } = useVaultContext();
 
 
@@ -288,6 +290,24 @@ export default function Information() {
           {renderWithTransition(
             minProfitLtv ? formatLtv(minProfitLtv) : null,
             loadingState.isLoadingMinProfitLtv
+          )}
+        </div>
+      </div>
+      <div className="w-full flex justify-between items-center text-sm">
+        <div>APY:</div>
+        <div className="min-w-[60px] text-right">
+          {renderWithTransition(
+            apy !== null ? `${apy.toFixed(2)}%` : null,
+            apy === null
+          )}
+        </div>
+      </div>
+      <div className="w-full flex justify-between items-center text-sm">
+        <div>Points Rate:</div>
+        <div className="min-w-[60px] text-right">
+          {renderWithTransition(
+            pointsRate !== null ? `${pointsRate}/day` : null,
+            pointsRate === null
           )}
         </div>
       </div>

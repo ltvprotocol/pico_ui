@@ -405,57 +405,64 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   ]);
 
   const loadLtv = useCallback(async () => {
-    if (!publicProvider || !lendingAddress || !vaultAddress) return;
+    if (!publicProvider || !vaultLens || !vaultAddress || !lendingAddress) return;
+
+    // Define known connector addresses
+    const CONNECTOR_ADDRESSES = {
+      MORPHO: '0x2F7E5B3f16120363E9d6C6a46744D3a90D426CB0',
+      AAVE: '0x87e1d99D8Af73a7DB9d80827076A283E17a1f431',
+      GHOST: '0x899645f1AF07511e112f737027BCF13F122aa5A6'
+    };
 
     try {
-      // Try loadAaveLtv first
-      const aaveLtv = await loadAaveLtv(lendingAddress, vaultAddress, publicProvider);
-      if (aaveLtv) {
-        setCurrentLtv(aaveLtv);
+      const lendingConnectorAddress = await vaultLens.lendingConnector();
+
+      if (lendingConnectorAddress.toLowerCase() === CONNECTOR_ADDRESSES.AAVE.toLowerCase()) {
+        const aaveLtv = await loadAaveLtv(lendingAddress, vaultAddress, publicProvider);
+        if (aaveLtv) {
+          setCurrentLtv(aaveLtv);
+          return;
+        }
+      } else if (lendingConnectorAddress.toLowerCase() === CONNECTOR_ADDRESSES.GHOST.toLowerCase()) {
+        const ghostLtv = await loadGhostLtv(lendingAddress, vaultAddress, publicProvider);
+        if (ghostLtv) {
+          setCurrentLtv(ghostLtv);
+          return;
+        }
+      } else if (lendingConnectorAddress.toLowerCase() === CONNECTOR_ADDRESSES.MORPHO.toLowerCase()) {
+        // Try loadMorphoLtv with a placeholder market ID
+        // TODO: Get the correct market ID from config or contract
+        const morphoLtv = await loadMorphoLtv(
+          lendingAddress, 
+          vaultAddress, 
+          "0xffd695adfd08031184633c49ce9296a58ddbddd0d5fed1e65fbe83a0ba43a5dd",
+          borrowTokenDecimals,
+          publicProvider
+        );
+        if (morphoLtv) {
+          setCurrentLtv(morphoLtv);
+          return;
+        }
+      } else {
+        console.log('Unknown lending connector:', lendingConnectorAddress, 'unable to fetch LTV');
+        setCurrentLtv('UNKNOWN_CONNECTOR');
         return;
       }
-    } catch (err) {
-      console.log('Aave LTV loader failed, trying next...');
-    }
 
-    try {
-      // Try loadGhostLtv
-      const ghostLtv = await loadGhostLtv(lendingAddress, vaultAddress, publicProvider);
-      if (ghostLtv) {
-        setCurrentLtv(ghostLtv);
-        return;
-      }
+      console.error('LTV loading failed for known connector');
+      setCurrentLtv('LOAD_FAILED');
     } catch (err) {
-      console.log('Ghost LTV loader failed, trying next...');
+      console.error('Error loading LTV:', err);
+      setCurrentLtv('LOAD_ERROR');
     }
-
-    try {
-      // Try loadMorphoLtv with a placeholder market ID
-      // TODO: Get the correct market ID from config or contract
-      const morphoLtv = await loadMorphoLtv(
-        lendingAddress, 
-        vaultAddress, 
-        "0xffd695adfd08031184633c49ce9296a58ddbddd0d5fed1e65fbe83a0ba43a5dd",
-        borrowTokenDecimals,
-        publicProvider
-      );
-      if (morphoLtv) {
-        setCurrentLtv(morphoLtv);
-        return;
-      }
-    } catch (err) {
-      console.log('Morpho LTV loader failed');
-    }
-
-    console.error('All LTV loaders failed');
-  }, [publicProvider, lendingAddress, vaultAddress, borrowTokenDecimals]);
+  }, [publicProvider, vaultLens, lendingAddress, vaultAddress, borrowTokenDecimals]);
 
   // Load ltv
   useEffect(() => {
-    if (lendingAddress && borrowTokenDecimals) {
+    if (vaultLens && borrowTokenDecimals && lendingAddress) {
       loadLtv();
     }
-  }, [lendingAddress, borrowTokenDecimals, loadLtv]);
+  }, [vaultLens, borrowTokenDecimals, lendingAddress, loadLtv]);
 
   // Load all possbile from config and params
   useEffect(() => {

@@ -4,7 +4,7 @@ import { useAppContext } from '@/contexts/AppContext';
 import { Vault, WETH, ERC20, Vault__factory, WETH__factory, ERC20__factory } from '@/typechain-types';
 import { ltvToLeverage, getLendingProtocolAddress } from '@/utils';
 import vaultsConfig from '../../vaults.config.json';
-import { isWETHAddress, GAS_RESERVE_WEI, SEPOLIA_CHAIN_ID_STRING, MORPHO_MARKET_ID } from '@/constants';
+import { isWETHAddress, GAS_RESERVE_WEI, SEPOLIA_CHAIN_ID_STRING, MORPHO_MARKET_ID, CONNECTOR_ADDRESSES} from '@/constants';
 import { useAdaptiveInterval } from '@/hooks';
 import { loadGhostLtv, loadAaveLtv, loadMorphoLtv } from '@/utils';
 
@@ -406,13 +406,6 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
 
   const loadLtv = useCallback(async () => {
     if (!publicProvider || !vaultLens || !vaultAddress || !lendingAddress) return;
-
-    // Define known connector addresses
-    const CONNECTOR_ADDRESSES = {
-      MORPHO: '0x2F7E5B3f16120363E9d6C6a46744D3a90D426CB0',
-      AAVE: '0x87e1d99D8Af73a7DB9d80827076A283E17a1f431',
-      GHOST: '0x899645f1AF07511e112f737027BCF13F122aa5A6'
-    };
 
     try {
       const lendingConnectorAddress = await vaultLens.lendingConnector();

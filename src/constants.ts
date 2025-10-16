@@ -14,6 +14,12 @@ export const isWETHAddress = (address: string): boolean => {
   return result;
 };
 
+export const CONNECTOR_ADDRESSES = {
+  MORPHO: '0x2F7E5B3f16120363E9d6C6a46744D3a90D426CB0',
+  AAVE: '0x87e1d99D8Af73a7DB9d80827076A283E17a1f431',
+  GHOST: '0x899645f1AF07511e112f737027BCF13F122aa5A6'
+};
+
 // TODO: Get the correct market ID from config or contract
 export const MORPHO_MARKET_ID = '0xffd695adfd08031184633c49ce9296a58ddbddd0d5fed1e65fbe83a0ba43a5dd';
 

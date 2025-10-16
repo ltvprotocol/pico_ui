@@ -8,6 +8,7 @@ type ActionFormProps = {
   amount: string;
   maxAmount: string;
   tokenSymbol: string;
+  decimals: number;
   isLoading: boolean;
   error: string | null;
   success: string | null;
@@ -20,12 +21,17 @@ export const ActionForm: React.FC<ActionFormProps> = ({
   amount,
   maxAmount,
   tokenSymbol,
+  decimals,
   isLoading,
   error,
   success,
   setAmount,
   handleSubmit
 }) => {
+  const setMaxAmount = () => {
+    setAmount(formatForInput(maxAmount, decimals));
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
@@ -50,7 +56,7 @@ export const ActionForm: React.FC<ActionFormProps> = ({
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
             <button
               type="button"
-              onClick={() => setAmount(formatForInput(maxAmount))}
+              onClick={setMaxAmount}
               className="text-sm text-indigo-600 hover:text-indigo-500 mr-2"
             >
               MAX

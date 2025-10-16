@@ -12,6 +12,7 @@ export async function loadGhostLtv(
     const borrowAmount = await lending.borrowBalance(userAddress);
     const collateralAmount = await lending.supplyCollateralBalance(userAddress);
 
+    // Multiply by 10000 to prevent zero result
     const ltvBigInt = (borrowAmount * 10000n) / collateralAmount;
     const ltv = Number(ltvBigInt) / 10000;
 

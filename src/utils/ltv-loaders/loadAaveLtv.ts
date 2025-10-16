@@ -14,6 +14,7 @@ export async function loadAaveLtv(
     const totalCollateralBase = accountData.totalCollateralBase;
     const totalDebtBase = accountData.totalDebtBase;
 
+    // Multiply by 10000 to prevent zero result
     const ltvBigInt = (totalDebtBase * 10000n) / totalCollateralBase;
     const ltv = Number(ltvBigInt) / 10000;
 

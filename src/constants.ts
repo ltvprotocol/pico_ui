@@ -14,6 +14,9 @@ export const isWETHAddress = (address: string): boolean => {
   return result;
 };
 
+// TODO: Get the correct market ID from config or contract
+export const MORPHO_MARKET_ID = '0xffd695adfd08031184633c49ce9296a58ddbddd0d5fed1e65fbe83a0ba43a5dd';
+
 // Gas reserve in ETH (0.002 ETH = 2,000,000,000,000,000 wei)
 export const GAS_RESERVE_ETH = 0.002;
 export const GAS_RESERVE_ETH_STR = "0.002";

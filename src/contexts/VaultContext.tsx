@@ -4,7 +4,7 @@ import { useAppContext } from '@/contexts/AppContext';
 import { Vault, WETH, ERC20, Vault__factory, WETH__factory, ERC20__factory } from '@/typechain-types';
 import { ltvToLeverage, getLendingProtocolAddress } from '@/utils';
 import vaultsConfig from '../../vaults.config.json';
-import { isWETHAddress, GAS_RESERVE_WEI, SEPOLIA_CHAIN_ID_STRING } from '@/constants';
+import { isWETHAddress, GAS_RESERVE_WEI, SEPOLIA_CHAIN_ID_STRING, MORPHO_MARKET_ID } from '@/constants';
 import { useAdaptiveInterval } from '@/hooks';
 import { loadGhostLtv, loadAaveLtv, loadMorphoLtv } from '@/utils';
 
@@ -433,9 +433,9 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
       // Try loadMorphoLtv with a placeholder market ID
       // TODO: Get the correct market ID from config or contract
       const morphoLtv = await loadMorphoLtv(
-        lendingAddress, 
-        vaultAddress, 
-        "0xffd695adfd08031184633c49ce9296a58ddbddd0d5fed1e65fbe83a0ba43a5dd",
+        lendingAddress,
+        vaultAddress,
+        MORPHO_MARKET_ID,
         borrowTokenDecimals,
         publicProvider
       );

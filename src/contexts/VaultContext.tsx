@@ -1,11 +1,12 @@
 import { createContext, ReactNode, useContext, useEffect, useState, useCallback } from 'react'
 import { formatUnits, formatEther, parseUnits, ZeroAddress, parseEther } from 'ethers'
 import { useAppContext } from '@/contexts/AppContext';
-import { Vault, WETH, ERC20, Vault__factory, WETH__factory, ERC20__factory, LendingConnector__factory } from '@/typechain-types';
-import { ltvToLeverage } from '@/utils';
+import { Vault, WETH, ERC20, Vault__factory, WETH__factory, ERC20__factory } from '@/typechain-types';
+import { ltvToLeverage, getLendingProtocolAddress } from '@/utils';
 import vaultsConfig from '../../vaults.config.json';
-import { isWETHAddress, GAS_RESERVE_WEI, SEPOLIA_CHAIN_ID_STRING } from '@/constants';
+import { isWETHAddress, GAS_RESERVE_WEI, SEPOLIA_CHAIN_ID_STRING, MORPHO_MARKET_ID } from '@/constants';
 import { useAdaptiveInterval } from '@/hooks';
+import { loadGhostLtv, loadAaveLtv, loadMorphoLtv } from '@/utils';
 
 interface VaultConfig {
   address: string;
@@ -66,6 +67,8 @@ interface VaultContextType {
   maxRedeemCollateral: string;
   maxMintCollateral: string;
   maxWithdrawCollateral: string;
+  // LTV
+  currentLtv: string | null;
   // Refresh functions
   refreshBalances: () => Promise<void>;
   refreshVaultLimits: () => Promise<void>;
@@ -117,6 +120,8 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   const [maxRedeemCollateral, setMaxRedeemCollateral] = useState<string>('0');
   const [maxMintCollateral, setMaxMintCollateral] = useState<string>('0');
   const [maxWithdrawCollateral, setMaxWithdrawCollateral] = useState<string>('0');
+
+  const [currentLtv, setCurrentLtv] = useState<string | null>(null);
 
   const { publicProvider, signer, isConnected, address } = useAppContext();
 
@@ -183,9 +188,10 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
 
       if (!vaultConfig?.lendingAddress) {
         const lendingConnector = await vaultLensInstance.lendingConnector();
-        const lending = LendingConnector__factory.connect(lendingConnector, publicProvider);
-        const lendingProtocol = await lending.POOL();
-        setLendingAddress(lendingProtocol);
+        const lendingProtocol = await getLendingProtocolAddress(lendingConnector, publicProvider);
+        if (lendingProtocol) {
+          setLendingAddress(lendingProtocol);
+        }
       }
 
       if (!params.collateralTokenSymbol && !vaultConfig?.collateralTokenSymbol) {
@@ -398,6 +404,59 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
     vaultMaxMintCollateral, vaultMaxWithdrawCollateral
   ]);
 
+  const loadLtv = useCallback(async () => {
+    if (!publicProvider || !lendingAddress || !vaultAddress) return;
+
+    try {
+      // Try loadAaveLtv first
+      const aaveLtv = await loadAaveLtv(lendingAddress, vaultAddress, publicProvider);
+      if (aaveLtv) {
+        setCurrentLtv(aaveLtv);
+        return;
+      }
+    } catch (err) {
+      console.log('Aave LTV loader failed, trying next...');
+    }
+
+    try {
+      // Try loadGhostLtv
+      const ghostLtv = await loadGhostLtv(lendingAddress, vaultAddress, publicProvider);
+      if (ghostLtv) {
+        setCurrentLtv(ghostLtv);
+        return;
+      }
+    } catch (err) {
+      console.log('Ghost LTV loader failed, trying next...');
+    }
+
+    try {
+      // Try loadMorphoLtv with a placeholder market ID
+      // TODO: Get the correct market ID from config or contract
+      const morphoLtv = await loadMorphoLtv(
+        lendingAddress,
+        vaultAddress,
+        MORPHO_MARKET_ID,
+        borrowTokenDecimals,
+        publicProvider
+      );
+      if (morphoLtv) {
+        setCurrentLtv(morphoLtv);
+        return;
+      }
+    } catch (err) {
+      console.log('Morpho LTV loader failed');
+    }
+
+    console.error('All LTV loaders failed');
+  }, [publicProvider, lendingAddress, vaultAddress, borrowTokenDecimals]);
+
+  // Load ltv
+  useEffect(() => {
+    if (lendingAddress && borrowTokenDecimals) {
+      loadLtv();
+    }
+  }, [lendingAddress, borrowTokenDecimals, loadLtv]);
+
   // Load all possbile from config and params
   useEffect(() => {
     loadConfigAndParams();
@@ -495,6 +554,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         maxRedeemCollateral,
         maxMintCollateral,
         maxWithdrawCollateral,
+        currentLtv,
         refreshBalances: loadBalances,
         refreshVaultLimits: loadVaultLimits
       }}

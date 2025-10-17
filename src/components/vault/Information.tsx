@@ -269,7 +269,15 @@ export default function Information() {
         <div>Current LTV:</div>
         <div className="min-w-[60px] text-right">
           {renderWithTransition(
-            currentLtv ? formatLtv(currentLtv) : null,
+            currentLtv ? (
+              currentLtv === 'UNKNOWN_CONNECTOR' ? (
+                <span className="text-gray-500 italic">Unable to fetch LTV</span>
+              ) : currentLtv === 'LOAD_FAILED' ? (
+                <span className="text-red-500 italic">Failed to load</span>
+              ) : (
+                formatLtv(currentLtv)
+              )
+            ) : null,
             !currentLtv
           )}
         </div>

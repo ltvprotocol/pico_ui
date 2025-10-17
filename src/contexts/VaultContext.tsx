@@ -4,7 +4,7 @@ import { useAppContext } from '@/contexts/AppContext';
 import { Vault, WETH, ERC20, Vault__factory, WETH__factory, ERC20__factory } from '@/typechain-types';
 import { ltvToLeverage, getLendingProtocolAddress } from '@/utils';
 import vaultsConfig from '../../vaults.config.json';
-import { isWETHAddress, GAS_RESERVE_WEI, SEPOLIA_CHAIN_ID_STRING, MORPHO_MARKET_ID } from '@/constants';
+import { isWETHAddress, GAS_RESERVE_WEI, SEPOLIA_CHAIN_ID_STRING, MORPHO_MARKET_ID, CONNECTOR_ADDRESSES} from '@/constants';
 import { useAdaptiveInterval } from '@/hooks';
 import { loadGhostLtv, loadAaveLtv, loadMorphoLtv } from '@/utils';
 
@@ -67,7 +67,6 @@ interface VaultContextType {
   maxRedeemCollateral: string;
   maxMintCollateral: string;
   maxWithdrawCollateral: string;
-  // LTV
   currentLtv: string | null;
   // Refresh functions
   refreshBalances: () => Promise<void>;
@@ -405,57 +404,55 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   ]);
 
   const loadLtv = useCallback(async () => {
-    if (!publicProvider || !lendingAddress || !vaultAddress) return;
+    if (!publicProvider || !vaultLens || !vaultAddress || !lendingAddress) return;
 
     try {
-      // Try loadAaveLtv first
-      const aaveLtv = await loadAaveLtv(lendingAddress, vaultAddress, publicProvider);
-      if (aaveLtv) {
-        setCurrentLtv(aaveLtv);
+      const lendingConnectorAddress = await vaultLens.lendingConnector();
+
+      if (lendingConnectorAddress.toLowerCase() === CONNECTOR_ADDRESSES.AAVE.toLowerCase()) {
+        const aaveLtv = await loadAaveLtv(lendingAddress, vaultAddress, publicProvider);
+        if (aaveLtv) {
+          setCurrentLtv(aaveLtv);
+          return;
+        }
+      } else if (lendingConnectorAddress.toLowerCase() === CONNECTOR_ADDRESSES.GHOST.toLowerCase()) {
+        const ghostLtv = await loadGhostLtv(lendingAddress, vaultAddress, publicProvider);
+        if (ghostLtv) {
+          setCurrentLtv(ghostLtv);
+          return;
+        }
+      } else if (lendingConnectorAddress.toLowerCase() === CONNECTOR_ADDRESSES.MORPHO.toLowerCase()) {
+        const morphoLtv = await loadMorphoLtv(
+          lendingAddress,
+          vaultAddress,
+          MORPHO_MARKET_ID,
+          borrowTokenDecimals,
+          publicProvider
+        );
+        if (morphoLtv) {
+          setCurrentLtv(morphoLtv);
+          return;
+        }
+      } else {
+        console.log('Unknown lending connector:', lendingConnectorAddress, 'unable to fetch LTV');
+        setCurrentLtv('UNKNOWN_CONNECTOR');
         return;
       }
+
+      console.error('LTV loading failed for known connector');
+      setCurrentLtv('LOAD_FAILED');
     } catch (err) {
-      console.log('Aave LTV loader failed, trying next...');
+      console.error('Error loading LTV:', err);
+      setCurrentLtv('LOAD_FAILED');
     }
-
-    try {
-      // Try loadGhostLtv
-      const ghostLtv = await loadGhostLtv(lendingAddress, vaultAddress, publicProvider);
-      if (ghostLtv) {
-        setCurrentLtv(ghostLtv);
-        return;
-      }
-    } catch (err) {
-      console.log('Ghost LTV loader failed, trying next...');
-    }
-
-    try {
-      // Try loadMorphoLtv with a placeholder market ID
-      // TODO: Get the correct market ID from config or contract
-      const morphoLtv = await loadMorphoLtv(
-        lendingAddress,
-        vaultAddress,
-        MORPHO_MARKET_ID,
-        borrowTokenDecimals,
-        publicProvider
-      );
-      if (morphoLtv) {
-        setCurrentLtv(morphoLtv);
-        return;
-      }
-    } catch (err) {
-      console.log('Morpho LTV loader failed');
-    }
-
-    console.error('All LTV loaders failed');
-  }, [publicProvider, lendingAddress, vaultAddress, borrowTokenDecimals]);
-
+  }, [publicProvider, vaultLens, lendingAddress, vaultAddress, borrowTokenDecimals]);
+  
   // Load ltv
   useEffect(() => {
-    if (lendingAddress && borrowTokenDecimals) {
+    if (vaultLens && borrowTokenDecimals && lendingAddress) {
       loadLtv();
     }
-  }, [lendingAddress, borrowTokenDecimals, loadLtv]);
+  }, [vaultLens, borrowTokenDecimals, lendingAddress, loadLtv]);
 
   // Load all possbile from config and params
   useEffect(() => {

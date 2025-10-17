@@ -2,6 +2,7 @@ import { JsonRpcProvider } from 'ethers';
 import { HodlMyBeer__factory } from '@/typechain-types';
 import { truncate } from '../truncate';
 
+// TODO: Include decimals and prices from oracle
 export async function loadGhostLtv(
   poolAddress: string,
   userAddress: string,

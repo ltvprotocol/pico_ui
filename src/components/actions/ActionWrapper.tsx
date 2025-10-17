@@ -39,7 +39,7 @@ export default function ActionWrapper({ actionType }: ActionWrapperProps) {
   const config = ACTION_CONFIGS[actionType];
 
   return (
-    <div className="mt-8 p-3">
+    <div className="mt-4 p-3">
       <h2 className="text-2xl font-bold mb-6 text-gray-900">{config.title}</h2>
       <SelectToken
         label={config.selectLabel}

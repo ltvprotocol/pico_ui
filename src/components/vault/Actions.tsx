@@ -10,8 +10,8 @@ export default function Actions() {
   return (
     <div className="mt-8">
       <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />
-      <DexLink />
       <ActionWrapper actionType={activeTab} />
+      <DexLink />
     </div>
   );
 }

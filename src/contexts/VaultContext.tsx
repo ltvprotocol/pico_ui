@@ -21,6 +21,7 @@ interface VaultConfig {
   lendingName?: string;
   lendingAddress?: string;
   dexLink?: string;
+  dexLinkName?: string;
 };
 
 interface VaultContextType {

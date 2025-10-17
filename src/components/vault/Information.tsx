@@ -274,8 +274,6 @@ export default function Information() {
                 <span className="text-gray-500 italic">Unable to fetch LTV</span>
               ) : currentLtv === 'LOAD_FAILED' ? (
                 <span className="text-red-500 italic">Failed to load</span>
-              ) : currentLtv === 'LOAD_ERROR' ? (
-                <span className="text-red-500 italic">Load error</span>
               ) : (
                 formatLtv(currentLtv)
               )

@@ -67,7 +67,6 @@ interface VaultContextType {
   maxRedeemCollateral: string;
   maxMintCollateral: string;
   maxWithdrawCollateral: string;
-  // LTV
   currentLtv: string | null;
   // Refresh functions
   refreshBalances: () => Promise<void>;
@@ -444,7 +443,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
       setCurrentLtv('LOAD_FAILED');
     } catch (err) {
       console.error('Error loading LTV:', err);
-      setCurrentLtv('LOAD_ERROR');
+      setCurrentLtv('LOAD_FAILED');
     }
   }, [publicProvider, vaultLens, lendingAddress, vaultAddress, borrowTokenDecimals]);
   

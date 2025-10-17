@@ -366,22 +366,8 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
       const maxAvailableMintCollateral = formatUnits(maxAvailableMintCollateralWei, dShares);
 
       // ---- WITHDRAW (borrow/collateral) ----
-      const rawPreviewedRedeemBorrow = await vaultLens.previewRedeem(sharesBalanceWei);
-      const maxAvailableWithdrawTokensWei = minBN(
-        rawPreviewedRedeemBorrow,
-        vaultMaxWithdrawWei
-      );
-      const maxAvailableWithdrawTokens = formatUnits(maxAvailableWithdrawTokensWei, dBorrow);
-
-      const rawPreviewedRedeemCollateral = await vaultLens.previewRedeemCollateral(sharesBalanceWei);
-      const maxAvailableWithdrawCollateralTokensWei = minBN(
-        rawPreviewedRedeemCollateral,
-        vaultMaxWithdrawCollateralWei
-      );
-      const maxAvailableWithdrawCollateralTokens = formatUnits(
-        maxAvailableWithdrawCollateralTokensWei,
-        dColl
-      );
+      const maxAvailableWithdrawTokens = formatUnits(vaultMaxWithdrawWei, dBorrow);
+      const maxAvailableWithdrawCollateralTokens = formatUnits(vaultMaxWithdrawCollateralWei, dColl);
 
       setMaxDeposit(maxAvailableDeposit);
       setMaxRedeem(maxAvailableRedeem);

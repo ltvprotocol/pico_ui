@@ -297,8 +297,8 @@ export default function Information() {
         <div>APY:</div>
         <div className="min-w-[60px] text-right">
           {renderWithTransition(
-            apy !== null ? `${apy.toFixed(2)}%` : null,
-            apy === null
+            apy ? `${apy.toFixed(2)}%` : null,
+            !apy
           )}
         </div>
       </div>
@@ -306,8 +306,8 @@ export default function Information() {
         <div>Points Rate:</div>
         <div className="min-w-[60px] text-right">
           {renderWithTransition(
-            pointsRate !== null ? `${pointsRate}/day` : null,
-            pointsRate === null
+            pointsRate ? `${pointsRate}/day` : null,
+            !pointsRate
           )}
         </div>
       </div>

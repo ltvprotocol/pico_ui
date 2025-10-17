@@ -267,6 +267,7 @@ export default function ActionHandler({ actionType, tokenType }: ActionHandlerPr
       amount={amount}
       maxAmount={maxAmount}
       tokenSymbol={displayTokenSymbol || ''}
+      decimals={Number(displayDecimals)}
       isLoading={loading}
       error={error}
       success={success}

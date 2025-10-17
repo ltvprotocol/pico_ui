@@ -8,6 +8,7 @@ type ActionFormProps = {
   amount: string;
   maxAmount: string;
   tokenSymbol: string;
+  decimals: number;
   isLoading: boolean;
   error: string | null;
   success: string | null;
@@ -21,6 +22,7 @@ export const ActionForm: React.FC<ActionFormProps> = ({
   amount,
   maxAmount,
   tokenSymbol,
+  decimals,
   isLoading,
   error,
   success,
@@ -29,7 +31,7 @@ export const ActionForm: React.FC<ActionFormProps> = ({
   setIsMaxSelected
 }) => {
   const setMaxAmount = () => {
-    setAmount(formatForInput(maxAmount));
+    setAmount(formatForInput(maxAmount, decimals));
     setIsMaxSelected(true);
   }
 

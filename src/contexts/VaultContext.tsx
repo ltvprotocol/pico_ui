@@ -21,6 +21,8 @@ interface VaultConfig {
   minProfitLTV?: string;
   lendingName?: string;
   lendingAddress?: string;
+  dexLink?: string;
+  dexLinkName?: string;
 };
 
 interface VaultContextType {

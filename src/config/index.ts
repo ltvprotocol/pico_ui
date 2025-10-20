@@ -1,3 +1,3 @@
 export const CONFIG = {
-  API: "http://localhost:8000"
+  API: "https://api-testnet.ltv.finance"
 };

@@ -11,7 +11,7 @@ export default function WalletsPopup({ isOpen }: WalletsPopupProps) {
 
   return (
     <div className="
-      absolute top-full top-[79px] right-0 bg-white rounded-3xl
+      absolute top-[65px] right-0 bg-white rounded-lg
       min-w-[320px] z-50 overflow-hidden
     ">
       <div className="p-4">
@@ -24,7 +24,7 @@ export default function WalletsPopup({ isOpen }: WalletsPopupProps) {
               disabled={!!connectingWalletId}
               className="
                 text-gray-600 w-full flex justify-center items-center space-x-2 py-2 px-4
-                border border-blue-300 bg-white dark:bg-white rounded-3xl
+                border border-blue-300 bg-white dark:bg-white rounded-lg
                 hover:bg-blue-50 dark:hover:bg-blue-50 hover:border-blue-600 
                 transition disabled:opacity-50
               "

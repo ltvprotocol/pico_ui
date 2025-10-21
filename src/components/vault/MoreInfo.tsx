@@ -11,7 +11,7 @@ interface LoadingState {
   isLoadingMinProfitLtv: boolean;
 }
 
-export default function Information() {
+export default function MoreInfo() {
   const [loadingState, setLoadingState] = useState<LoadingState>({
     isLoadingTargetLtv: true,
     isLoadingMaxSafeLtv: true,
@@ -36,9 +36,6 @@ export default function Information() {
     vaultMaxWithdrawCollateral,
     vaultMaxMintCollateral,
     vaultMaxRedeemCollateral,
-    totalAssets,
-    apy,
-    pointsRate,
     currentLtv
   } = useVaultContext();
 
@@ -123,9 +120,9 @@ export default function Information() {
 
   return (
     <div className="relative rounded-lg bg-gray-50 p-3">
-      <h3 className="text-lg font-medium text-gray-900">Vault Information</h3>
+      <h3 className="text-lg font-medium text-gray-900">More Info</h3>
       <div className="w-full hidden sm:flex items-end justify-between text-sm text-gray-600 mb-2">
-        <div>
+        <div className="font-medium text-gray-700">
           <div>Max Deposit:</div>
           <div>Max Withdraw:</div>
           <div>Max Mint:</div>
@@ -133,7 +130,7 @@ export default function Information() {
         </div>
         <div className="flex">
           <div className="flex flex-col items-end mr-2">
-            <div className="mb-2">Collateral: </div>
+            <div className="font-medium text-gray-700 mb-2">Collateral: </div>
             {[
               [vaultMaxDepositCollateral, collateralTokenSymbol],
               [vaultMaxWithdrawCollateral, collateralTokenSymbol],
@@ -157,7 +154,7 @@ export default function Information() {
             ))}
           </div>
           <div className="flex flex-col items-end">
-            <div className="mb-2">Borrow: </div>
+            <div className="font-medium text-gray-700 mb-2">Borrow: </div>
             {[
               [vaultMaxDeposit, borrowTokenSymbol],
               [vaultMaxWithdraw, borrowTokenSymbol],
@@ -184,8 +181,8 @@ export default function Information() {
       </div>
       <div className="w-full sm:hidden text-sm text-gray-600 mt-2 mb-2">
         <div className="flex items-end justify-between mb-2">
-          <div>
-            <div className="font-medium text-gray-700">Action</div>
+          <div className="font-medium text-gray-700">
+            <div>Action</div>
             <div>Deposit:</div>
             <div>Withdraw:</div>
             <div>Mint:</div>
@@ -217,8 +214,8 @@ export default function Information() {
           </div>
         </div>
         <div className="flex items-end justify-between">
-          <div>
-            <div className="font-medium text-gray-700">Action</div>
+          <div className="font-medium text-gray-700">
+            <div>Action</div>
             <div>Deposit:</div>
             <div>Withdraw:</div>
             <div>Mint:</div>
@@ -251,24 +248,7 @@ export default function Information() {
         </div>
       </div>
       <div className="w-full flex justify-between items-center text-sm mb-2">
-        <div>TVL:</div>
-        <div className='flex min-w-[100px] justify-end'>
-          <div className="mr-2">
-            {renderWithTransition(
-              <NumberDisplay value={totalAssets} />,
-              !totalAssets || totalAssets === '0'
-            )}
-          </div>
-          <div className="font-medium text-gray-700">
-            {renderWithTransition(
-              borrowTokenSymbol,
-              !borrowTokenSymbol
-            )}
-          </div>
-        </div>
-      </div>
-      <div className="w-full flex justify-between items-center text-sm mb-2">
-        <div>Current LTV:</div>
+        <div className="font-medium text-gray-700">Current LTV:</div>
         <div className="min-w-[60px] text-right">
           {renderWithTransition(
             currentLtv ? (
@@ -285,7 +265,7 @@ export default function Information() {
         </div>
       </div>
       <div className="w-full flex justify-between items-center text-sm">
-        <div>Target LTV:</div>
+        <div className="font-medium text-gray-700">Target LTV:</div>
         <div className="min-w-[60px] text-right">
           {renderWithTransition(
             targetLtv ? formatLtv(targetLtv) : null,
@@ -294,7 +274,7 @@ export default function Information() {
         </div>
       </div>
       <div className="w-full flex justify-between items-center text-sm">
-        <div>Max Safe LTV:</div>
+        <div className="font-medium text-gray-700">Max Safe LTV:</div>
         <div className="min-w-[60px] text-right">
           {renderWithTransition(
             maxSafeLtv ? formatLtv(maxSafeLtv) : null,
@@ -303,29 +283,11 @@ export default function Information() {
         </div>
       </div>
       <div className="w-full flex justify-between items-center text-sm">
-        <div>Min Profit LTV:</div>
+        <div className="font-medium text-gray-700">Min Profit LTV:</div>
         <div className="min-w-[60px] text-right">
           {renderWithTransition(
             minProfitLtv ? formatLtv(minProfitLtv) : null,
             loadingState.isLoadingMinProfitLtv
-          )}
-        </div>
-      </div>
-      <div className="w-full flex justify-between items-center text-sm">
-        <div>APY:</div>
-        <div className="min-w-[60px] text-right">
-          {renderWithTransition(
-            apy ? `${apy.toFixed(2)}%` : null,
-            !apy
-          )}
-        </div>
-      </div>
-      <div className="w-full flex justify-between items-center text-sm">
-        <div>Points Rate:</div>
-        <div className="min-w-[60px] text-right">
-          {renderWithTransition(
-            pointsRate ? `${pointsRate}/day` : null,
-            !pointsRate
           )}
         </div>
       </div>

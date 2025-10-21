@@ -86,6 +86,7 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     setSigner(null);
     setAddress(null);
     setChainId(null);
+    setIsConnected(false);
     setIsSepolia(false);
     setRawProvider(null);
     localStorage.removeItem('connectedWallet');

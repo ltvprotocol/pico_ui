@@ -10,10 +10,11 @@ interface InfoProps {
 export default function Info({ className }: InfoProps) {
   const {
     apy,
+    apyLoadFailed,
     totalAssets,
     sharesBalance,
     sharesSymbol,
-    borrowTokenSymbol,
+    borrowTokenSymbol
   } = useVaultContext();
 
   return (
@@ -22,8 +23,9 @@ export default function Info({ className }: InfoProps) {
         <div className="text-gray-600">APY:</div>
         <div className="min-w-[60px] text-right font-medium text-gray-900">
           {renderWithTransition(
-            apy !== null ? `${apy.toFixed(2)}%` : null,
-            apy === null
+            apy ? `${apy.toFixed(2)}%` : 
+            apyLoadFailed ? <span className="text-red-500 italic text-xs">Failed to load</span> : null,
+            !apy && !apyLoadFailed
           )}
         </div>
       </div>

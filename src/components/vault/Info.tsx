@@ -11,6 +11,7 @@ export default function Info() {
     sharesBalance,
     sharesSymbol,
     borrowTokenSymbol,
+    description,
   } = useVaultContext();
 
   const formatApy = (value: number | null) => {
@@ -80,9 +81,7 @@ export default function Info() {
       <div className="w-full text-sm mt-6">
         <div className="font-medium text-gray-700 mb-2">Description</div>
         <p className="text-gray-700 max-w-[380px]">
-          Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod 
-          tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, 
-          quis nostrud exercitation ullamco laboris.
+          {description || "No description available for this vault."}
         </p>
       </div>
     </div>

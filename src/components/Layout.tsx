@@ -19,6 +19,7 @@ export default function Layout({ children, showContent }: LayoutProps) {
               [@media(max-width:450px)]:w-[calc(100% - 30px)]
               [@media(max-width:450px)]:m-[15px]
               min-w-[411.75px]
+              sm:w-auto px-4 py-4 bg-white sm:mx-8 shadow rounded-3xl
             ">
               <div className="max-w-md mx-auto">
                 <div className="divide-y divide-gray-200">

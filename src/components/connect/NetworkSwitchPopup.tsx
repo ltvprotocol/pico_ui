@@ -38,7 +38,7 @@ export default function NetworkSwitchPopup({ isOpen, onClose }: NetworkSwitchPop
 
   return (
     <div className="
-      absolute top-full top-[79px] right-0 bg-white rounded-3xl
+      absolute top-[65px] right-0 bg-white rounded-lg
       min-w-[320px] z-50 overflow-hidden
     ">
       <div className="p-1">
@@ -52,7 +52,6 @@ export default function NetworkSwitchPopup({ isOpen, onClose }: NetworkSwitchPop
               </div>
             </div>
             <div className="flex-1">
-              <h4 className="text-sm font-medium text-gray-900 mb-1">Wrong Network</h4>
               <p className="text-xs text-gray-500 leading-relaxed">
                 You're connected to the wrong network. Please switch to Sepolia testnet to continue using the application.
               </p>
@@ -63,9 +62,9 @@ export default function NetworkSwitchPopup({ isOpen, onClose }: NetworkSwitchPop
             onClick={switchToSepolia}
             disabled={!!connectingWalletId}
             className="
-              w-full flex justify-center items-center space-x-2 py-3 px-4 
+              w-full flex justify-center items-center space-x-2 py-2 px-4
               bg-indigo-600
-              text-white font-medium rounded-3xl
+              text-white font-medium rounded-lg
               transition-all duration-200 ease-in-out
               disabled:opacity-50 disabled:cursor-not-allowed
             "

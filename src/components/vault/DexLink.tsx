@@ -10,7 +10,7 @@ export default function DexLink() {
     <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mt-2 mb-4 rounded-md">
       <div className="flex flex-col justify-between">
         <div className="flex flex-col items-start">
-          <p className="ml-3 text-sm">
+          <p className="ml-3 text-sm max-w-[350px]">
             DEX prices may be better than direct deposit or withdraw
           </p>
           <a

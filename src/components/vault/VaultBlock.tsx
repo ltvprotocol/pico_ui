@@ -61,6 +61,8 @@ export default function VaultBlock({ address }: VaultBlockProps) {
     pointsRate: null,
   });
   const [isLoadingApy, setIsLoadingApy] = useState<boolean>(false);
+  const [apyLoadFailed, setApyLoadFailed] = useState<boolean>(false);
+  const [pointsRateLoadFailed, setPointsRateLoadFailed] = useState<boolean>(false);
 
   const [vaultDecimals, setVaultDecimals] = useState<VaultDecimals>({
     sharesDecimals: 18n,
@@ -85,6 +87,9 @@ export default function VaultBlock({ address }: VaultBlockProps) {
   const loadApyAndPointsRate = useCallback(async () => {
     try {
       setIsLoadingApy(true);
+      setApyLoadFailed(false);
+      setPointsRateLoadFailed(false);
+      
       const [apyResult, pointsRateResult] = await Promise.all([
         fetchApy(address),
         fetchPointsRate(address)
@@ -94,8 +99,17 @@ export default function VaultBlock({ address }: VaultBlockProps) {
         apy: apyResult,
         pointsRate: pointsRateResult,
       });
+      
+      if (apyResult === null) {
+        setApyLoadFailed(true);
+      }
+      if (pointsRateResult === null) {
+        setPointsRateLoadFailed(true);
+      }
     } catch (err) {
       console.error('Error loading APY and points rate:', err);
+      setApyLoadFailed(true);
+      setPointsRateLoadFailed(true);
     } finally {
       setIsLoadingApy(false);
     }
@@ -420,8 +434,9 @@ export default function VaultBlock({ address }: VaultBlockProps) {
           <div className="font-medium text-gray-700">APY: </div>
           <div className="font-normal text-gray-700 min-w-[60px] text-right">
             {renderWithTransition(
-              memoizedApyData.apy !== null ? `${memoizedApyData.apy.toFixed(2)}%` : null,
-              isLoadingApy || memoizedApyData.apy === null
+              memoizedApyData.apy !== null ? `${memoizedApyData.apy.toFixed(2)}%` : 
+              apyLoadFailed ? <span className="text-red-500 italic text-xs">Failed to load</span> : null,
+              isLoadingApy && !apyLoadFailed
             )}
           </div>
         </div>
@@ -429,8 +444,9 @@ export default function VaultBlock({ address }: VaultBlockProps) {
           <div className="font-medium text-gray-700">Points Rate: </div>
           <div className="font-normal text-gray-700 min-w-[60px] text-right">
             {renderWithTransition(
-              memoizedApyData.pointsRate !== null ? `${memoizedApyData.pointsRate}/day` : null,
-              isLoadingApy || memoizedApyData.pointsRate === null
+              memoizedApyData.pointsRate !== null ? `${memoizedApyData.pointsRate}/day` : 
+              pointsRateLoadFailed ? <span className="text-red-500 italic text-xs">Failed to load</span> : null,
+              isLoadingApy && !pointsRateLoadFailed
             )}
           </div>
         </div>

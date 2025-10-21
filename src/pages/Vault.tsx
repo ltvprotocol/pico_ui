@@ -1,10 +1,9 @@
 import { useLocation, useParams } from 'react-router-dom';
 import { VaultContextProvider } from "@/contexts";
-import Balances from "@/components/vault/Balances";
-import Information from "@/components/vault/Information";
+import Info from "@/components/vault/Info";
+import MoreInfo from "@/components/vault/MoreInfo";
 import Actions from "@/components/vault/Actions";
 import Header from '@/components/vault/Header';
-import Addresses from '@/components/vault/Addresses';
 
 export default function Vault() {
   const { vaultAddress } = useParams<{ vaultAddress: string }>();
@@ -25,11 +24,10 @@ export default function Vault() {
 
   return (
     <VaultContextProvider vaultAddress={vaultAddress} params={params}>
-      <Header />
-      <Addresses />
-      <Actions />
-      <Balances />
-      <Information />
+      <Header className="mb-6" />
+      <Info  className="mb-6"/>
+      <Actions className="mb-6"/>
+      <MoreInfo />
     </VaultContextProvider>
   );
 }

@@ -5,13 +5,17 @@ import { renderSymbolWithPlaceholder } from '@/helpers/renderSymbolWithPlacehold
 import { NumberDisplay } from '@/components/ui';
 import { formatLtv } from '@/utils';
 
+interface MoreInfoProps {
+  className?: string;
+}
+
 interface LoadingState {
   isLoadingTargetLtv: boolean;
   isLoadingMaxSafeLtv: boolean;
   isLoadingMinProfitLtv: boolean;
 }
 
-export default function Information() {
+export default function MoreInfo({ className }: MoreInfoProps) {
   const [loadingState, setLoadingState] = useState<LoadingState>({
     isLoadingTargetLtv: true,
     isLoadingMaxSafeLtv: true,
@@ -36,12 +40,8 @@ export default function Information() {
     vaultMaxWithdrawCollateral,
     vaultMaxMintCollateral,
     vaultMaxRedeemCollateral,
-    totalAssets,
-    apy,
-    pointsRate,
     currentLtv
   } = useVaultContext();
-
 
   useEffect(() => {
     if (vaultConfig) {
@@ -120,10 +120,8 @@ export default function Information() {
     }
   }, [vaultLens, loadingState.isLoadingMinProfitLtv, vaultConfig, loadMinProfitLtv]);
 
-
   return (
-    <div className="relative rounded-lg bg-gray-50 p-3">
-      <h3 className="text-lg font-medium text-gray-900">Vault Information</h3>
+    <div className={`relative rounded-lg bg-white p-4 ${className ?? ''}`}>
       <div className="w-full hidden sm:flex items-end justify-between text-sm text-gray-600 mb-2">
         <div>
           <div>Max Deposit:</div>
@@ -251,23 +249,6 @@ export default function Information() {
         </div>
       </div>
       <div className="w-full flex justify-between items-center text-sm mb-2">
-        <div>TVL:</div>
-        <div className='flex min-w-[100px] justify-end'>
-          <div className="mr-2">
-            {renderWithTransition(
-              <NumberDisplay value={totalAssets} />,
-              !totalAssets || totalAssets === '0'
-            )}
-          </div>
-          <div className="font-medium text-gray-700">
-            {renderWithTransition(
-              borrowTokenSymbol,
-              !borrowTokenSymbol
-            )}
-          </div>
-        </div>
-      </div>
-      <div className="w-full flex justify-between items-center text-sm mb-2">
         <div>Current LTV:</div>
         <div className="min-w-[60px] text-right">
           {renderWithTransition(
@@ -308,24 +289,6 @@ export default function Information() {
           {renderWithTransition(
             minProfitLtv ? formatLtv(minProfitLtv) : null,
             loadingState.isLoadingMinProfitLtv
-          )}
-        </div>
-      </div>
-      <div className="w-full flex justify-between items-center text-sm">
-        <div>APY:</div>
-        <div className="min-w-[60px] text-right">
-          {renderWithTransition(
-            apy ? `${apy.toFixed(2)}%` : null,
-            !apy
-          )}
-        </div>
-      </div>
-      <div className="w-full flex justify-between items-center text-sm">
-        <div>Points Rate:</div>
-        <div className="min-w-[60px] text-right">
-          {renderWithTransition(
-            pointsRate ? `${pointsRate}/day` : null,
-            !pointsRate
           )}
         </div>
       </div>

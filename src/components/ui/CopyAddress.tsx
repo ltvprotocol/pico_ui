@@ -30,7 +30,7 @@ export function CopyAddress({ className, address} : CopyAddressProps ) {
  
   return (
     <div className={className}>
-      <div className="flex items-center">
+      <div className="flex items-center text-gray-300">
         <div className="text-sm mr-2">
           <a href={`https://sepolia.etherscan.io/address/${address}`} target="_blank" className="hidden sm:block text-sm text-gray-700 break-all hover:underline">
             {renderWithTransition(

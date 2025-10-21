@@ -69,15 +69,28 @@ interface VaultContextType {
   maxRedeemCollateral: string;
   maxMintCollateral: string;
   maxWithdrawCollateral: string;
+  apy: number | null;
+  pointsRate: number | null;
+  apyLoadFailed: boolean;
+  pointsRateLoadFailed: boolean;
   currentLtv: string | null;
   // Refresh functions
   refreshBalances: () => Promise<void>;
   refreshVaultLimits: () => Promise<void>;
 };
 
+interface Params {
+  collateralTokenSymbol: string | null,
+  borrowTokenSymbol: string | null,
+  maxLeverage: string | null,
+  lendingName: string | null,
+  apy: number | null,
+  pointsRate: number | null
+}
+
 const VaultContext = createContext<VaultContextType | undefined>(undefined);
 
-export const VaultContextProvider = ({ children, vaultAddress, params }: { children: ReactNode, vaultAddress: string, params: { collateralTokenSymbol: string | null, borrowTokenSymbol: string | null, maxLeverage: string | null, lendingName: string | null } }) => {
+export const VaultContextProvider = ({ children, vaultAddress, params }: { children: ReactNode, vaultAddress: string, params: Params }) => {
   const [vaultConfig, setVaultConfig] = useState<VaultConfig | undefined>(undefined);
   const [collateralTokenAddress, setCollateralTokenAddress] = useState<string>(ZeroAddress);
   const [borrowTokenAddress, setBorrowTokenAddress] = useState<string>(ZeroAddress);
@@ -122,6 +135,11 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   const [maxMintCollateral, setMaxMintCollateral] = useState<string>('0');
   const [maxWithdrawCollateral, setMaxWithdrawCollateral] = useState<string>('0');
 
+  const [apy, setApy] = useState<number | null>(null);
+  const [pointsRate, setPointsRate] = useState<number | null>(null);
+  const [apyLoadFailed, setApyLoadFailed] = useState<boolean>(false);
+  const [pointsRateLoadFailed, setPointsRateLoadFailed] = useState<boolean>(false);
+
   const [currentLtv, setCurrentLtv] = useState<string | null>(null);
 
   const { publicProvider, signer, isConnected, address } = useAppContext();
@@ -140,6 +158,10 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
     setMaxLeverage(params.maxLeverage ?? config?.leverage ?? null);
     setBorrowTokenSymbol(params.borrowTokenSymbol ?? config?.borrowTokenSymbol ?? null);
     setCollateralTokenSymbol(params.collateralTokenSymbol ?? config?.collateralTokenSymbol ?? null);
+    setApy(params.apy);
+    setPointsRate(params.pointsRate);
+    setApyLoadFailed(params.apy === null);
+    setPointsRateLoadFailed(params.pointsRate === null);
   }, [vaultAddress, params]);
 
   const initializeContracts = useCallback(async () => {
@@ -539,6 +561,10 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         maxRedeemCollateral,
         maxMintCollateral,
         maxWithdrawCollateral,
+        apy,
+        pointsRate,
+        apyLoadFailed,
+        pointsRateLoadFailed,
         currentLtv,
         refreshBalances: loadBalances,
         refreshVaultLimits: loadVaultLimits

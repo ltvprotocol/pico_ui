@@ -37,6 +37,10 @@ export default function Information() {
     vaultMaxMintCollateral,
     vaultMaxRedeemCollateral,
     totalAssets,
+    apy,
+    pointsRate,
+    apyLoadFailed,
+    pointsRateLoadFailed,
     currentLtv
   } = useVaultContext();
 
@@ -306,6 +310,26 @@ export default function Information() {
           {renderWithTransition(
             minProfitLtv ? formatLtv(minProfitLtv) : null,
             loadingState.isLoadingMinProfitLtv
+          )}
+        </div>
+      </div>
+      <div className="w-full flex justify-between items-center text-sm">
+        <div>APY:</div>
+        <div className="min-w-[60px] text-right">
+          {renderWithTransition(
+            apy ? `${apy.toFixed(2)}%` : 
+            apyLoadFailed ? <span className="text-red-500 italic text-xs">Failed to load</span> : null,
+            !apy && !apyLoadFailed
+          )}
+        </div>
+      </div>
+      <div className="w-full flex justify-between items-center text-sm">
+        <div>Points Rate:</div>
+        <div className="min-w-[60px] text-right">
+          {renderWithTransition(
+            pointsRate ? `${pointsRate}/day` : 
+            pointsRateLoadFailed ? <span className="text-red-500 italic text-xs">Failed to load</span> : null,
+            !pointsRate && !pointsRateLoadFailed
           )}
         </div>
       </div>

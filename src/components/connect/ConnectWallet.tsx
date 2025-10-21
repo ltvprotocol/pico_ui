@@ -38,16 +38,16 @@ export default function ConnectWallet() {
   if (isConnected && isSepolia && !isAutoConnecting) {
     return (
       <div className="flex gap-2">
-        <div className="flex items-center gap-2 py-2 px-4 rounded-3xl border border-gray-300 font-medium">
+        <div className="flex items-center gap-2 py-2 px-4 rounded-lg border border-gray-300 font-medium">
           <img src="eth.png" alt="Sepolia" className="w-4 h-4" /> Sepolia
         </div>
-        <div className="py-2 px-4 rounded-3xl border border-gray-300 font-medium">
+        <div className="py-2 px-4 rounded-lg border border-gray-300 font-medium">
           {address ? shortAddress(address) : "Connected"}
         </div>
         <button
           onClick={disconnectWallet}
           className=" text-red-600 hover:text-red-700 
-            border border-red-300 bg-white rounded-3xl py-2 px-4
+            border border-red-300 bg-white rounded-lg py-2 px-4
             hover:bg-red-50 hover:border-red-300 
             transition-all duration-200 disabled:opacity-50 font-medium
           "
@@ -61,20 +61,12 @@ export default function ConnectWallet() {
   if (isConnected && !isSepolia && !isAutoConnecting) {
     return (
       <div className="relative" ref={popupRef}>
-        <button
-          onClick={() => setShowNetworkPopup(!showNetworkPopup)}
-          className="
-            py-2 px-4 font-semibold text-white bg-orange-500 
-            hover:from-amber-600 hover:to-orange-600
-            rounded-3xl transition-all duration-200 ease-in-out
-            focus:outline-none focus:ring-0 active:outline-none active:ring-0
-          "
-        >
-          Switch Network
-        </button>
+        <div className="py-2 px-4 font-semibold text-red-600">
+          Wrong Network
+        </div>
         
         <NetworkSwitchPopup 
-          isOpen={showNetworkPopup} 
+          isOpen={true} 
           onClose={() => setShowNetworkPopup(false)} 
         />
       </div>
@@ -89,7 +81,7 @@ export default function ConnectWallet() {
           disabled={!!connectingWalletId || !wallets || wallets.length === 0}
           className="
             py-2 px-4 font-medium text-white bg-indigo-600
-            rounded-3xl disabled:opacity-50
+            rounded-lg disabled:opacity-50
             transition-all duration-200 ease-in-out
             focus:outline-none focus:ring-0 active:outline-none active:ring-0
           "

@@ -71,6 +71,8 @@ interface VaultContextType {
   maxWithdrawCollateral: string;
   apy: number | null;
   pointsRate: number | null;
+  apyLoadFailed: boolean;
+  pointsRateLoadFailed: boolean;
   currentLtv: string | null;
   // Refresh functions
   refreshBalances: () => Promise<void>;
@@ -135,6 +137,8 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
 
   const [apy, setApy] = useState<number | null>(null);
   const [pointsRate, setPointsRate] = useState<number | null>(null);
+  const [apyLoadFailed, setApyLoadFailed] = useState<boolean>(false);
+  const [pointsRateLoadFailed, setPointsRateLoadFailed] = useState<boolean>(false);
 
   const [currentLtv, setCurrentLtv] = useState<string | null>(null);
 
@@ -156,6 +160,8 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
     setCollateralTokenSymbol(params.collateralTokenSymbol ?? config?.collateralTokenSymbol ?? null);
     setApy(params.apy);
     setPointsRate(params.pointsRate);
+    setApyLoadFailed(params.apy === null);
+    setPointsRateLoadFailed(params.pointsRate === null);
   }, [vaultAddress, params]);
 
   const initializeContracts = useCallback(async () => {
@@ -557,6 +563,8 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         maxWithdrawCollateral,
         apy,
         pointsRate,
+        apyLoadFailed,
+        pointsRateLoadFailed,
         currentLtv,
         refreshBalances: loadBalances,
         refreshVaultLimits: loadVaultLimits

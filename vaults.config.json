@@ -15,7 +15,8 @@
         "minProfitLTV": "0.50",
         "lendingName": "HodlMyBeer",
         "dexLink": "https://app.uniswap.org/swap?inputCurrency=0xe2a7f267124ac3e4131f27b9159c78c521a44f3c&outputCurrency=0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14&chain=sepolia",
-        "dexLinkName": "Uniswap V3 GME/WETH pool"
+        "dexLinkName": "Uniswap V3 GME/WETH pool",
+        "description": "Use your MAE tokens as collateral to borrow WETH. Get 4x leverage through HodlMyBeer. Good to maximize your MAE holdings or get yield on your WETH."
       },
       {
         "address": "0xAa707a2a0e38DE55cA0b61dd32468e357b55b15f",
@@ -26,7 +27,8 @@
         "collateralTokenSymbol": "WETH",
         "borrowTokenSymbol": "WBTC",
         "leverage": "4",
-        "lendingName": "AAVE V3"
+        "lendingName": "AAVE V3",
+        "description": "Put up WETH to borrow WBTC with 4x leverage. Uses AAVE V3. Combines two fundamental assets with leverage."
       },
       {
         "address": "0x9A1Fc3ff25083f33373Bbf9617E12892FF19E07A",
@@ -37,7 +39,8 @@
         "collateralTokenSymbol": "WETH",
         "borrowTokenSymbol": "USDC",
         "leverage": "3",
-        "lendingName": "Morpho"
+        "lendingName": "Morpho",
+        "description": "Use WETH to borrow USDC with 3x leverage. Runs on Morpho. For those who are not afraid of the fall in the price of Ethereum"
       }
     ]
   },

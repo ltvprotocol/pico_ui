@@ -23,6 +23,7 @@ interface VaultConfig {
   lendingAddress?: string;
   dexLink?: string;
   dexLinkName?: string;
+  description?: string;
 };
 
 interface VaultContextType {
@@ -45,6 +46,7 @@ interface VaultContextType {
   borrowTokenDecimals: bigint;
   collateralTokenDecimals: bigint;
   vaultConfig: VaultConfig | undefined;
+  description: string | null;
   // Balances
   ethBalance: string;
   sharesBalance: string;
@@ -100,6 +102,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   const [maxLeverage, setMaxLeverage] = useState<string | null>(null);
   const [borrowTokenSymbol, setBorrowTokenSymbol] = useState<string | null>(null);
   const [collateralTokenSymbol, setCollateralTokenSymbol] = useState<string | null>(null);
+  const [description, setDescription] = useState<string | null>(null);
 
   const [vault, setVault] = useState<Vault | null>(null);
   const [borrowToken, setBorrowToken] = useState<ERC20 | WETH | null>(null);
@@ -158,6 +161,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
     setMaxLeverage(params.maxLeverage ?? config?.leverage ?? null);
     setBorrowTokenSymbol(params.borrowTokenSymbol ?? config?.borrowTokenSymbol ?? null);
     setCollateralTokenSymbol(params.collateralTokenSymbol ?? config?.collateralTokenSymbol ?? null);
+    setDescription(config?.description ?? null);
     setApy(params.apy);
     setPointsRate(params.pointsRate);
     setApyLoadFailed(params.apy === null);
@@ -540,6 +544,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         borrowTokenDecimals,
         collateralTokenDecimals,
         vaultConfig,
+        description,
         ethBalance,
         sharesBalance,
         borrowTokenBalance,

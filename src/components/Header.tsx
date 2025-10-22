@@ -6,7 +6,7 @@ export default function Header() {
     <header className="relative z-50 bg-white/80 h-16 flex-shrink-0">
       <Container>
         <div className="w-full h-full flex justify-between items-center text-gray-700">
-          <div className="text-black font-semibold text-xl">LTV Protocol</div>
+          <div className="text-black font-semibold text-lg [@media(min-width:640px)]:text-xl">LTV Protocol</div>
           <ConnectWallet />
         </div>
       </Container>

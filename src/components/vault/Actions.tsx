@@ -8,7 +8,7 @@ export default function Actions() {
   const [activeTab, setActiveTab] = useState<ActionType>('deposit');
 
   return (
-    <div className="mt-8">
+    <div className="bg-gray-50 rounded-lg p-4">
       <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />
       <ActionWrapper actionType={activeTab} />
       <DexLink />

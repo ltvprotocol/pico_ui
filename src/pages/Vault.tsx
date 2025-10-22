@@ -25,8 +25,14 @@ export default function Vault() {
   return (
     <VaultContextProvider vaultAddress={vaultAddress} params={params}>
       <VaultHeader />
-      <Info />
-      <Actions />
+      <div className="flex flex-col [@media(min-width:768px)]:flex-row gap-4 mb-4">
+        <div className="flex-1">
+          <Info />
+        </div>
+        <div className="flex-1">
+          <Actions />
+        </div>
+      </div>
       <MoreInfo />
     </VaultContextProvider>
   );

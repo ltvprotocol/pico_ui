@@ -38,10 +38,10 @@ export default function ConnectWallet() {
   if (isConnected && isSepolia && !isAutoConnecting) {
     return (
       <div className="flex gap-2">
-        <div className="flex items-center gap-2 py-2 px-4 rounded-lg border border-gray-300 font-medium">
+        <div className="hidden [@media(min-width:640px)]:flex items-center gap-2 py-2 px-4 rounded-lg border border-gray-300 font-medium">
           <img src="eth.png" alt="Sepolia" className="w-4 h-4" /> Sepolia
         </div>
-        <div className="py-2 px-4 rounded-lg border border-gray-300 font-medium">
+        <div className="hidden [@media(min-width:640px)]:block py-2 px-4 rounded-lg border border-gray-300 font-medium">
           {address ? shortAddress(address) : "Connected"}
         </div>
         <button

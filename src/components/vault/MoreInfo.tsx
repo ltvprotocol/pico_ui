@@ -12,6 +12,8 @@ interface LoadingState {
 }
 
 export default function MoreInfo() {
+  const [isOpen, setIsOpen] = useState(false);
+  
   const [loadingState, setLoadingState] = useState<LoadingState>({
     isLoadingTargetLtv: true,
     isLoadingMaxSafeLtv: true,
@@ -119,176 +121,191 @@ export default function MoreInfo() {
 
 
   return (
-    <div className="relative rounded-lg bg-gray-50 p-3">
-      <h3 className="text-lg font-medium text-gray-900">More Info</h3>
-      <div className="w-full hidden sm:flex items-end justify-between text-sm text-gray-600 mb-2">
-        <div className="font-medium text-gray-700">
-          <div>Max Deposit:</div>
-          <div>Max Withdraw:</div>
-          <div>Max Mint:</div>
-          <div>Max Redeem:</div>
-        </div>
-        <div className="flex">
-          <div className="flex flex-col items-end mr-2">
-            <div className="font-medium text-gray-700 mb-2">Collateral: </div>
-            {[
-              [vaultMaxDepositCollateral, collateralTokenSymbol],
-              [vaultMaxWithdrawCollateral, collateralTokenSymbol],
-              [vaultMaxMintCollateral, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'mint-collateral', isLoading: !sharesSymbol })],
-              [vaultMaxRedeemCollateral, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'redeem-collateral', isLoading: !sharesSymbol })]
-            ].map((info, index) => (
-              <div key={index} className='flex'>
-                <div className="mr-2 min-w-[60px] text-right">
-                  {renderWithTransition(
-                    <NumberDisplay value={info[0] as string} />,
-                    !info[0] || info[0] === '0'
-                  )}
-                </div>
-                <div className="font-medium text-gray-700">
-                  {renderWithTransition(
-                    info[1],
-                    !info[1]
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="flex flex-col items-end">
-            <div className="font-medium text-gray-700 mb-2">Borrow: </div>
-            {[
-              [vaultMaxDeposit, borrowTokenSymbol],
-              [vaultMaxWithdraw, borrowTokenSymbol],
-              [vaultMaxMint, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'mint-borrow', isLoading: !sharesSymbol })],
-              [vaultMaxRedeem, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'redeem-borrow', isLoading: !sharesSymbol })]
-            ].map((info, index) => (
-              <div key={index} className="flex">
-                <div className="mr-2 min-w-[60px] text-right">
-                  {renderWithTransition(
-                    <NumberDisplay value={info[0] as string} />,
-                    !info[0] || info[0] === '0'
-                  )}
-                </div>
-                <div className="font-medium text-gray-700">
-                  {renderWithTransition(
-                    info[1],
-                    !info[1]
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-      <div className="w-full sm:hidden text-sm text-gray-600 mt-2 mb-2">
-        <div className="flex items-end justify-between mb-2">
+    <div className="relative rounded-lg bg-gray-50">
+      <button 
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full bg-gray-100 flex items-center justify-between p-3 text-left hover:bg-gray-100 transition-colors rounded-lg focus:outline-none focus:ring-0"
+      >
+        <span className="text-lg font-medium text-gray-900">More Info</span>
+        <svg 
+          className={`w-5 h-5 text-gray-600 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+          fill="none" 
+          stroke="currentColor" 
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      <div className={`p-3 transition-all duration-200 overflow-hidden ${isOpen ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 pb-0'}`}>
+        <div className="w-full hidden sm:flex items-end justify-between text-sm text-gray-600 mb-2">
           <div className="font-medium text-gray-700">
-            <div>Action</div>
-            <div>Deposit:</div>
-            <div>Withdraw:</div>
-            <div>Mint:</div>
-            <div>Redeem:</div>
+            <div>Max Deposit:</div>
+            <div>Max Withdraw:</div>
+            <div>Max Mint:</div>
+            <div>Max Redeem:</div>
           </div>
-          <div className="flex flex-col items-end">
-            <div className="font-medium text-gray-700">Max for Collateral</div>
-            {[
-              [vaultMaxDepositCollateral, collateralTokenSymbol],
-              [vaultMaxWithdrawCollateral, collateralTokenSymbol],
-              [vaultMaxMintCollateral, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'mobile-mint-collateral', isLoading: !sharesSymbol })],
-              [vaultMaxRedeemCollateral, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'mobile-redeem-collateral', isLoading: !sharesSymbol })]
-            ].map((info, index) => (
-              <div key={index} className='flex'>
-                <div className="mr-2 min-w-[60px] text-right">
-                  {renderWithTransition(
-                    <NumberDisplay value={info[0] as string} />,
-                    !info[0] || info[0] === '0'
-                  )}
+          <div className="flex">
+            <div className="flex flex-col items-end mr-2">
+              <div className="font-medium text-gray-700 mb-2">Collateral: </div>
+              {[
+                [vaultMaxDepositCollateral, collateralTokenSymbol],
+                [vaultMaxWithdrawCollateral, collateralTokenSymbol],
+                [vaultMaxMintCollateral, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'mint-collateral', isLoading: !sharesSymbol })],
+                [vaultMaxRedeemCollateral, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'redeem-collateral', isLoading: !sharesSymbol })]
+              ].map((info, index) => (
+                <div key={index} className='flex'>
+                  <div className="mr-2 min-w-[60px] text-right">
+                    {renderWithTransition(
+                      <NumberDisplay value={info[0] as string} />,
+                      !info[0] || info[0] === '0'
+                    )}
+                  </div>
+                  <div className="font-medium text-gray-700">
+                    {renderWithTransition(
+                      info[1],
+                      !info[1]
+                    )}
+                  </div>
                 </div>
-                <div className="font-medium text-gray-700">
-                  {renderWithTransition(
-                    info[1],
-                    !info[1]
-                  )}
+              ))}
+            </div>
+            <div className="flex flex-col items-end">
+              <div className="font-medium text-gray-700 mb-2">Borrow: </div>
+              {[
+                [vaultMaxDeposit, borrowTokenSymbol],
+                [vaultMaxWithdraw, borrowTokenSymbol],
+                [vaultMaxMint, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'mint-borrow', isLoading: !sharesSymbol })],
+                [vaultMaxRedeem, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'redeem-borrow', isLoading: !sharesSymbol })]
+              ].map((info, index) => (
+                <div key={index} className="flex">
+                  <div className="mr-2 min-w-[60px] text-right">
+                    {renderWithTransition(
+                      <NumberDisplay value={info[0] as string} />,
+                      !info[0] || info[0] === '0'
+                    )}
+                  </div>
+                  <div className="font-medium text-gray-700">
+                    {renderWithTransition(
+                      info[1],
+                      !info[1]
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="flex items-end justify-between">
-          <div className="font-medium text-gray-700">
-            <div>Action</div>
-            <div>Deposit:</div>
-            <div>Withdraw:</div>
-            <div>Mint:</div>
-            <div>Redeem:</div>
-          </div>
-          <div className="flex flex-col items-end">
-            <div className="font-medium text-gray-700">Max for Borrow</div>
-            {[
-              [vaultMaxDeposit, borrowTokenSymbol],
-              [vaultMaxWithdraw, borrowTokenSymbol],
-              [vaultMaxMint, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'mobile-mint-borrow', isLoading: !sharesSymbol })],
-              [vaultMaxRedeem, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'mobile-redeem-borrow', isLoading: !sharesSymbol })]
-            ].map((info, index) => (
-              <div key={index} className="flex">
-                <div className="mr-2 min-w-[60px] text-right">
-                  {renderWithTransition(
-                    <NumberDisplay value={info[0] as string} />,
-                    !info[0] || info[0] === '0'
-                  )}
-                </div>
-                <div className="font-medium text-gray-700">
-                  {renderWithTransition(
-                    info[1],
-                    !info[1]
-                  )}
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
-      </div>
-      <div className="w-full flex justify-between items-center text-sm mb-2">
-        <div className="font-medium text-gray-700">Current LTV:</div>
-        <div className="min-w-[60px] text-right">
-          {renderWithTransition(
-            currentLtv ? (
-              currentLtv === 'UNKNOWN_CONNECTOR' ? (
-                <span className="text-gray-500 italic">Unable to fetch LTV</span>
-              ) : currentLtv === 'LOAD_FAILED' ? (
-                <span className="text-red-500 italic">Failed to load</span>
-              ) : (
-                formatLtv(currentLtv)
-              )
-            ) : null,
-            !currentLtv
-          )}
+        <div className="w-full sm:hidden text-sm text-gray-600 mt-2 mb-2">
+          <div className="flex items-end justify-between mb-2">
+            <div className="font-medium text-gray-700">
+              <div>Action</div>
+              <div>Deposit:</div>
+              <div>Withdraw:</div>
+              <div>Mint:</div>
+              <div>Redeem:</div>
+            </div>
+            <div className="flex flex-col items-end">
+              <div className="font-medium text-gray-700">Max for Collateral</div>
+              {[
+                [vaultMaxDepositCollateral, collateralTokenSymbol],
+                [vaultMaxWithdrawCollateral, collateralTokenSymbol],
+                [vaultMaxMintCollateral, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'mobile-mint-collateral', isLoading: !sharesSymbol })],
+                [vaultMaxRedeemCollateral, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'mobile-redeem-collateral', isLoading: !sharesSymbol })]
+              ].map((info, index) => (
+                <div key={index} className='flex'>
+                  <div className="mr-2 min-w-[60px] text-right">
+                    {renderWithTransition(
+                      <NumberDisplay value={info[0] as string} />,
+                      !info[0] || info[0] === '0'
+                    )}
+                  </div>
+                  <div className="font-medium text-gray-700">
+                    {renderWithTransition(
+                      info[1],
+                      !info[1]
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-end justify-between">
+            <div className="font-medium text-gray-700">
+              <div>Action</div>
+              <div>Deposit:</div>
+              <div>Withdraw:</div>
+              <div>Mint:</div>
+              <div>Redeem:</div>
+            </div>
+            <div className="flex flex-col items-end">
+              <div className="font-medium text-gray-700">Max for Borrow</div>
+              {[
+                [vaultMaxDeposit, borrowTokenSymbol],
+                [vaultMaxWithdraw, borrowTokenSymbol],
+                [vaultMaxMint, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'mobile-mint-borrow', isLoading: !sharesSymbol })],
+                [vaultMaxRedeem, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'mobile-redeem-borrow', isLoading: !sharesSymbol })]
+              ].map((info, index) => (
+                <div key={index} className="flex">
+                  <div className="mr-2 min-w-[60px] text-right">
+                    {renderWithTransition(
+                      <NumberDisplay value={info[0] as string} />,
+                      !info[0] || info[0] === '0'
+                    )}
+                  </div>
+                  <div className="font-medium text-gray-700">
+                    {renderWithTransition(
+                      info[1],
+                      !info[1]
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
-      <div className="w-full flex justify-between items-center text-sm">
-        <div className="font-medium text-gray-700">Target LTV:</div>
-        <div className="min-w-[60px] text-right">
-          {renderWithTransition(
-            targetLtv ? formatLtv(targetLtv) : null,
-            loadingState.isLoadingTargetLtv
-          )}
+        <div className="w-full flex justify-between items-center text-sm mb-2">
+          <div className="font-medium text-gray-700">Current LTV:</div>
+          <div className="min-w-[60px] text-right">
+            {renderWithTransition(
+              currentLtv ? (
+                currentLtv === 'UNKNOWN_CONNECTOR' ? (
+                  <span className="text-gray-500 italic">Unable to fetch LTV</span>
+                ) : currentLtv === 'LOAD_FAILED' ? (
+                  <span className="text-red-500 italic">Failed to load</span>
+                ) : (
+                  formatLtv(currentLtv)
+                )
+              ) : null,
+              !currentLtv
+            )}
+          </div>
         </div>
-      </div>
-      <div className="w-full flex justify-between items-center text-sm">
-        <div className="font-medium text-gray-700">Max Safe LTV:</div>
-        <div className="min-w-[60px] text-right">
-          {renderWithTransition(
-            maxSafeLtv ? formatLtv(maxSafeLtv) : null,
-            loadingState.isLoadingMaxSafeLtv
-          )}
+        <div className="w-full flex justify-between items-center text-sm">
+          <div className="font-medium text-gray-700">Target LTV:</div>
+          <div className="min-w-[60px] text-right">
+            {renderWithTransition(
+              targetLtv ? formatLtv(targetLtv) : null,
+              loadingState.isLoadingTargetLtv
+            )}
+          </div>
         </div>
-      </div>
-      <div className="w-full flex justify-between items-center text-sm">
-        <div className="font-medium text-gray-700">Min Profit LTV:</div>
-        <div className="min-w-[60px] text-right">
-          {renderWithTransition(
-            minProfitLtv ? formatLtv(minProfitLtv) : null,
-            loadingState.isLoadingMinProfitLtv
-          )}
+        <div className="w-full flex justify-between items-center text-sm">
+          <div className="font-medium text-gray-700">Max Safe LTV:</div>
+          <div className="min-w-[60px] text-right">
+            {renderWithTransition(
+              maxSafeLtv ? formatLtv(maxSafeLtv) : null,
+              loadingState.isLoadingMaxSafeLtv
+            )}
+          </div>
+        </div>
+        <div className="w-full flex justify-between items-center text-sm">
+          <div className="font-medium text-gray-700">Min Profit LTV:</div>
+          <div className="min-w-[60px] text-right">
+            {renderWithTransition(
+              minProfitLtv ? formatLtv(minProfitLtv) : null,
+              loadingState.isLoadingMinProfitLtv
+            )}
+          </div>
         </div>
       </div>
     </div>

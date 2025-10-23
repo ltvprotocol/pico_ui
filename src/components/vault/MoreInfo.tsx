@@ -13,7 +13,7 @@ interface LoadingState {
 
 export default function MoreInfo() {
   const [isOpen, setIsOpen] = useState(false);
-  
+
   const [loadingState, setLoadingState] = useState<LoadingState>({
     isLoadingTargetLtv: true,
     isLoadingMaxSafeLtv: true,
@@ -136,7 +136,7 @@ export default function MoreInfo() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
-      <div className={`p-3 transition-all duration-200 overflow-hidden ${isOpen ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 pb-0'}`}>
+      <div className={`transition-all duration-200 overflow-hidden ${isOpen ? 'max-h-[2000px] opacity-100 p-3' : 'max-h-0 opacity-0 pb-0'}`}>
         <div className="w-full hidden sm:flex items-end justify-between text-sm text-gray-600 mb-2">
           <div className="font-medium text-gray-700">
             <div>Max Deposit:</div>

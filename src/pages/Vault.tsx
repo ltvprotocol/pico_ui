@@ -4,6 +4,7 @@ import MoreInfo from "@/components/vault/MoreInfo";
 import Actions from "@/components/vault/Actions";
 import VaultHeader from '@/components/vault/VaultHeader';
 import Info from '@/components/vault/Info';
+import LowLevelRebalance from '@/components/vault/LowLevelRebalance';
 
 export default function Vault() {
   const { vaultAddress } = useParams<{ vaultAddress: string }>();
@@ -32,6 +33,9 @@ export default function Vault() {
         <div className="flex-1">
           <Actions />
         </div>
+      </div>
+      <div className="mb-4">
+        <LowLevelRebalance />
       </div>
       <MoreInfo />
     </VaultContextProvider>

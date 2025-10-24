@@ -15,3 +15,19 @@ export function allowOnlyNumbers(input: string) : string {
 
   return value;
 };
+
+export function allowOnlySignedNumbers(value: string): string {
+  const cleaned = value.replace(/[^\d.-]/g, '');
+  
+  const parts = cleaned.split('-');
+  if (parts.length > 2) {
+    return parts[0] === '' ? '-' + parts.slice(1).join('') : parts.join('');
+  }
+  
+  const decimalParts = cleaned.split('.');
+  if (decimalParts.length > 2) {
+    return decimalParts[0] + '.' + decimalParts.slice(1).join('');
+  }
+  
+  return cleaned;
+};

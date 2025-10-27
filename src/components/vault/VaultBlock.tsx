@@ -78,7 +78,7 @@ export default function VaultBlock({ address }: VaultBlockProps) {
     hasLoadedDecimals: false,
   });
 
-  const { publicProvider } = useAppContext();
+  const { publicProvider, currentNetwork } = useAppContext();
 
   const loadApyAndPointsRate = useCallback(async () => {
     try {
@@ -114,10 +114,10 @@ export default function VaultBlock({ address }: VaultBlockProps) {
   const memoizedApyData = useMemo(() => apyData, [apyData.apy, apyData.pointsRate]);
 
   const vaultConfig = useMemo(() => {
-    const chainId = "11155111";
-    const vaults = vaultsConfig[chainId]?.vaults || [];
-    return vaults.find(v => v.address.toLowerCase() === address.toLowerCase());
-  }, [address]);
+    const chainId = currentNetwork || "11155111"; // Default to Sepolia if no network
+    const vaults = (vaultsConfig as any)[chainId]?.vaults || [];
+    return vaults.find((v: any) => v.address.toLowerCase() === address.toLowerCase());
+  }, [address, currentNetwork]);
 
   const vaultContract = useMemo(() => {
     if (!publicProvider) return null;

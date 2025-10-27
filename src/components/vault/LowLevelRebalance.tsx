@@ -3,6 +3,7 @@ import Tabs from '@/components/ui/Tabs';
 import LowLevelRebalanceHandler from './LowLevelRebalanceHandler';
 
 type LowLevelRebalanceType = 'shares' | 'borrow' | 'collateral';
+type ActionType = 'mint' | 'burn' | 'provide' | 'receive';
 
 const LOW_LEVEL_TABS: { value: LowLevelRebalanceType; label: string }[] = [
   { value: 'shares', label: 'Shares' },
@@ -10,9 +11,32 @@ const LOW_LEVEL_TABS: { value: LowLevelRebalanceType; label: string }[] = [
   { value: 'collateral', label: 'Collateral' },
 ];
 
+const getActionTabs = (rebalanceType: LowLevelRebalanceType): { value: ActionType; label: string }[] => {
+  if (rebalanceType === 'shares') {
+    return [
+      { value: 'mint', label: 'Mint' },
+      { value: 'burn', label: 'Burn' },
+    ];
+  } else {
+    return [
+      { value: 'provide', label: 'Provide' },
+      { value: 'receive', label: 'Receive' },
+    ];
+  }
+};
+
 export default function LowLevelRebalance() {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<LowLevelRebalanceType>('shares');
+  const [activeAction, setActiveAction] = useState<ActionType>('mint');
+
+  // Reset action tab when main tab changes
+  const handleMainTabChange = (newTab: LowLevelRebalanceType | ((prev: LowLevelRebalanceType) => LowLevelRebalanceType)) => {
+    const tab = typeof newTab === 'function' ? newTab(activeTab) : newTab;
+    setActiveTab(tab);
+    const actionTabs = getActionTabs(tab);
+    setActiveAction(actionTabs[0].value);
+  };
 
   return (
     <div className="relative rounded-lg bg-gray-50">
@@ -34,11 +58,21 @@ export default function LowLevelRebalance() {
         <div className="mb-3">
           <Tabs 
             activeTab={activeTab} 
-            setActiveTab={setActiveTab}
+            setActiveTab={handleMainTabChange}
             tabs={LOW_LEVEL_TABS}
           />
         </div>
-        <LowLevelRebalanceHandler rebalanceType={activeTab} />
+        <div className="mb-3">
+          <Tabs 
+            activeTab={activeAction} 
+            setActiveTab={setActiveAction}
+            tabs={getActionTabs(activeTab)}
+          />
+        </div>
+        <LowLevelRebalanceHandler 
+          rebalanceType={activeTab} 
+          actionType={activeAction}
+        />
       </div>
     </div>
   );

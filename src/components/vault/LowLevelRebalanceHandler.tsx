@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { formatUnits, parseUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
-import { isUserRejected, allowOnlySignedNumbers } from '@/utils';
+import { isUserRejected, allowOnlyNumbers } from '@/utils';
 import { renderWithTransition } from '@/helpers/renderWithTransition';
 import { NumberDisplay } from '@/components/ui';
 
 type TokenType = 'collateral' | 'borrow' | 'shares';
+type ActionType = 'mint' | 'burn' | 'provide' | 'receive';
 
 interface LowLevelRebalanceHandlerProps {
   rebalanceType: TokenType;
+  actionType: ActionType;
 }
 
-export default function LowLevelRebalanceHandler({ rebalanceType }: LowLevelRebalanceHandlerProps) {
+export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: LowLevelRebalanceHandlerProps) {
   const [inputValue, setInputValue] = useState('');
   const [amount, setAmount] = useState<bigint | null>(null);
   const [loading, setLoading] = useState(false);
@@ -66,7 +68,7 @@ export default function LowLevelRebalanceHandler({ rebalanceType }: LowLevelReba
     setPreviewData(null);
     setMaxValue(null);
     loadMaxValue();
-  }, [rebalanceType, sharesDecimals, borrowTokenDecimals, collateralTokenDecimals, borrowTokenBalance, collateralTokenBalance]);
+  }, [rebalanceType, actionType, sharesDecimals, borrowTokenDecimals, collateralTokenDecimals, borrowTokenBalance, collateralTokenBalance]);
 
   const loadMaxValue = async () => {
     if (!vaultLens) return;
@@ -237,12 +239,9 @@ export default function LowLevelRebalanceHandler({ rebalanceType }: LowLevelReba
 
   const handleMaxClick = () => {
     if (maxValue !== null) {
-      const isNegative = maxValue < 0n;
-      const absValue = isNegative ? -maxValue : maxValue;
+      const absValue = maxValue < 0n ? -maxValue : maxValue;
       const formatted = formatUnits(absValue, decimals);
-      const finalFormatted = isNegative ? '-' + formatted : formatted;
-      
-      setInputValue(finalFormatted);
+      setInputValue(formatted);
       setAmount(maxValue);
     }
   };
@@ -281,6 +280,17 @@ export default function LowLevelRebalanceHandler({ rebalanceType }: LowLevelReba
         label: 'Shares',
         token: null
       };
+    }
+  };
+
+  // Convert action type to the correct sign for the amount
+  const getAmountSign = (): bigint => {
+    if (rebalanceType === 'shares') {
+      return actionType === 'mint' ? 1n : -1n;
+    } else if (rebalanceType === 'collateral') {
+      return actionType === 'provide' ? 1n : -1n;
+    } else { // borrow
+      return actionType === 'provide' ? -1n : 1n;
     }
   };
 
@@ -345,10 +355,10 @@ export default function LowLevelRebalanceHandler({ rebalanceType }: LowLevelReba
   };
 
   const handleInputChange = (value: string) => {
-    const cleanedValue = allowOnlySignedNumbers(value);
+    const cleanedValue = allowOnlyNumbers(value); // Only allow positive numbers
     setInputValue(cleanedValue);
     
-    if (!cleanedValue || cleanedValue === '' || cleanedValue === '-' || cleanedValue === '.') {
+    if (!cleanedValue || cleanedValue === '' || cleanedValue === '.') {
       setAmount(null);
       return;
     }
@@ -360,11 +370,9 @@ export default function LowLevelRebalanceHandler({ rebalanceType }: LowLevelReba
         return;
       }
 
-      const isNegative = cleanedValue.startsWith('-');
-      const absoluteValue = cleanedValue.replace('-', '');
-      
-      const parsed = parseUnits(absoluteValue, decimals);
-      setAmount(isNegative ? -parsed : parsed);
+      const parsed = parseUnits(cleanedValue, decimals);
+      const sign = getAmountSign();
+      setAmount(parsed * sign);
     } catch (err) {
       setAmount(null);
     }
@@ -386,7 +394,7 @@ export default function LowLevelRebalanceHandler({ rebalanceType }: LowLevelReba
               onChange={(e) => handleInputChange(e.target.value)}
               autoComplete="off"
               className={`block w-full ${rebalanceType !== 'shares' ? 'pr-24' : 'pr-16'} rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm`}
-              placeholder={`±0.0`}
+              placeholder="0.0"
               disabled={loading}
             />
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
@@ -545,14 +553,17 @@ export default function LowLevelRebalanceHandler({ rebalanceType }: LowLevelReba
 
       {/* Help Text */}
       <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-        <h4 className="text-sm font-medium text-blue-900 mb-2">About {rebalanceType === 'shares' ? 'Shares' : rebalanceType === 'borrow' ? 'Borrow' : 'Collateral'} Rebalance</h4>
+        <h4 className="text-sm font-medium text-blue-900 mb-2">About {actionType === 'mint' ? 'Mint' : actionType === 'burn' ? 'Burn' : actionType === 'provide' ? 'Provide' : 'Receive'} {rebalanceType === 'shares' ? 'Shares' : rebalanceType === 'borrow' ? 'Borrow' : 'Collateral'}</h4>
         <p className="text-xs text-blue-800 mb-2">
-          {rebalanceType === 'shares' && 'Input shares amount: positive to mint shares, negative to burn shares. The vault will calculate the collateral and borrow changes needed.'}
-          {rebalanceType === 'borrow' && 'Input borrow assets amount: positive to receive borrow assets, negative to provide borrow assets. The vault will calculate the collateral and shares changes needed.'}
-          {rebalanceType === 'collateral' && 'Input collateral assets amount: positive to deposit collateral, negative to withdraw collateral. The vault will calculate the borrow and shares changes needed.'}
+          {actionType === 'mint' && 'Enter the amount of shares to mint. The vault will calculate the collateral and borrow changes needed.'}
+          {actionType === 'burn' && 'Enter the amount of shares to burn. The vault will calculate the collateral and borrow changes needed.'}
+          {actionType === 'provide' && rebalanceType === 'borrow' && 'Enter the amount of borrow assets to provide. The vault will calculate the collateral and shares changes needed.'}
+          {actionType === 'provide' && rebalanceType === 'collateral' && 'Enter the amount of collateral assets to provide. The vault will calculate the borrow and shares changes needed.'}
+          {actionType === 'receive' && rebalanceType === 'borrow' && 'Enter the amount of borrow assets to receive. The vault will calculate the collateral and shares changes needed.'}
+          {actionType === 'receive' && rebalanceType === 'collateral' && 'Enter the amount of collateral assets to receive. The vault will calculate the borrow and shares changes needed.'}
         </p>
         <p className="text-xs text-blue-700">
-          💡 Tip: You can enter negative values (e.g., -100) for opposite operations, or zero for edge cases.
+          💡 Tip: Enter only positive values. The action type determines the direction of the operation.
         </p>
       </div>
     </div>

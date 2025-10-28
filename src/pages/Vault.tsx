@@ -7,6 +7,7 @@ import Actions from "@/components/vault/Actions";
 import VaultHeader from '@/components/vault/VaultHeader';
 import Info from '@/components/vault/Info';
 import LowLevelRebalance from '@/components/vault/LowLevelRebalance';
+import Auction from '@/components/vault/Auction';
 import VaultNotFound from '@/components/vault/VaultNotFound';
 
 function VaultContent() {
@@ -34,6 +35,9 @@ function VaultContent() {
       </div>
       <div className="mb-4">
         <LowLevelRebalance />
+      </div>
+      <div className="mb-4">
+        <Auction />
       </div>
       <MoreInfo />
     </>

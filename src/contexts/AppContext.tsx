@@ -1,6 +1,6 @@
 import { createContext, ReactNode, useContext, useEffect, useState, useCallback } from 'react';
 import { BrowserProvider, JsonRpcSigner, JsonRpcProvider, Eip1193Provider } from 'ethers';
-import { SEPOLIA_NETWORK, SEPOLIA_CHAIN_ID, SEPOLIA_CHAIN_ID_HEX } from '@/constants';
+import { SEPOLIA_CHAIN_ID, MAINNET_CHAIN_ID, NETWORK_CONFIGS, URL_PARAM_TO_CHAIN_ID } from '@/constants';
 import { isUserRejected } from '@/utils';
 
 type DiscoveredWallet = {
@@ -21,12 +21,17 @@ interface AppContextType {
   chainId: bigint | null;
   isConnected: boolean;
   isSepolia: boolean;
+  isMainnet: boolean;
+  currentNetwork: string | null;
+  unrecognizedNetworkParam: boolean;
   connectingWalletId: string | null;
   isAutoConnecting: boolean;
   error: string | null;
   connectWallet: (wallet: DiscoveredWallet) => Promise<void>;
   disconnectWallet: () => void;
   switchToSepolia: () => Promise<void>;
+  switchToMainnet: () => Promise<void>;
+  switchToNetwork: (chainId: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -38,6 +43,9 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
   const [wallets, setWallets] = useState<DiscoveredWallet[]>([]);
   const [connectingWalletId, setConnectingWalletId] = useState<string | null>(null);
   const [isSepolia, setIsSepolia] = useState(false);
+  const [isMainnet, setIsMainnet] = useState(false);
+  const [currentNetwork, setCurrentNetwork] = useState<string | null>(null);
+  const [unrecognizedNetworkParam, setUnrecognizedNetworkParam] = useState<boolean>(false);
 
   const [publicProvider, setPublicProvider] = useState<JsonRpcProvider | null>(null);
   const [provider, setProvider] = useState<BrowserProvider | null>(null);
@@ -47,6 +55,32 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
   const [isConnected, setIsConnected] = useState(false);
 
   const [rawProvider, setRawProvider] = useState<Eip1193Provider | null>(null);
+
+  const getNetworkFromUrl = useCallback(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const networkParam = urlParams.get('network');
+    
+    if (!networkParam) {
+      setUnrecognizedNetworkParam(false);
+      return null;
+    }
+    
+    const recognizedNetwork = URL_PARAM_TO_CHAIN_ID[networkParam as keyof typeof URL_PARAM_TO_CHAIN_ID];
+    
+    if (!recognizedNetwork) {
+      console.warn(`Unrecognized network parameter: "${networkParam}".`);
+      setUnrecognizedNetworkParam(true);
+      return null;
+    }
+    
+    setUnrecognizedNetworkParam(false);
+    return recognizedNetwork;
+  }, []);
+
+  const getDefaultNetwork = useCallback(() => {
+    const urlNetwork = getNetworkFromUrl();
+    return urlNetwork ?? '11155111';
+  }, [getNetworkFromUrl]);
 
   useEffect(() => {
     const discovered: DiscoveredWallet[] = [];
@@ -77,9 +111,79 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
   }, [provider, signer, address]);
 
   useEffect(() => {
-    const newPublicProvider = new JsonRpcProvider(SEPOLIA_NETWORK.rpcUrls[0]);
+    const defaultNetwork = getDefaultNetwork();
+    const networkConfig = (NETWORK_CONFIGS as any)[defaultNetwork];
+    if (networkConfig) {
+      const newPublicProvider = new JsonRpcProvider(networkConfig.rpcUrls[0]);
+      setPublicProvider(newPublicProvider);
+      setCurrentNetwork(defaultNetwork);
+    } else {
+      setPublicProvider(null);
+      setCurrentNetwork(null);
+    }
+  }, [getDefaultNetwork]);
+
+  const switchToNetwork = useCallback(async (chainId: string) => {
+    const networkConfig = (NETWORK_CONFIGS as any)[chainId];
+    if (!networkConfig) {
+      console.error('Unknown network chain ID:', chainId);
+      return;
+    }
+
+    const urlParam = Object.keys(URL_PARAM_TO_CHAIN_ID).find(
+      key => URL_PARAM_TO_CHAIN_ID[key as keyof typeof URL_PARAM_TO_CHAIN_ID] === chainId
+    );
+    
+    if (urlParam) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('network', urlParam);
+      window.history.pushState({}, '', url.toString());
+    }
+
+    const newPublicProvider = new JsonRpcProvider(networkConfig.rpcUrls[0]);
     setPublicProvider(newPublicProvider);
-  }, []);
+    setCurrentNetwork(chainId);
+
+    if (provider) {
+      try {
+        await provider.send('wallet_switchEthereumChain', [
+          { chainId: networkConfig.chainId },
+        ]);
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } catch (err: any) {
+        if (err.code === 4902 || err.error?.code === 4902) {
+          try {
+            await provider.send('wallet_addEthereumChain', [networkConfig]);
+            await new Promise(resolve => setTimeout(resolve, 500));
+          } catch (addError) {
+            console.error(`Error adding ${networkConfig.name} network:`, addError);
+          }
+        } else {
+          console.error(`Error switching to ${networkConfig.name}:`, err);
+        }
+      }
+    }
+  }, [provider]);
+
+  useEffect(() => {
+    const autoSwitchToUrlNetwork = async () => {
+      if (!isConnected || !provider) return;
+      
+      const urlNetwork = getNetworkFromUrl();
+      if (!urlNetwork) return;
+      
+      const currentChainId = chainId?.toString();
+      if (currentChainId === urlNetwork) return;
+      
+      try {
+        await switchToNetwork(urlNetwork);
+      } catch (error) {
+        console.log('Auto-switch to URL network failed:', error);
+      }
+    };
+
+    autoSwitchToUrlNetwork();
+  }, [isConnected, provider, chainId, getNetworkFromUrl, switchToNetwork]);
 
   const disconnectWallet = useCallback(() => {
     setProvider(null);
@@ -88,6 +192,7 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     setChainId(null);
     setIsConnected(false);
     setIsSepolia(false);
+    setIsMainnet(false);
     setRawProvider(null);
     localStorage.removeItem('connectedWallet');
   }, []);
@@ -104,8 +209,14 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
       const newAddress = await newSigner.getAddress();
       const network = await newProvider.getNetwork();
       const newChainId = network.chainId;
+      const chainIdString = newChainId.toString();
 
-      setIsSepolia(newChainId === SEPOLIA_CHAIN_ID);
+      const isSepoliaNetwork = newChainId === SEPOLIA_CHAIN_ID;
+      const isMainnetNetwork = newChainId === MAINNET_CHAIN_ID;
+
+      setIsSepolia(isSepoliaNetwork);
+      setIsMainnet(isMainnetNetwork);
+      setCurrentNetwork(chainIdString);
       setProvider(newProvider);
       setSigner(newSigner);
       setAddress(newAddress);
@@ -215,11 +326,18 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
       const onChainChangedHandler = async (chainIdHex: string) => {
         console.log('Event: chainChanged, new chainIdHex:', chainIdHex);
 
-        const isSepoliaNetwork = chainIdHex === SEPOLIA_CHAIN_ID_HEX;
+        const chainIdBigInt = BigInt(chainIdHex);
+        const chainIdString = chainIdBigInt.toString();
+        
+        const isSepoliaNetwork = chainIdBigInt === SEPOLIA_CHAIN_ID;
+        const isMainnetNetwork = chainIdBigInt === MAINNET_CHAIN_ID;
+
         await setupProviderConnection(rawProvider);
 
         setIsSepolia(isSepoliaNetwork);
-        setChainId(BigInt(chainIdHex));
+        setIsMainnet(isMainnetNetwork);
+        setCurrentNetwork(chainIdString);
+        setChainId(chainIdBigInt);
       };
 
       eip1193Provider.on('accountsChanged', onAccountsChangedHandler);
@@ -235,26 +353,12 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
   }, [rawProvider, provider]);
 
   const switchToSepolia = useCallback(async () => {
-    if (!provider) return;
+    await switchToNetwork('11155111');
+  }, [switchToNetwork]);
 
-    try {
-      await provider.send('wallet_switchEthereumChain', [
-        { chainId: SEPOLIA_CHAIN_ID_HEX },
-      ]);
-      await new Promise(resolve => setTimeout(resolve, 500));
-    } catch (err: any) {
-      if (err.code === 4902 || err.error?.code === 4902) {
-        try {
-          await provider.send('wallet_addEthereumChain', [SEPOLIA_NETWORK]);
-          await new Promise(resolve => setTimeout(resolve, 500));
-        } catch (addError) {
-          console.error('Error adding Sepolia network:', addError);
-        }
-      } else {
-        console.error('Error switching to Sepolia:', err);
-      }
-    }
-  }, [provider]);
+  const switchToMainnet = useCallback(async () => {
+    await switchToNetwork('1');
+  }, [switchToNetwork]);
 
   const contextValue: AppContextType = {
     wallets,
@@ -265,12 +369,17 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     address,
     chainId,
     isSepolia,
+    isMainnet,
+    currentNetwork,
+    unrecognizedNetworkParam,
     connectingWalletId,
     isAutoConnecting,
     error,
     connectWallet,
     disconnectWallet,
     switchToSepolia,
+    switchToMainnet,
+    switchToNetwork,
   };
 
   return <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>;

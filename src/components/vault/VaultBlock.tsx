@@ -78,7 +78,7 @@ export default function VaultBlock({ address }: VaultBlockProps) {
     hasLoadedDecimals: false,
   });
 
-  const { publicProvider } = useAppContext();
+  const { publicProvider, currentNetwork } = useAppContext();
 
   const loadApyAndPointsRate = useCallback(async () => {
     try {
@@ -114,10 +114,10 @@ export default function VaultBlock({ address }: VaultBlockProps) {
   const memoizedApyData = useMemo(() => apyData, [apyData.apy, apyData.pointsRate]);
 
   const vaultConfig = useMemo(() => {
-    const chainId = "11155111";
-    const vaults = vaultsConfig[chainId]?.vaults || [];
-    return vaults.find(v => v.address.toLowerCase() === address.toLowerCase());
-  }, [address]);
+    const chainId = currentNetwork || "11155111"; // Default to Sepolia if no network
+    const vaults = (vaultsConfig as any)[chainId]?.vaults || [];
+    return vaults.find((v: any) => v.address.toLowerCase() === address.toLowerCase());
+  }, [address, currentNetwork]);
 
   const vaultContract = useMemo(() => {
     if (!publicProvider) return null;
@@ -288,6 +288,11 @@ export default function VaultBlock({ address }: VaultBlockProps) {
     return formatUnits(dynamicData.tvl, vaultDecimals.borrowTokenDecimals);
   }, [dynamicData.tvl, vaultDecimals.borrowTokenDecimals]);
 
+  useEffect(() => {
+    setDynamicData({ tvl: null });
+    setLoadingState(prev => ({ ...prev, isLoadingAssets: true, hasLoadedAssets: false }));
+  }, [currentNetwork, address]);
+
   const tokenPairDisplay = useMemo(() => {
     if (staticData.collateralTokenSymbol && staticData.borrowTokenSymbol) {
       return `${staticData.collateralTokenSymbol}/${staticData.borrowTokenSymbol}`;
@@ -308,7 +313,7 @@ export default function VaultBlock({ address }: VaultBlockProps) {
         }}
         className="wrapper block w-full bg-gray-50 transition-colors border border-gray-50 rounded-lg mb-4 last:mb-0 p-3">
         <div className="w-full">
-          <div className="w-full flex flex-row justify-between mb-2 hidden sm:flex">
+          <div className="w-full flex flex-row justify-between mb-2">
             <div className="flex items-center text-base font-medium text-gray-900">
               <div className="mr-2 min-w-[60px]">
                 {renderWithTransition(
@@ -323,26 +328,6 @@ export default function VaultBlock({ address }: VaultBlockProps) {
                 )}
               </div>
               <div className="font-normal">{staticData.lendingName || "Lending"}</div>
-            </div>
-          </div>
-          <div className="w-full mb-2 sm:hidden">
-            <div className="flex text-base font-medium text-gray-900 mb-2">
-              <div className="min-w-[60px]">
-                {renderWithTransition(
-                  tokenPairDisplay,
-                  loadingState.isLoadingTokens && !loadingState.hasLoadedTokens
-                )}
-              </div>
-              <div className="font-normal ml-2">{staticData.lendingName || "Lending"}</div>
-            </div>
-            <div className="flex font-normal text-gray-700 text-sm">
-              <div className="font-medium text-gray-700 mr-2">LTV: </div>
-              <div className="min-w-[40px]">
-                {renderWithTransition(
-                  staticData.maxLeverage ? `${staticData.maxLeverage}` : null,
-                  loadingState.isLoadingLeverage && !loadingState.hasLoadedLeverage
-                )}
-              </div>
             </div>
           </div>
         </div>

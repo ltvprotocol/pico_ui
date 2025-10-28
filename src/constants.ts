@@ -33,6 +33,10 @@ export const SEPOLIA_CHAIN_ID = 11155111n;
 export const SEPOLIA_CHAIN_ID_HEX = '0xaa36a7'; // 11155111 in hex
 export const SEPOLIA_CHAIN_ID_STRING = "11155111";
 
+export const MAINNET_CHAIN_ID = 1n;
+export const MAINNET_CHAIN_ID_HEX = '0x1'; // 1 in hex
+export const MAINNET_CHAIN_ID_STRING = "1";
+
 export const SEPOLIA_NETWORK = {
   chainId: SEPOLIA_CHAIN_ID_HEX,
   chainName: 'Sepolia',
@@ -43,4 +47,37 @@ export const SEPOLIA_NETWORK = {
   },
   rpcUrls: ['https://ethereum-sepolia-rpc.publicnode.com'],
   blockExplorerUrls: ['https://sepolia.etherscan.io']
+};
+
+export const MAINNET_NETWORK = {
+  chainId: MAINNET_CHAIN_ID_HEX,
+  chainName: 'Ethereum',
+  nativeCurrency: {
+    name: 'Ether',
+    symbol: 'ETH',
+    decimals: 18
+  },
+  rpcUrls: ['https://ethereum-rpc.publicnode.com'],
+  blockExplorerUrls: ['https://etherscan.io']
+};
+
+export const NETWORK_CONFIGS = {
+  [SEPOLIA_CHAIN_ID_STRING]: {
+    ...SEPOLIA_NETWORK,
+    chainId: SEPOLIA_CHAIN_ID_HEX,
+    name: 'Sepolia',
+    urlParam: 'sepolia'
+  },
+  [MAINNET_CHAIN_ID_STRING]: {
+    ...MAINNET_NETWORK,
+    chainId: MAINNET_CHAIN_ID_HEX,
+    name: 'Ethereum',
+    urlParam: 'ethereum'
+  }
+};
+
+// Only these networks are supported. Any unrecognized network parameter will default to Sepolia.
+export const URL_PARAM_TO_CHAIN_ID = {
+  'sepolia': SEPOLIA_CHAIN_ID_STRING,
+  'ethereum': MAINNET_CHAIN_ID_STRING
 };

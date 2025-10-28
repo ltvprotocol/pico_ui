@@ -288,6 +288,11 @@ export default function VaultBlock({ address }: VaultBlockProps) {
     return formatUnits(dynamicData.tvl, vaultDecimals.borrowTokenDecimals);
   }, [dynamicData.tvl, vaultDecimals.borrowTokenDecimals]);
 
+  useEffect(() => {
+    setDynamicData({ tvl: null });
+    setLoadingState(prev => ({ ...prev, isLoadingAssets: true, hasLoadedAssets: false }));
+  }, [currentNetwork, address]);
+
   const tokenPairDisplay = useMemo(() => {
     if (staticData.collateralTokenSymbol && staticData.borrowTokenSymbol) {
       return `${staticData.collateralTokenSymbol}/${staticData.borrowTokenSymbol}`;

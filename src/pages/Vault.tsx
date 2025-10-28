@@ -1,5 +1,7 @@
 import { useLocation, useParams } from 'react-router-dom';
 import { VaultContextProvider, useVaultContext } from "@/contexts";
+import { useAppContext } from "@/contexts";
+import UnrecognizedNetwork from "@/components/vault/UnrecognizedNetwork";
 import MoreInfo from "@/components/vault/MoreInfo";
 import Actions from "@/components/vault/Actions";
 import VaultHeader from '@/components/vault/VaultHeader';
@@ -9,6 +11,11 @@ import VaultNotFound from '@/components/vault/VaultNotFound';
 
 function VaultContent() {
   const { vaultExists } = useVaultContext();
+  const { unrecognizedNetworkParam } = useAppContext();
+
+  if (unrecognizedNetworkParam) {
+    return <UnrecognizedNetwork />;
+  }
 
   if (vaultExists === false) {
     return <VaultNotFound />;

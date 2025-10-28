@@ -1,10 +1,15 @@
 import vaultsConfig from "../../vaults.config.json";
 import VaultBlock from "@/components/vault/VaultBlock";
 import { useAppContext } from "@/contexts";
+import UnrecognizedNetwork from "@/components/vault/UnrecognizedNetwork";
 
 export default function Home() {
-  const { currentNetwork } = useAppContext();
+  const { currentNetwork, unrecognizedNetworkParam } = useAppContext();
   
+  if (unrecognizedNetworkParam) {
+    return <UnrecognizedNetwork />;
+  }
+
   const chainId = currentNetwork || "11155111";
   const vaults = vaultsConfig[chainId as keyof typeof vaultsConfig]?.vaults || [];
 

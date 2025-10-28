@@ -23,6 +23,7 @@ interface AppContextType {
   isSepolia: boolean;
   isMainnet: boolean;
   currentNetwork: string | null;
+  unrecognizedNetworkParam: boolean;
   connectingWalletId: string | null;
   isAutoConnecting: boolean;
   error: string | null;
@@ -44,6 +45,7 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
   const [isSepolia, setIsSepolia] = useState(false);
   const [isMainnet, setIsMainnet] = useState(false);
   const [currentNetwork, setCurrentNetwork] = useState<string | null>(null);
+  const [unrecognizedNetworkParam, setUnrecognizedNetworkParam] = useState<boolean>(false);
 
   const [publicProvider, setPublicProvider] = useState<JsonRpcProvider | null>(null);
   const [provider, setProvider] = useState<BrowserProvider | null>(null);
@@ -59,22 +61,25 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     const networkParam = urlParams.get('network');
     
     if (!networkParam) {
+      setUnrecognizedNetworkParam(false);
       return null;
     }
     
     const recognizedNetwork = URL_PARAM_TO_CHAIN_ID[networkParam as keyof typeof URL_PARAM_TO_CHAIN_ID];
     
     if (!recognizedNetwork) {
-      console.warn(`Unrecognized network parameter: "${networkParam}". Defaulting to Sepolia.`);
-      return '11155111';
+      console.warn(`Unrecognized network parameter: "${networkParam}".`);
+      setUnrecognizedNetworkParam(true);
+      return null;
     }
     
+    setUnrecognizedNetworkParam(false);
     return recognizedNetwork;
   }, []);
 
   const getDefaultNetwork = useCallback(() => {
     const urlNetwork = getNetworkFromUrl();
-    return urlNetwork || '11155111'; // Default to Sepolia
+    return urlNetwork ?? '11155111';
   }, [getNetworkFromUrl]);
 
   useEffect(() => {
@@ -112,6 +117,9 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
       const newPublicProvider = new JsonRpcProvider(networkConfig.rpcUrls[0]);
       setPublicProvider(newPublicProvider);
       setCurrentNetwork(defaultNetwork);
+    } else {
+      setPublicProvider(null);
+      setCurrentNetwork(null);
     }
   }, [getDefaultNetwork]);
 
@@ -363,6 +371,7 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     isSepolia,
     isMainnet,
     currentNetwork,
+    unrecognizedNetworkParam,
     connectingWalletId,
     isAutoConnecting,
     error,

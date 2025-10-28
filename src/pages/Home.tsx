@@ -1,10 +1,17 @@
 import vaultsConfig from "../../vaults.config.json";
 import VaultBlock from "@/components/vault/VaultBlock";
+import { useAppContext } from "@/contexts";
+import UnrecognizedNetwork from "@/components/vault/UnrecognizedNetwork";
 
 export default function Home() {
-  const chainId = "11155111";
+  const { currentNetwork, unrecognizedNetworkParam } = useAppContext();
+  
+  if (unrecognizedNetworkParam) {
+    return <UnrecognizedNetwork />;
+  }
 
-  const vaults = vaultsConfig[chainId]?.vaults || [];
+  const chainId = currentNetwork || "11155111";
+  const vaults = vaultsConfig[chainId as keyof typeof vaultsConfig]?.vaults || [];
 
   return (
     <div className="w-full flex flex-col">

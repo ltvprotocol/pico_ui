@@ -47,17 +47,38 @@
   "1": {
     "vaults": [
       {
-        "address": "0xMainnetVaultAddress",
-        "collateralTokenAddress": "",
-        "borrowTokenAddress": "",
-        "collateralTokenSymbol": "",
-        "borrowTokenSymbol": "",
-        "leverage": "",
-        "targetLTV": "",
-        "maxSafeLTV": "",
-        "minSafeLTV": "",
-        "lendingName": "",
-        "lendingAddress": ""
+        "address": "0xwstETH_WETH_x12_AAVEV3",
+        "collateralTokenAddress": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+        "borrowTokenAddress": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "lendingAddress": "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
+        "sharesSymbol": "wstETH_WETH_x12_AAVEV3",
+        "collateralTokenSymbol": "wstETH",
+        "borrowTokenSymbol": "WETH",
+        "leverage": "12",
+        "targetLTV": "0.9167",
+        "maxSafeLTV": "0.9286",
+        "minProfitLTV": "0.9000",
+        "lendingName": "AaveV3",
+        "dexLink": "https://app.uniswap.org/swap?inputCurrency=0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0&outputCurrency=0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2&chain=ethereum",
+        "dexLinkName": "Uniswap V3 wstETH/WETH pool",
+        "description": "Use your wstETH tokens as collateral to borrow WETH. Get 12x leverage through Aave V3. Good to maximize your wstETH holdings or get yield on your WETH."
+      },
+      {
+        "address": "0xSUSDE_USDT_X10_AAVEV3",
+        "collateralTokenAddress": "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+        "borrowTokenAddress": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "lendingAddress": "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
+        "sharesSymbol": "SUSDE_USDT_X10_AAVEV3",
+        "collateralTokenSymbol": "SUSDE",
+        "borrowTokenSymbol": "USDT",
+        "leverage": "10",
+        "targetLTV": "0.8920",
+        "maxSafeLTV": "0.9000",
+        "minProfitLTV": "0.8840",
+        "lendingName": "AaveV3",
+        "dexLink": "https://app.uniswap.org/swap?inputCurrency=0x9D39A5DE30e57443BfF2A8307A4256c8797A3497&outputCurrency=0xdAC17F958D2ee523a2206206994597C13D831ec7&chain=ethereum",
+        "dexLinkName": "Uniswap V3 SUSDE/USDT pool",
+        "description": "Use your SUSDE tokens as collateral to borrow USDT with 10x leverage. Uses Aave V3. Combines stablecoin assets with leverage."
       }
     ]
   },

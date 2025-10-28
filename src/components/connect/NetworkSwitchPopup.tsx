@@ -1,6 +1,5 @@
 import { useCallback } from 'react';
 import { useAppContext } from '@/contexts';
-import { SEPOLIA_CHAIN_ID_HEX, SEPOLIA_NETWORK } from '@/constants';
 
 interface NetworkSwitchPopupProps {
   isOpen: boolean;
@@ -8,31 +7,17 @@ interface NetworkSwitchPopupProps {
 }
 
 export default function NetworkSwitchPopup({ isOpen, onClose }: NetworkSwitchPopupProps) {
-  const { connectingWalletId, provider } = useAppContext();
+  const { connectingWalletId, switchToSepolia, switchToMainnet } = useAppContext();
 
-  const switchToSepolia = useCallback(async () => {
-    if (!provider) return;
+  const handleSwitchToSepolia = useCallback(async () => {
+    await switchToSepolia();
+    onClose();
+  }, [switchToSepolia, onClose]);
 
-    try {
-      await provider.send('wallet_switchEthereumChain', [
-        { chainId: SEPOLIA_CHAIN_ID_HEX },
-      ]);
-      await new Promise(resolve => setTimeout(resolve, 500));
-      onClose();
-    } catch (err: any) {
-      if (err.code === 4902 || err.error?.code === 4902) {
-        try {
-          await provider.send('wallet_addEthereumChain', [SEPOLIA_NETWORK]);
-          await new Promise(resolve => setTimeout(resolve, 500));
-          onClose();
-        } catch (addError) {
-          console.error('Error adding Sepolia network:', addError);
-        }
-      } else {
-        console.error('Error switching to Sepolia:', err);
-      }
-    }
-  }, [provider, onClose]);
+  const handleSwitchToMainnet = useCallback(async () => {
+    await switchToMainnet();
+    onClose();
+  }, [switchToMainnet, onClose]);
 
   if (!isOpen) return null;
 
@@ -53,36 +38,64 @@ export default function NetworkSwitchPopup({ isOpen, onClose }: NetworkSwitchPop
             </div>
             <div className="flex-1">
               <p className="text-xs text-gray-500 leading-relaxed">
-                You're connected to the wrong network. Please switch to Sepolia testnet to continue using the application.
+                You're connected to the wrong network. Please switch to Sepolia testnet or Ethereum mainnet to continue using the application.
               </p>
             </div>
           </div>
           
-          <button
-            onClick={switchToSepolia}
-            disabled={!!connectingWalletId}
-            className="
-              w-full flex justify-center items-center space-x-2 py-2 px-4
-              bg-indigo-600
-              text-white font-medium rounded-lg
-              transition-all duration-200 ease-in-out
-              disabled:opacity-50 disabled:cursor-not-allowed
-            "
-          >
-            {connectingWalletId ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>Switching...</span>
-              </>
-            ) : (
-              <>
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                <span>Switch to Sepolia</span>
-              </>
-            )}
-          </button>
+          <div className="space-y-2">
+            <button
+              onClick={handleSwitchToSepolia}
+              disabled={!!connectingWalletId}
+              className="
+                w-full flex justify-center items-center space-x-2 py-2 px-4
+                bg-indigo-600
+                text-white font-medium rounded-lg
+                transition-all duration-200 ease-in-out
+                disabled:opacity-50 disabled:cursor-not-allowed
+              "
+            >
+              {connectingWalletId ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Switching...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <span>Switch to Sepolia</span>
+                </>
+              )}
+            </button>
+            
+            <button
+              onClick={handleSwitchToMainnet}
+              disabled={!!connectingWalletId}
+              className="
+                w-full flex justify-center items-center space-x-2 py-2 px-4
+                bg-green-600
+                text-white font-medium rounded-lg
+                transition-all duration-200 ease-in-out
+                disabled:opacity-50 disabled:cursor-not-allowed
+              "
+            >
+              {connectingWalletId ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Switching...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  <span>Switch to Ethereum</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>

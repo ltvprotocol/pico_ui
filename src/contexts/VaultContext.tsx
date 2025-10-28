@@ -2,7 +2,7 @@ import { createContext, ReactNode, useContext, useEffect, useState, useCallback 
 import { formatUnits, formatEther, parseUnits, ZeroAddress, parseEther } from 'ethers'
 import { useAppContext } from '@/contexts/AppContext';
 import { Vault, WETH, ERC20, Vault__factory, WETH__factory, ERC20__factory } from '@/typechain-types';
-import { ltvToLeverage, getLendingProtocolAddress } from '@/utils';
+import { ltvToLeverage, getLendingProtocolAddress, isVaultExists } from '@/utils';
 import vaultsConfig from '../../vaults.config.json';
 import { isWETHAddress, GAS_RESERVE_WEI, SEPOLIA_CHAIN_ID_STRING, MORPHO_MARKET_ID, CONNECTOR_ADDRESSES} from '@/constants';
 import { useAdaptiveInterval } from '@/hooks';
@@ -47,6 +47,9 @@ interface VaultContextType {
   collateralTokenDecimals: bigint;
   vaultConfig: VaultConfig | undefined;
   description: string | null;
+  // Vault existence
+  vaultExists: boolean | null;
+  isCheckingVaultExistence: boolean;
   // Balances
   ethBalance: string;
   sharesBalance: string;
@@ -104,6 +107,10 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   const [collateralTokenSymbol, setCollateralTokenSymbol] = useState<string | null>(null);
   const [description, setDescription] = useState<string | null>(null);
 
+  // Vault existence state
+  const [vaultExists, setVaultExists] = useState<boolean | null>(null);
+  const [isCheckingVaultExistence, setIsCheckingVaultExistence] = useState<boolean>(true);
+
   const [vault, setVault] = useState<Vault | null>(null);
   const [borrowToken, setBorrowToken] = useState<ERC20 | WETH | null>(null);
   const [collateralToken, setCollateralToken] = useState<ERC20 | WETH | null>(null);
@@ -145,12 +152,30 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
 
   const [currentLtv, setCurrentLtv] = useState<string | null>(null);
 
-  const { publicProvider, signer, isConnected, address } = useAppContext();
+  const { publicProvider, signer, isConnected, address, currentNetwork } = useAppContext();
+
+  const checkVaultExistence = useCallback(async () => {
+    if (!vaultAddress || !publicProvider) {
+      setIsCheckingVaultExistence(false);
+      return;
+    }
+
+    try {
+      setIsCheckingVaultExistence(true);
+      const exists = await isVaultExists(vaultAddress, publicProvider);
+      setVaultExists(exists);
+    } catch (err) {
+      console.error('Error checking vault existence:', err);
+      setVaultExists(false);
+    } finally {
+      setIsCheckingVaultExistence(false);
+    }
+  }, [vaultAddress, publicProvider]);
 
   const loadConfigAndParams = useCallback(() => {
-    const chainId = SEPOLIA_CHAIN_ID_STRING; // Forcing Sepolia for now. In future - get from AppContext
-    const vaults = vaultsConfig[chainId]?.vaults || [];
-    const config = vaults.find(v => v.address.toLowerCase() === vaultAddress.toLowerCase());
+    const chainId = currentNetwork || SEPOLIA_CHAIN_ID_STRING; // Use current network or default to Sepolia
+    const vaults = (vaultsConfig as any)[chainId]?.vaults || [];
+    const config = vaults.find((v: any) => v.address.toLowerCase() === vaultAddress.toLowerCase());
     setVaultConfig(config);
 
     setCollateralTokenAddress(config?.collateralTokenAddress || ZeroAddress);
@@ -166,7 +191,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
     setPointsRate(params.pointsRate);
     setApyLoadFailed(params.apy === null);
     setPointsRateLoadFailed(params.pointsRate === null);
-  }, [vaultAddress, params]);
+  }, [vaultAddress, params, currentNetwork]);
 
   const initializeContracts = useCallback(async () => {
     if (!publicProvider) return;
@@ -468,6 +493,11 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
     }
   }, [vaultLens, borrowTokenDecimals, lendingAddress, loadLtv]);
 
+  // Check vault existence
+  useEffect(() => {
+    checkVaultExistence();
+  }, [checkVaultExistence]);
+
   // Load all possbile from config and params
   useEffect(() => {
     loadConfigAndParams();
@@ -545,6 +575,8 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         collateralTokenDecimals,
         vaultConfig,
         description,
+        vaultExists,
+        isCheckingVaultExistence,
         ethBalance,
         sharesBalance,
         borrowTokenBalance,

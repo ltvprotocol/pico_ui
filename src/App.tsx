@@ -6,9 +6,9 @@ import Home from './pages/Home';
 import Vault from './pages/Vault';
 
 function App() {
-  const { isConnected, isSepolia } = useAppContext();
+  const { isConnected, isSepolia, isMainnet } = useAppContext();
 
-  const showContent = isConnected && isSepolia;
+  const showContent = isConnected && (isSepolia || isMainnet);
 
   return (
     <Routes>

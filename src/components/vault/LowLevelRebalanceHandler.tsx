@@ -194,7 +194,7 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!vault || !address || !amount) return;
+    if (!vault || !vaultLens || !address || !amount) return;
 
     setLoading(true);
     setError(null);
@@ -209,9 +209,29 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
       if (rebalanceType === 'shares') {
         tx = await vault.executeLowLevelRebalanceShares(amount);
       } else if (rebalanceType === 'borrow') {
-        tx = await vault.executeLowLevelRebalanceBorrow(amount);
+        const preview = await vaultLens.previewLowLevelRebalanceBorrow(amount);
+        const deltaShares = preview?.[1] as bigint | undefined;
+
+        if (!deltaShares) {
+          console.error("Failed to preview shares delta");
+          setError("Failed to preview shares delta");
+          return;
+        }
+
+        const isSharesPositiveHint = deltaShares >= 0n;
+        tx = await vault.executeLowLevelRebalanceBorrowHint(amount, isSharesPositiveHint);
       } else {
-        tx = await vault.executeLowLevelRebalanceCollateral(amount);
+        const preview = await vaultLens.previewLowLevelRebalanceCollateral(amount);
+        const deltaShares = preview?.[1] as bigint | undefined;
+        
+        if (!deltaShares) {
+          console.error("Failed to preview shares delta");
+          setError("Failed to preview shares delta");
+          return;
+        }
+
+        const isSharesPositiveHint = deltaShares >= 0n;
+        tx = await vault.executeLowLevelRebalanceCollateralHint(amount, isSharesPositiveHint);
       }
 
       await tx.wait();

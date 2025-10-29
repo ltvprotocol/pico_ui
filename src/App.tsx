@@ -6,19 +6,20 @@ import Home from './pages/Home';
 import Vault from './pages/Vault';
 
 function App() {
-  const { isConnected, isSepolia, isMainnet } = useAppContext();
+  const { isConnected, isSepolia, isMainnet, isAutoConnecting } = useAppContext();
 
   const showContent = isConnected && (isSepolia || isMainnet);
+  const showWelcome = !isConnected && !isAutoConnecting;
 
   return (
     <Routes>
       <Route path="/" element={
-        <HomeLayout showContent={showContent}>
+        <HomeLayout showContent={showContent} showWelcome={showWelcome}>
           <Home />
         </HomeLayout>
       } />
       <Route path="/:vaultAddress" element={
-        <VaultLayout showContent={showContent}>
+        <VaultLayout showContent={showContent} showWelcome={showWelcome}>
           <Vault />
         </VaultLayout>
       } />

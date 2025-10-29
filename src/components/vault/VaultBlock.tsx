@@ -2,10 +2,10 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { formatUnits } from "ethers";
 import { useAppContext } from "@/contexts";
-import { ltvToLeverage } from "@/utils";
+import { ltvToLeverage, fetchApy, fetchPointsRate } from "@/utils";
 import { useAdaptiveInterval } from "@/hooks";
 import { Vault__factory, ERC20__factory } from "@/typechain-types";
-import { CopyAddress, NumberDisplay } from "@/components/ui";
+import { NumberDisplay } from "@/components/ui";
 import { renderWithTransition } from "@/helpers/renderWithTransition";
 import vaultsConfig from "../../../vaults.config.json";
 
@@ -21,8 +21,7 @@ interface StaticVaultData {
 }
 
 interface DynamicVaultData {
-  borrowAssets: bigint | null;
-  collateralAssets: bigint | null;
+  tvl: bigint | null;
 }
 
 interface VaultDecimals {
@@ -32,7 +31,6 @@ interface VaultDecimals {
 }
 
 interface LoadingState {
-  isInitialLoad: boolean;
   isLoadingTokens: boolean;
   isLoadingAssets: boolean;
   isLoadingLeverage: boolean;
@@ -52,9 +50,16 @@ export default function VaultBlock({ address }: VaultBlockProps) {
   });
 
   const [dynamicData, setDynamicData] = useState<DynamicVaultData>({
-    borrowAssets: null,
-    collateralAssets: null,
+    tvl: null,
   });
+
+  const [apyData, setApyData] = useState<{ apy: number | null; pointsRate: number | null }>({
+    apy: null,
+    pointsRate: null,
+  });
+  const [isLoadingApy, setIsLoadingApy] = useState<boolean>(false);
+  const [apyLoadFailed, setApyLoadFailed] = useState<boolean>(false);
+  const [pointsRateLoadFailed, setPointsRateLoadFailed] = useState<boolean>(false);
 
   const [vaultDecimals, setVaultDecimals] = useState<VaultDecimals>({
     sharesDecimals: 18n,
@@ -63,7 +68,6 @@ export default function VaultBlock({ address }: VaultBlockProps) {
   });
 
   const [loadingState, setLoadingState] = useState<LoadingState>({
-    isInitialLoad: true,
     isLoadingTokens: true,
     isLoadingAssets: true,
     isLoadingLeverage: true,
@@ -74,13 +78,46 @@ export default function VaultBlock({ address }: VaultBlockProps) {
     hasLoadedDecimals: false,
   });
 
-  const { publicProvider } = useAppContext();
+  const { publicProvider, currentNetwork } = useAppContext();
+
+  const loadApyAndPointsRate = useCallback(async () => {
+    try {
+      setIsLoadingApy(true);
+      setApyLoadFailed(false);
+      setPointsRateLoadFailed(false);
+      
+      const [apyResult, pointsRateResult] = await Promise.all([
+        fetchApy(address),
+        fetchPointsRate(address)
+      ]);
+      
+      setApyData({
+        apy: apyResult,
+        pointsRate: pointsRateResult,
+      });
+      
+      if (apyResult === null) {
+        setApyLoadFailed(true);
+      }
+      if (pointsRateResult === null) {
+        setPointsRateLoadFailed(true);
+      }
+    } catch (err) {
+      console.error('Error loading APY and points rate:', err);
+      setApyLoadFailed(true);
+      setPointsRateLoadFailed(true);
+    } finally {
+      setIsLoadingApy(false);
+    }
+  }, [address]);
+
+  const memoizedApyData = useMemo(() => apyData, [apyData.apy, apyData.pointsRate]);
 
   const vaultConfig = useMemo(() => {
-    const chainId = "11155111";
-    const vaults = vaultsConfig[chainId]?.vaults || [];
-    return vaults.find(v => v.address.toLowerCase() === address.toLowerCase());
-  }, [address]);
+    const chainId = currentNetwork || "11155111"; // Default to Sepolia if no network
+    const vaults = (vaultsConfig as any)[chainId]?.vaults || [];
+    return vaults.find((v: any) => v.address.toLowerCase() === address.toLowerCase());
+  }, [address, currentNetwork]);
 
   const vaultContract = useMemo(() => {
     if (!publicProvider) return null;
@@ -218,78 +255,43 @@ export default function VaultBlock({ address }: VaultBlockProps) {
     }
   }, [vaultContract, loadDecimals]);
 
-  const loadBorrowAssets = useCallback(async () => {
+  const loadTvl = useCallback(async () => {
     if (!vaultContract) return;
 
     try {
-      const borrowAssets = await vaultContract["totalAssets()"]();
-      setDynamicData(prev => ({ ...prev, borrowAssets }));
-      setLoadingState(prev => ({ ...prev, hasLoadedAssets: true }));
+      const tvl = await vaultContract["totalAssets()"]();
+      setDynamicData({ tvl });
+      setLoadingState(prev => ({ ...prev, hasLoadedAssets: true, isLoadingAssets: false }));
     } catch (err) {
-      console.error('Error loading borrow assets:', err);
+      console.error('Error loading TVL:', err);
+      setLoadingState(prev => ({ ...prev, isLoadingAssets: false }));
     }
   }, [vaultContract]);
 
-  const loadCollateralAssets = useCallback(async () => {
-    if (!vaultContract) return;
-
-    try {
-      const collateralAssets = await vaultContract["totalAssetsCollateral()"]();
-      setDynamicData(prev => ({ ...prev, collateralAssets }));
-      setLoadingState(prev => ({ ...prev, hasLoadedAssets: true }));
-    } catch (err) {
-      console.error('Error loading collateral assets:', err);
-    }
-  }, [vaultContract]);
-
-  const fetchDynamicData = useCallback(async () => {
-    if (!vaultContract) return;
-
-    try {
-      setLoadingState(prev => ({
-        ...prev,
-        isInitialLoad: false,
-        isLoadingAssets: !prev.hasLoadedAssets,
-      }));
-
-      await Promise.all([
-        loadBorrowAssets(),
-        loadCollateralAssets(),
-      ]);
-
-      setLoadingState(prev => ({ ...prev, isLoadingAssets: false }));
-    } catch (err) {
-      console.error('Error fetching dynamic vault data:', err);
-      setLoadingState(prev => ({ ...prev, isLoadingAssets: false }));
-    }
-  }, [vaultContract, loadBorrowAssets, loadCollateralAssets]);
-
   useEffect(() => {
     if (vaultContract) {
-      loadBorrowAssets();
+      loadTvl();
     }
-  }, [vaultContract, loadBorrowAssets]);
+  }, [vaultContract, loadTvl]);
 
-  useEffect(() => {
-    if (vaultContract) {
-      loadCollateralAssets();
-    }
-  }, [vaultContract, loadCollateralAssets]);
-
-  useAdaptiveInterval(fetchDynamicData, {
+  useAdaptiveInterval(loadTvl, {
     initialDelay: 12000,
     enabled: !!vaultContract
   });
 
-  const formattedCollateralAmount = useMemo(() => {
-    if (!dynamicData.collateralAssets) return null;
-    return formatUnits(dynamicData.collateralAssets, vaultDecimals.collateralTokenDecimals);
-  }, [dynamicData.collateralAssets, vaultDecimals.collateralTokenDecimals]);
+  useEffect(() => {
+    loadApyAndPointsRate();
+  }, [loadApyAndPointsRate]);
 
-  const formattedBorrowAmount = useMemo(() => {
-    if (!dynamicData.borrowAssets) return null;
-    return formatUnits(dynamicData.borrowAssets, vaultDecimals.borrowTokenDecimals);
-  }, [dynamicData.borrowAssets, vaultDecimals.borrowTokenDecimals]);
+  const formattedTvl = useMemo(() => {
+    if (!dynamicData.tvl) return null;
+    return formatUnits(dynamicData.tvl, vaultDecimals.borrowTokenDecimals);
+  }, [dynamicData.tvl, vaultDecimals.borrowTokenDecimals]);
+
+  useEffect(() => {
+    setDynamicData({ tvl: null });
+    setLoadingState(prev => ({ ...prev, isLoadingAssets: true, hasLoadedAssets: false }));
+  }, [currentNetwork, address]);
 
   const tokenPairDisplay = useMemo(() => {
     if (staticData.collateralTokenSymbol && staticData.borrowTokenSymbol) {
@@ -299,19 +301,19 @@ export default function VaultBlock({ address }: VaultBlockProps) {
   }, [staticData.collateralTokenSymbol, staticData.borrowTokenSymbol]);
 
   return (
-    <>
-      <CopyAddress className="mb-2" address={address} />
       <Link
         to={`/${address}`}
         state={{
           collateralTokenSymbol: staticData.collateralTokenSymbol,
           borrowTokenSymbol: staticData.borrowTokenSymbol,
           maxLeverage: staticData.maxLeverage,
-          lendingName: staticData.lendingName
+          lendingName: staticData.lendingName,
+          apy: memoizedApyData.apy,
+          pointsRate: memoizedApyData.pointsRate
         }}
-        className="wrapper block w-full bg-gray-50 transition-colors border border-gray-50 rounded-lg mb-12 last:mb-0 p-3">
+        className="wrapper block w-full bg-gray-50 transition-colors border border-gray-50 rounded-lg mb-4 last:mb-0 p-3">
         <div className="w-full">
-          <div className="w-full flex flex-row justify-between mb-2 hidden sm:flex">
+          <div className="w-full flex flex-row justify-between mb-2">
             <div className="flex items-center text-base font-medium text-gray-900">
               <div className="mr-2 min-w-[60px]">
                 {renderWithTransition(
@@ -328,52 +330,15 @@ export default function VaultBlock({ address }: VaultBlockProps) {
               <div className="font-normal">{staticData.lendingName || "Lending"}</div>
             </div>
           </div>
-          <div className="w-full mb-2 sm:hidden">
-            <div className="flex text-base font-medium text-gray-900 mb-2">
-              <div className="min-w-[60px]">
-                {renderWithTransition(
-                  tokenPairDisplay,
-                  loadingState.isLoadingTokens && !loadingState.hasLoadedTokens
-                )}
-              </div>
-              <div className="font-normal ml-2">{staticData.lendingName || "Lending"}</div>
-            </div>
-            <div className="flex font-normal text-gray-700 text-sm">
-              <div className="font-medium text-gray-700 mr-2">LTV: </div>
-              <div className="min-w-[40px]">
-                {renderWithTransition(
-                  staticData.maxLeverage ? `${staticData.maxLeverage}` : null,
-                  loadingState.isLoadingLeverage && !loadingState.hasLoadedLeverage
-                )}
-              </div>
-            </div>
-          </div>
         </div>
-        <div className="w-full flex justify-between text-sm">
-          <div className="font-medium text-gray-700">TVL In Collateral Assets: </div>
+        <div className="flex justify-between text-sm">
+          <div className="font-medium text-gray-700">TVL: </div>
           <div className="font-normal text-gray-700 min-w-[100px] text-right">
             {renderWithTransition(
-              formattedCollateralAmount && staticData.collateralTokenSymbol ? (
+              formattedTvl && staticData.borrowTokenSymbol ? (
                 <div className="flex justify-end">
                   <div className="font-normal text-gray-700 mr-2">
-                    <NumberDisplay value={formattedCollateralAmount} />
-                  </div>
-                  <div className="font-medium text-gray-700">{staticData.collateralTokenSymbol}</div>
-                </div>
-              ) : null,
-              (loadingState.isLoadingAssets && !loadingState.hasLoadedAssets) ||
-              (loadingState.isLoadingTokens && !loadingState.hasLoadedTokens)
-            )}
-          </div>
-        </div>
-        <div className="w-full flex justify-between text-sm">
-          <div className="font-medium text-gray-700">TVL In Borrow Assets: </div>
-          <div className="font-normal text-gray-700 min-w-[100px] text-right">
-            {renderWithTransition(
-              formattedBorrowAmount && staticData.borrowTokenSymbol ? (
-                <div className="flex justify-end">
-                  <div className="font-normal text-gray-700 mr-2">
-                    <NumberDisplay value={formattedBorrowAmount} />
+                    <NumberDisplay value={formattedTvl} />
                   </div>
                   <div className="font-medium text-gray-700">{staticData.borrowTokenSymbol}</div>
                 </div>
@@ -383,7 +348,26 @@ export default function VaultBlock({ address }: VaultBlockProps) {
             )}
           </div>
         </div>
+        <div className="flex justify-between text-sm">
+          <div className="font-medium text-gray-700">APY: </div>
+          <div className="font-normal text-gray-700 min-w-[60px] text-right">
+            {renderWithTransition(
+              memoizedApyData.apy !== null ? `${memoizedApyData.apy.toFixed(2)}%` : 
+              apyLoadFailed ? <span className="text-red-500 italic text-xs">Failed to load</span> : null,
+              isLoadingApy && !apyLoadFailed
+            )}
+          </div>
+        </div>
+        <div className="flex justify-between text-sm">
+          <div className="font-medium text-gray-700">Points: </div>
+          <div className="font-normal text-gray-700 min-w-[60px] text-right">
+            {renderWithTransition(
+              memoizedApyData.pointsRate !== null ? `${memoizedApyData.pointsRate}/day` : 
+              pointsRateLoadFailed ? <span className="text-red-500 italic text-xs">Failed to load</span> : null,
+              isLoadingApy && !pointsRateLoadFailed
+            )}
+          </div>
+        </div>
       </Link>
-    </>
   );
 }

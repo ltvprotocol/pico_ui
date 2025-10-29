@@ -1,21 +1,29 @@
 import { Routes, Route } from "react-router-dom";
 import { useAppContext } from '@/contexts';
-import Layout from '@/components/Layout';
+import HomeLayout from '@/components/HomeLayout';
+import VaultLayout from '@/components/VaultLayout';
 import Home from './pages/Home';
 import Vault from './pages/Vault';
 
 function App() {
-  const { isConnected, isSepolia } = useAppContext();
+  const { isConnected, isSepolia, isMainnet, isAutoConnecting } = useAppContext();
 
-  const showContent = isConnected && isSepolia;
+  const showContent = isConnected && (isSepolia || isMainnet);
+  const showWelcome = !isConnected && !isAutoConnecting;
 
   return (
-    <Layout showContent={showContent}>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/:vaultAddress" element={<Vault />} />
-      </Routes>
-    </Layout>
+    <Routes>
+      <Route path="/" element={
+        <HomeLayout showContent={showContent} showWelcome={showWelcome}>
+          <Home />
+        </HomeLayout>
+      } />
+      <Route path="/:vaultAddress" element={
+        <VaultLayout showContent={showContent} showWelcome={showWelcome}>
+          <Vault />
+        </VaultLayout>
+      } />
+    </Routes>
   );
 }
 

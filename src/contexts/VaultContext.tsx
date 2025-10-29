@@ -1,11 +1,12 @@
 import { createContext, ReactNode, useContext, useEffect, useState, useCallback } from 'react'
 import { formatUnits, formatEther, parseUnits, ZeroAddress, parseEther } from 'ethers'
 import { useAppContext } from '@/contexts/AppContext';
-import { Vault, WETH, ERC20, Vault__factory, WETH__factory, ERC20__factory, LendingConnector__factory } from '@/typechain-types';
-import { ltvToLeverage } from '@/utils';
+import { Vault, WETH, ERC20, Vault__factory, WETH__factory, ERC20__factory } from '@/typechain-types';
+import { ltvToLeverage, getLendingProtocolAddress, isVaultExists } from '@/utils';
 import vaultsConfig from '../../vaults.config.json';
-import { isWETHAddress, GAS_RESERVE_WEI, SEPOLIA_CHAIN_ID_STRING } from '@/constants';
+import { isWETHAddress, GAS_RESERVE_WEI, SEPOLIA_CHAIN_ID_STRING, MORPHO_MARKET_ID, CONNECTOR_ADDRESSES} from '@/constants';
 import { useAdaptiveInterval } from '@/hooks';
+import { loadGhostLtv, loadAaveLtv, loadMorphoLtv } from '@/utils';
 
 interface VaultConfig {
   address: string;
@@ -20,6 +21,9 @@ interface VaultConfig {
   minProfitLTV?: string;
   lendingName?: string;
   lendingAddress?: string;
+  dexLink?: string;
+  dexLinkName?: string;
+  description?: string;
 };
 
 interface VaultContextType {
@@ -42,6 +46,10 @@ interface VaultContextType {
   borrowTokenDecimals: bigint;
   collateralTokenDecimals: bigint;
   vaultConfig: VaultConfig | undefined;
+  description: string | null;
+  // Vault existence
+  vaultExists: boolean | null;
+  isCheckingVaultExistence: boolean;
   // Balances
   ethBalance: string;
   sharesBalance: string;
@@ -66,14 +74,28 @@ interface VaultContextType {
   maxRedeemCollateral: string;
   maxMintCollateral: string;
   maxWithdrawCollateral: string;
+  apy: number | null;
+  pointsRate: number | null;
+  apyLoadFailed: boolean;
+  pointsRateLoadFailed: boolean;
+  currentLtv: string | null;
   // Refresh functions
   refreshBalances: () => Promise<void>;
   refreshVaultLimits: () => Promise<void>;
 };
 
+interface Params {
+  collateralTokenSymbol: string | null,
+  borrowTokenSymbol: string | null,
+  maxLeverage: string | null,
+  lendingName: string | null,
+  apy: number | null,
+  pointsRate: number | null
+}
+
 const VaultContext = createContext<VaultContextType | undefined>(undefined);
 
-export const VaultContextProvider = ({ children, vaultAddress, params }: { children: ReactNode, vaultAddress: string, params: { collateralTokenSymbol: string | null, borrowTokenSymbol: string | null, maxLeverage: string | null, lendingName: string | null } }) => {
+export const VaultContextProvider = ({ children, vaultAddress, params }: { children: ReactNode, vaultAddress: string, params: Params }) => {
   const [vaultConfig, setVaultConfig] = useState<VaultConfig | undefined>(undefined);
   const [collateralTokenAddress, setCollateralTokenAddress] = useState<string>(ZeroAddress);
   const [borrowTokenAddress, setBorrowTokenAddress] = useState<string>(ZeroAddress);
@@ -83,6 +105,11 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   const [maxLeverage, setMaxLeverage] = useState<string | null>(null);
   const [borrowTokenSymbol, setBorrowTokenSymbol] = useState<string | null>(null);
   const [collateralTokenSymbol, setCollateralTokenSymbol] = useState<string | null>(null);
+  const [description, setDescription] = useState<string | null>(null);
+
+  // Vault existence state
+  const [vaultExists, setVaultExists] = useState<boolean | null>(null);
+  const [isCheckingVaultExistence, setIsCheckingVaultExistence] = useState<boolean>(true);
 
   const [vault, setVault] = useState<Vault | null>(null);
   const [borrowToken, setBorrowToken] = useState<ERC20 | WETH | null>(null);
@@ -118,12 +145,37 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   const [maxMintCollateral, setMaxMintCollateral] = useState<string>('0');
   const [maxWithdrawCollateral, setMaxWithdrawCollateral] = useState<string>('0');
 
-  const { publicProvider, signer, isConnected, address } = useAppContext();
+  const [apy, setApy] = useState<number | null>(null);
+  const [pointsRate, setPointsRate] = useState<number | null>(null);
+  const [apyLoadFailed, setApyLoadFailed] = useState<boolean>(false);
+  const [pointsRateLoadFailed, setPointsRateLoadFailed] = useState<boolean>(false);
+
+  const [currentLtv, setCurrentLtv] = useState<string | null>(null);
+
+  const { publicProvider, signer, isConnected, address, currentNetwork } = useAppContext();
+
+  const checkVaultExistence = useCallback(async () => {
+    if (!vaultAddress || !publicProvider) {
+      setIsCheckingVaultExistence(false);
+      return;
+    }
+
+    try {
+      setIsCheckingVaultExistence(true);
+      const exists = await isVaultExists(vaultAddress, publicProvider);
+      setVaultExists(exists);
+    } catch (err) {
+      console.error('Error checking vault existence:', err);
+      setVaultExists(false);
+    } finally {
+      setIsCheckingVaultExistence(false);
+    }
+  }, [vaultAddress, publicProvider]);
 
   const loadConfigAndParams = useCallback(() => {
-    const chainId = SEPOLIA_CHAIN_ID_STRING; // Forcing Sepolia for now. In future - get from AppContext
-    const vaults = vaultsConfig[chainId]?.vaults || [];
-    const config = vaults.find(v => v.address.toLowerCase() === vaultAddress.toLowerCase());
+    const chainId = currentNetwork || SEPOLIA_CHAIN_ID_STRING; // Use current network or default to Sepolia
+    const vaults = (vaultsConfig as any)[chainId]?.vaults || [];
+    const config = vaults.find((v: any) => v.address.toLowerCase() === vaultAddress.toLowerCase());
     setVaultConfig(config);
 
     setCollateralTokenAddress(config?.collateralTokenAddress || ZeroAddress);
@@ -134,7 +186,12 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
     setMaxLeverage(params.maxLeverage ?? config?.leverage ?? null);
     setBorrowTokenSymbol(params.borrowTokenSymbol ?? config?.borrowTokenSymbol ?? null);
     setCollateralTokenSymbol(params.collateralTokenSymbol ?? config?.collateralTokenSymbol ?? null);
-  }, [vaultAddress, params]);
+    setDescription(config?.description ?? null);
+    setApy(params.apy);
+    setPointsRate(params.pointsRate);
+    setApyLoadFailed(params.apy === null);
+    setPointsRateLoadFailed(params.pointsRate === null);
+  }, [vaultAddress, params, currentNetwork]);
 
   const initializeContracts = useCallback(async () => {
     if (!publicProvider) return;
@@ -183,9 +240,10 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
 
       if (!vaultConfig?.lendingAddress) {
         const lendingConnector = await vaultLensInstance.lendingConnector();
-        const lending = LendingConnector__factory.connect(lendingConnector, publicProvider);
-        const lendingProtocol = await lending.POOL();
-        setLendingAddress(lendingProtocol);
+        const lendingProtocol = await getLendingProtocolAddress(lendingConnector, publicProvider);
+        if (lendingProtocol) {
+          setLendingAddress(lendingProtocol);
+        }
       }
 
       if (!params.collateralTokenSymbol && !vaultConfig?.collateralTokenSymbol) {
@@ -359,22 +417,8 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
       const maxAvailableMintCollateral = formatUnits(maxAvailableMintCollateralWei, dShares);
 
       // ---- WITHDRAW (borrow/collateral) ----
-      const rawPreviewedRedeemBorrow = await vaultLens.previewRedeem(sharesBalanceWei);
-      const maxAvailableWithdrawTokensWei = minBN(
-        rawPreviewedRedeemBorrow,
-        vaultMaxWithdrawWei
-      );
-      const maxAvailableWithdrawTokens = formatUnits(maxAvailableWithdrawTokensWei, dBorrow);
-
-      const rawPreviewedRedeemCollateral = await vaultLens.previewRedeemCollateral(sharesBalanceWei);
-      const maxAvailableWithdrawCollateralTokensWei = minBN(
-        rawPreviewedRedeemCollateral,
-        vaultMaxWithdrawCollateralWei
-      );
-      const maxAvailableWithdrawCollateralTokens = formatUnits(
-        maxAvailableWithdrawCollateralTokensWei,
-        dColl
-      );
+      const maxAvailableWithdrawTokens = formatUnits(vaultMaxWithdrawWei, dBorrow);
+      const maxAvailableWithdrawCollateralTokens = formatUnits(vaultMaxWithdrawCollateralWei, dColl);
 
       setMaxDeposit(maxAvailableDeposit);
       setMaxRedeem(maxAvailableRedeem);
@@ -397,6 +441,62 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
     vaultMaxDepositCollateral, vaultMaxRedeemCollateral,
     vaultMaxMintCollateral, vaultMaxWithdrawCollateral
   ]);
+
+  const loadLtv = useCallback(async () => {
+    if (!publicProvider || !vaultLens || !vaultAddress || !lendingAddress) return;
+
+    try {
+      const lendingConnectorAddress = await vaultLens.lendingConnector();
+
+      if (lendingConnectorAddress.toLowerCase() === CONNECTOR_ADDRESSES.AAVE.toLowerCase()) {
+        const aaveLtv = await loadAaveLtv(lendingAddress, vaultAddress, publicProvider);
+        if (aaveLtv) {
+          setCurrentLtv(aaveLtv);
+          return;
+        }
+      } else if (lendingConnectorAddress.toLowerCase() === CONNECTOR_ADDRESSES.GHOST.toLowerCase()) {
+        const ghostLtv = await loadGhostLtv(lendingAddress, vaultAddress, publicProvider);
+        if (ghostLtv) {
+          setCurrentLtv(ghostLtv);
+          return;
+        }
+      } else if (lendingConnectorAddress.toLowerCase() === CONNECTOR_ADDRESSES.MORPHO.toLowerCase()) {
+        const morphoLtv = await loadMorphoLtv(
+          lendingAddress,
+          vaultAddress,
+          MORPHO_MARKET_ID,
+          borrowTokenDecimals,
+          publicProvider
+        );
+        if (morphoLtv) {
+          setCurrentLtv(morphoLtv);
+          return;
+        }
+      } else {
+        console.log('Unknown lending connector:', lendingConnectorAddress, 'unable to fetch LTV');
+        setCurrentLtv('UNKNOWN_CONNECTOR');
+        return;
+      }
+
+      console.error('LTV loading failed for known connector');
+      setCurrentLtv('LOAD_FAILED');
+    } catch (err) {
+      console.error('Error loading LTV:', err);
+      setCurrentLtv('LOAD_FAILED');
+    }
+  }, [publicProvider, vaultLens, lendingAddress, vaultAddress, borrowTokenDecimals]);
+  
+  // Load ltv
+  useEffect(() => {
+    if (vaultLens && borrowTokenDecimals && lendingAddress) {
+      loadLtv();
+    }
+  }, [vaultLens, borrowTokenDecimals, lendingAddress, loadLtv]);
+
+  // Check vault existence
+  useEffect(() => {
+    checkVaultExistence();
+  }, [checkVaultExistence]);
 
   // Load all possbile from config and params
   useEffect(() => {
@@ -474,6 +574,9 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         borrowTokenDecimals,
         collateralTokenDecimals,
         vaultConfig,
+        description,
+        vaultExists,
+        isCheckingVaultExistence,
         ethBalance,
         sharesBalance,
         borrowTokenBalance,
@@ -495,6 +598,11 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         maxRedeemCollateral,
         maxMintCollateral,
         maxWithdrawCollateral,
+        apy,
+        pointsRate,
+        apyLoadFailed,
+        pointsRateLoadFailed,
+        currentLtv,
         refreshBalances: loadBalances,
         refreshVaultLimits: loadVaultLimits
       }}

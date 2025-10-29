@@ -9,7 +9,7 @@ import NetworkSelect from './NetworkSelect';
 export default function ConnectWallet() {
   const {
     isConnected, isAutoConnecting, isSepolia, isMainnet, currentNetwork,
-    address, wallets, connectingWalletId, disconnectWallet
+    address, connectingWalletId, disconnectWallet
   } = useAppContext();
 
   const [showWalletsPopup, setShowWalletsPopup] = useState<boolean>(false);
@@ -123,12 +123,12 @@ export default function ConnectWallet() {
     );
   }
 
-  if (!isConnected && !isAutoConnecting && wallets && wallets.length > 0) {
+  if (!isConnected && !isAutoConnecting) {
     return (
       <div className="relative" ref={popupRef}>
         <button
           onClick={() => setShowWalletsPopup(!showWalletsPopup)}
-          disabled={!!connectingWalletId || !wallets || wallets.length === 0}
+          disabled={!!connectingWalletId}
           className="
             py-2 px-4 font-medium text-white bg-indigo-600
             rounded-lg disabled:opacity-50

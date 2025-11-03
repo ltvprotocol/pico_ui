@@ -15,6 +15,7 @@ type ActionFormProps = {
   setAmount: React.Dispatch<React.SetStateAction<string>>;
   handleSubmit: (e: React.FormEvent) => Promise<void>;
   setIsMaxSelected: React.Dispatch<React.SetStateAction<boolean>>;
+  preview?: React.ReactNode;
 }
 
 export const ActionForm: React.FC<ActionFormProps> = ({
@@ -28,7 +29,8 @@ export const ActionForm: React.FC<ActionFormProps> = ({
   success,
   setAmount,
   handleSubmit,
-  setIsMaxSelected
+  setIsMaxSelected,
+  preview
 }) => {
   const setMaxAmount = () => {
     setAmount(formatForInput(maxAmount, decimals));
@@ -98,6 +100,9 @@ export const ActionForm: React.FC<ActionFormProps> = ({
           )}
         </div>
       </div>
+      
+      {preview}
+      
       <button
         type="submit"
         disabled={isButtonDisabled(isLoading, amount, maxAmount)}

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { SelectToken } from '@/components/ui';
 import ActionHandler from './ActionHandler';
+import SafeActionHandler from './SafeActionHandler';
 import { useVaultContext } from '@/contexts';
 import { ActionType, TokenType } from '@/types/actions';
 
@@ -30,9 +31,10 @@ const ACTION_CONFIGS: Record<ActionType, ActionConfig> = {
 
 interface ActionWrapperProps {
   actionType: ActionType;
+  isSafe?: boolean;
 }
 
-export default function ActionWrapper({ actionType }: ActionWrapperProps) {
+export default function ActionWrapper({ actionType, isSafe = false }: ActionWrapperProps) {
   const [selectedToken, setSelectedToken] = useState<TokenType>('borrow');
   const { borrowTokenSymbol, collateralTokenSymbol } = useVaultContext();
 
@@ -48,7 +50,11 @@ export default function ActionWrapper({ actionType }: ActionWrapperProps) {
         selected={selectedToken}
         onSelect={(selected) => setSelectedToken(selected as TokenType)}
       />
-      <ActionHandler actionType={actionType} tokenType={selectedToken} />
+      {isSafe ? (
+        <SafeActionHandler actionType={actionType} tokenType={selectedToken} />
+      ) : (
+        <ActionHandler actionType={actionType} tokenType={selectedToken} />
+      )}
     </div>
   );
 }

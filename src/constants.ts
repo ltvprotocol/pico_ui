@@ -81,3 +81,15 @@ export const URL_PARAM_TO_CHAIN_ID = {
   'sepolia': SEPOLIA_CHAIN_ID_STRING,
   'ethereum': MAINNET_CHAIN_ID_STRING
 };
+
+// Mock helper addresses per network (borrow/collateral)
+export const SAFE_HELPER_ADDRESSES: Record<string, { borrow: string; collateral: string }> = {
+  [SEPOLIA_CHAIN_ID_STRING]: {
+    borrow: '0x1111111111111111111111111111111111111111',
+    collateral: '0x2222222222222222222222222222222222222222'
+  },
+  [MAINNET_CHAIN_ID_STRING]: {
+    borrow: '0x7777777777777777777777777777777777777777',
+    collateral: '0x8888888888888888888888888888888888888888'
+  }
+};

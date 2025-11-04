@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { parseUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
 import { isUserRejected, wrapEth } from '@/utils';
-import { ActionForm } from '@/components/ui';
+import { ActionForm, PreviewBox } from '@/components/ui';
 import { isWETHAddress } from '@/constants';
 import { WETH } from '@/typechain-types';
 import { ActionType, TokenType } from '@/types/actions';
+import { useActionPreview } from '@/hooks';
 
 interface SafeActionConfig {
   needsApproval: boolean;
@@ -103,6 +104,15 @@ export default function SafeActionHandler({ actionType, tokenType }: SafeActionH
 
   const displayTokenSymbol = config.usesShares ? sharesSymbol : tokenSymbol;
   const displayDecimals = config.usesShares ? sharesDecimals : tokenDecimals;
+
+  const { isLoadingPreview, previewData, receive, provide } = useActionPreview({
+    amount,
+    actionType,
+    tokenType,
+    vaultLens,
+    displayDecimals,
+    isBorrow,
+  });
 
   const handleWrapIfNeeded = async (needed: bigint, balance: bigint): Promise<boolean> => {
     if (balance >= needed) return true;
@@ -382,6 +392,16 @@ export default function SafeActionHandler({ actionType, tokenType }: SafeActionH
       defaultSlippage={DEFAULT_SLIPPAGE}
       setSlippageTolerance={setSlippageTolerance}
       setUseDefaultSlippage={setUseDefaultSlippage}
+      preview={
+        amount && previewData ? (
+          <PreviewBox
+            receive={receive}
+            provide={provide}
+            isLoading={isLoadingPreview}
+            title="Transaction Preview"
+          />
+        ) : undefined
+      }
     />
   );
 }

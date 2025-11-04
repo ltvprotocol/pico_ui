@@ -21,6 +21,7 @@ type ActionFormProps = {
   defaultSlippage?: string;
   setSlippageTolerance?: React.Dispatch<React.SetStateAction<string>>;
   setUseDefaultSlippage?: React.Dispatch<React.SetStateAction<boolean>>;
+  preview?: React.ReactNode;
 }
 
 export const ActionForm: React.FC<ActionFormProps> = ({
@@ -40,7 +41,8 @@ export const ActionForm: React.FC<ActionFormProps> = ({
   useDefaultSlippage = true,
   defaultSlippage = '0.5',
   setSlippageTolerance,
-  setUseDefaultSlippage
+  setUseDefaultSlippage,
+  preview
 }) => {
   const setMaxAmount = () => {
     setAmount(formatForInput(maxAmount, decimals));
@@ -198,6 +200,9 @@ export const ActionForm: React.FC<ActionFormProps> = ({
           </div>
         )}
       </div>
+      
+      {preview}
+      
       <button
         type="submit"
         disabled={isButtonDisabled(isLoading, amount, maxAmount) || (isSafe && (!slippageTolerance || parseFloat(slippageTolerance) <= 0))}

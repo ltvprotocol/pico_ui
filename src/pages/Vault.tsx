@@ -9,9 +9,10 @@ import Info from '@/components/vault/Info';
 import LowLevelRebalance from '@/components/vault/LowLevelRebalance';
 import Auction from '@/components/vault/Auction';
 import VaultNotFound from '@/components/vault/VaultNotFound';
+import WhitelistBanner from '@/components/vault/WhitelistBanner';
 
 function VaultContent() {
-  const { vaultExists } = useVaultContext();
+  const { vaultExists, isWhitelistActivated, isWhitelisted } = useVaultContext();
   const { unrecognizedNetworkParam } = useAppContext();
 
   if (unrecognizedNetworkParam) {
@@ -22,24 +23,30 @@ function VaultContent() {
     return <VaultNotFound />;
   }
 
+  // Only disable UI when we confirmed user is NOT whitelisted (don't disable while checking)
+  const isUIDisabled = isWhitelistActivated === true && isWhitelisted === false;
+
   return (
     <>
       <VaultHeader />
-      <div className="flex flex-col [@media(min-width:768px)]:flex-row gap-4 mb-4">
-        <div className="flex-1">
-          <Info />
+      <WhitelistBanner />
+      <div className={isUIDisabled ? 'opacity-50 pointer-events-none' : ''}>
+        <div className="flex flex-col [@media(min-width:768px)]:flex-row gap-4 mb-4">
+          <div className="flex-1">
+            <Info />
+          </div>
+          <div className="flex-1">
+            <Actions />
+          </div>
         </div>
-        <div className="flex-1">
-          <Actions />
+        <div className="mb-4">
+          <LowLevelRebalance />
         </div>
+        <div className="mb-4">
+          <Auction />
+        </div>
+        <MoreInfo />
       </div>
-      <div className="mb-4">
-        <LowLevelRebalance />
-      </div>
-      <div className="mb-4">
-        <Auction />
-      </div>
-      <MoreInfo />
     </>
   );
 }
@@ -58,6 +65,9 @@ export default function Vault() {
     lendingName: state.lendingName || null,
     apy: state.apy || null,
     pointsRate: state.pointsRate || null,
+    isWhitelistActivated: state.isWhitelistActivated ?? null,
+    isWhitelisted: state.isWhitelisted ?? null,
+    hasSignature: state.hasSignature,
   };
 
   return (

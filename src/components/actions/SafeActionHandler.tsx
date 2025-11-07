@@ -16,8 +16,8 @@ interface SafeActionConfig {
 const SAFE_ACTION_CONFIGS: Record<ActionType, SafeActionConfig> = {
   deposit: { needsApproval: true, usesShares: false },
   mint: { needsApproval: true, usesShares: true },
-  withdraw: { needsApproval: false, usesShares: false },
-  redeem: { needsApproval: false, usesShares: true },
+  withdraw: { needsApproval: true, usesShares: false },
+  redeem: { needsApproval: true, usesShares: true },
 };
 
 interface SafeActionHandlerProps {
@@ -84,7 +84,6 @@ export default function SafeActionHandler({ actionType, tokenType }: SafeActionH
   const tokenLens = isBorrow ? borrowTokenLens : collateralTokenLens;
   const tokenDecimals = isBorrow ? borrowTokenDecimals : collateralTokenDecimals;
 
-  // Get helper address from app context (mocked per network)
   const helperAddress = isBorrow ? safeHelperAddressBorrow : safeHelperAddressCollateral;
 
   const getMaxAmount = () => {
@@ -139,17 +138,33 @@ export default function SafeActionHandler({ actionType, tokenType }: SafeActionH
     return true;
   };
 
-  const handleApproval = async (needed: bigint): Promise<boolean> => {
-    if (!token || !tokenLens || !address || !helperAddress) return false;
+  const handleApproval = async (needed: bigint, approveShares: boolean = false): Promise<boolean> => {
+    if (!address || !helperAddress) return false;
 
-    const currentAllowance = await tokenLens.allowance(address, helperAddress);
-
-    if (currentAllowance < needed) {
-      const approveTx = await token.approve(helperAddress, needed);
-      await approveTx.wait();
-      setSuccess(`Successfully approved ${tokenSymbol} for Safe Helper.`);
+    if (approveShares) {
+      if (!vault || !vaultLens) return false;
+      
+      const currentAllowance = await vaultLens.allowance(address, helperAddress);
+      
+      if (currentAllowance < needed) {
+        const approveTx = await vault.approve(helperAddress, needed);
+        await approveTx.wait();
+        setSuccess(`Successfully approved ${sharesSymbol}.`);
+      } else {
+        setSuccess(`Already approved ${sharesSymbol}.`);
+      }
     } else {
-      setSuccess(`Already approved ${tokenSymbol} for Safe Helper.`);
+      if (!token || !tokenLens) return false;
+      
+      const currentAllowance = await tokenLens.allowance(address, helperAddress);
+
+      if (currentAllowance < needed) {
+        const approveTx = await token.approve(helperAddress, needed);
+        await approveTx.wait();
+        setSuccess(`Successfully approved ${tokenSymbol} for Safe Helper.`);
+      } else {
+        setSuccess(`Already approved ${tokenSymbol}.`);
+      }
     }
 
     return true;
@@ -211,9 +226,9 @@ export default function SafeActionHandler({ actionType, tokenType }: SafeActionH
       } else if (actionType === 'mint') {
         tx = await safeHelperBorrow.safeMint(vaultAddress, parsedAmount, address, bound);
       } else if (actionType === 'withdraw') {
-        tx = await safeHelperBorrow.safeWithdraw(vaultAddress, parsedAmount, address, address, bound);
+        tx = await safeHelperBorrow.safeWithdraw(vaultAddress, parsedAmount, address, bound);
       } else if (actionType === 'redeem') {
-        tx = await safeHelperBorrow.safeRedeem(vaultAddress, parsedAmount, address, address, bound);
+        tx = await safeHelperBorrow.safeRedeem(vaultAddress, parsedAmount, address, bound);
       }
 
       await tx?.wait();
@@ -230,9 +245,9 @@ export default function SafeActionHandler({ actionType, tokenType }: SafeActionH
       } else if (actionType === 'mint') {
         tx = await safeHelperCollateral.safeMintCollateral(vaultAddress, parsedAmount, address, bound);
       } else if (actionType === 'withdraw') {
-        tx = await safeHelperCollateral.safeWithdrawCollateral(vaultAddress, parsedAmount, address, address, bound);
+        tx = await safeHelperCollateral.safeWithdrawCollateral(vaultAddress, parsedAmount, address, bound);
       } else if (actionType === 'redeem') {
-        tx = await safeHelperCollateral.safeRedeemCollateral(vaultAddress, parsedAmount, address, address, bound);
+        tx = await safeHelperCollateral.safeRedeemCollateral(vaultAddress, parsedAmount, address, bound);
       }
 
       await tx?.wait();
@@ -298,35 +313,61 @@ export default function SafeActionHandler({ actionType, tokenType }: SafeActionH
         return;
       }
 
+      // Calculate slippage bound first (needed for approval amounts)
+      const slippageBound = await calculateSlippageBound(parsedAmount);
+      if (slippageBound === null) {
+        setError('Error calculating slippage bound.');
+        setLoading(false);
+        return;
+      }
+
       if (config.needsApproval) {
-        if (!publicProvider || !tokenLens || !token || !vaultLens) return;
+        if (!publicProvider || !vaultLens) return;
 
-        let tokensNeeded: bigint;
+        if (actionType === 'withdraw' || actionType === 'redeem') {
+          let sharesNeeded: bigint;
+          
+          if (actionType === 'withdraw') {
+            sharesNeeded = slippageBound;
+          } else { // redeem
+            sharesNeeded = parsedAmount;
+          }
 
-        if (actionType === "mint") {
-          tokensNeeded = isBorrow
-            ? await vaultLens.previewMint(parsedAmount)
-            : await vaultLens.previewMintCollateral(parsedAmount);
+          const approved = await handleApproval(sharesNeeded, true);
+          if (!approved) {
+            setLoading(false);
+            return;
+          }
         } else {
-          tokensNeeded = parsedAmount;
-        }
+          if (!tokenLens || !token) return;
+          
+          let tokensNeeded: bigint;
 
-        const balance = await tokenLens.balanceOf(address);
+          if (actionType === 'mint') {
+            tokensNeeded = slippageBound;
+          } else { // deposit
+            tokensNeeded = parsedAmount;
+          }
 
-        const hasEnough = await handleWrapIfNeeded(tokensNeeded, balance);
-        if (!hasEnough) {
-          setLoading(false);
-          return;
-        }
+          const balance = await tokenLens.balanceOf(address);
 
-        const approved = await handleApproval(tokensNeeded);
-        if (!approved) {
-          setLoading(false);
-          return;
+          const hasEnough = await handleWrapIfNeeded(tokensNeeded, balance);
+          if (!hasEnough) {
+            setLoading(false);
+            return;
+          }
+
+          const approved = await handleApproval(tokensNeeded, false);
+          if (!approved) {
+            setLoading(false);
+            return;
+          }
         }
       }
 
       let finalAmount = parsedAmount;
+      let finalSlippageBound = slippageBound;
+      
       if (isMaxSelected && (actionType === 'redeem' || actionType === 'withdraw')) {
         const maxBeforeTx = await refetchMaxBeforeTx();
 
@@ -343,16 +384,18 @@ export default function SafeActionHandler({ actionType, tokenType }: SafeActionH
         }
 
         finalAmount = maxBeforeTx;
+        
+        // Recalculate slippage bound for the adjusted amount
+        const adjustedSlippageBound = await calculateSlippageBound(finalAmount);
+        if (adjustedSlippageBound === null) {
+          setError('Error calculating slippage bound.');
+          setLoading(false);
+          return;
+        }
+        finalSlippageBound = adjustedSlippageBound;
       }
 
-      const slippageBound = await calculateSlippageBound(finalAmount);
-      if (slippageBound === null) {
-        setError('Error calculating slippage bound.');
-        setLoading(false);
-        return;
-      }
-
-      await executeSafeMethod(finalAmount, slippageBound);
+      await executeSafeMethod(finalAmount, finalSlippageBound);
 
       await Promise.all([
         refreshBalances(),
@@ -365,7 +408,7 @@ export default function SafeActionHandler({ actionType, tokenType }: SafeActionH
       if (isUserRejected(err)) {
         setError('Transaction canceled by user.');
       } else {
-        setError(`Failed to ${actionType}. ${err instanceof Error ? err.message : ''}`);
+        setError(`Failed to ${actionType}.`);
         console.error(`Failed to ${actionType}: `, err);
       }
     } finally {

@@ -87,11 +87,6 @@
         "internalType": "address"
       },
       {
-        "name": "owner",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
         "name": "minAssetsOut",
         "type": "uint256",
         "internalType": "uint256"
@@ -122,11 +117,6 @@
       },
       {
         "name": "receiver",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "owner",
         "type": "address",
         "internalType": "address"
       },

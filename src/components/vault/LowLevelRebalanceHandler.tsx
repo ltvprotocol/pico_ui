@@ -80,14 +80,28 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
       
       if (rebalanceType === 'shares') {
         max = await vaultLens.maxLowLevelRebalanceShares();
-      } else if (rebalanceType === 'borrow') {
-        const vaultMax = await vaultLens.maxLowLevelRebalanceBorrow();
-        const userBalance = parseUnits(borrowTokenBalance, Number(borrowTokenDecimals));
-        max = vaultMax < 0n ? (vaultMax > -userBalance ? vaultMax : -userBalance) : (vaultMax < userBalance ? vaultMax : userBalance);
       } else {
-        const vaultMax = await vaultLens.maxLowLevelRebalanceCollateral();
-        const userBalance = parseUnits(collateralTokenBalance, Number(collateralTokenDecimals));
-        max = vaultMax < 0n ? (vaultMax > -userBalance ? vaultMax : -userBalance) : (vaultMax < userBalance ? vaultMax : userBalance);
+        let vaultMax;
+        let userBalance;
+
+        if (rebalanceType === 'borrow') {
+          vaultMax = await vaultLens.maxLowLevelRebalanceBorrow();
+          userBalance = parseUnits(borrowTokenBalance, Number(borrowTokenDecimals));
+        } else {
+          vaultMax = await vaultLens.maxLowLevelRebalanceCollateral();
+          userBalance = parseUnits(collateralTokenBalance, Number(collateralTokenDecimals));
+        }
+
+        const isVaultProvideDirection = vaultMax < 0n;
+        const isUserProvideAction = actionType === 'provide';
+        
+        if (isVaultProvideDirection !== isUserProvideAction) {
+          max = 0n;
+        } else if (vaultMax < 0n) {
+          max = vaultMax > -userBalance ? vaultMax : -userBalance;
+        } else {
+          max = vaultMax < userBalance ? vaultMax : userBalance;
+        }
       }
 
       setMaxValue(max);
@@ -262,7 +276,8 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
       const absValue = maxValue < 0n ? -maxValue : maxValue;
       const formatted = formatUnits(absValue, decimals);
       setInputValue(formatted);
-      setAmount(maxValue);
+      const sign = getAmountSign();
+      setAmount(absValue * sign);
     }
   };
 
@@ -418,12 +433,12 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
               disabled={loading}
             />
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-              {rebalanceType !== 'shares' && (
+              {rebalanceType !== 'shares' && maxValue !== null && maxValue !== 0n && (
                 <button
                   type="button"
                   onClick={handleMaxClick}
                   className="text-sm text-indigo-600 hover:text-indigo-500 mr-2"
-                  disabled={loading || !maxValue}
+                  disabled={loading}
                 >
                   MAX
                 </button>
@@ -433,17 +448,15 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
               </span>
             </div>
           </div>
-          {rebalanceType !== 'shares' && (
+          {rebalanceType !== 'shares' && maxValue !== null && maxValue !== 0n && (
             <div className="flex gap-1 mt-1 text-sm text-gray-500">
               Max Available: {renderWithTransition(
-                maxValue !== null ? (
-                  <>
-                    {maxValue < 0n && <span className="mr-0.5">-</span>}
-                    <NumberDisplay value={formatUnits(maxValue < 0n ? -maxValue : maxValue, decimals)} />
-                    {' '}
-                    {getInputSymbol()}
-                  </>
-                ) : null,
+                <>
+                  {maxValue < 0n && <span className="mr-0.5">-</span>}
+                  <NumberDisplay value={formatUnits(maxValue < 0n ? -maxValue : maxValue, decimals)} />
+                  {' '}
+                  {getInputSymbol()}
+                </>,
                 isLoadingMax
               )}
             </div>
@@ -589,4 +602,3 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
     </div>
   );
 }
-

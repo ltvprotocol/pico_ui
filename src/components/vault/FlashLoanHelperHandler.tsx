@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { formatUnits, parseUnits } from 'ethers';
+import { parseUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
 import { isUserRejected, allowOnlyNumbers } from '@/utils';
-import { renderWithTransition } from '@/helpers/renderWithTransition';
-import { NumberDisplay } from '@/components/ui';
+import { PreviewBox, NumberDisplay } from '@/components/ui';
+import { useFlashLoanPreview } from '@/hooks';
 
 type HelperType = 'mint' | 'redeem';
 
@@ -17,14 +17,8 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const [approvalError, setApprovalError] = useState<string | null>(null);
-  const [hasInsufficientBalance, setHasInsufficientBalance] = useState(false);
-
-  const [previewData, setPreviewData] = useState<{
-    amount: bigint; // For mint: collateral required, For redeem: borrow tokens to receive
-  } | null>(null);
 
   const { address } = useAppContext();
 
@@ -40,8 +34,6 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     sharesBalance,
     collateralTokenSymbol,
     collateralTokenDecimals,
-    borrowTokenSymbol,
-    borrowTokenDecimals,
     collateralTokenBalance,
     refreshBalances,
     refreshVaultLimits,
@@ -50,61 +42,23 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
   const helper = helperType === 'mint' ? flashLoanMintHelper : flashLoanRedeemHelper;
   const helperAddress = helperType === 'mint' ? flashLoanMintHelperAddress : flashLoanRedeemHelperAddress;
 
+  const { isLoadingPreview, previewData, hasInsufficientBalance, receive, provide } = useFlashLoanPreview({
+    sharesToProcess,
+    helperType,
+    helper,
+    collateralTokenBalance,
+    collateralTokenDecimals,
+    sharesBalance,
+    sharesDecimals,
+  });
+
   useEffect(() => {
     setInputValue('');
     setSharesToProcess(null);
     setError(null);
     setApprovalError(null);
     setSuccess(null);
-    setPreviewData(null);
-    setHasInsufficientBalance(false);
   }, [helperType]);
-
-  const loadPreview = async (shares: bigint | null) => {
-    if (!helper || shares === null || shares <= 0n) {
-      setPreviewData(null);
-      setHasInsufficientBalance(false);
-      return;
-    }
-
-    setIsLoadingPreview(true);
-
-    try {
-      let amount: bigint;
-      if (helperType === 'mint') {
-        // returns collateral required
-        // @ts-expect-error - helper is FlashLoanMintHelper when helperType is 'mint'
-        amount = await helper.previewMintSharesWithFlashLoanCollateral(shares);
-      } else {
-        // returns borrow tokens to receive
-        // @ts-expect-error - helper is FlashLoanRedeemHelper when helperType is 'redeem'
-        amount = await helper.previewRedeemSharesWithCurveAndFlashLoanBorrow(shares);
-      }
-      setPreviewData({ amount });
-
-      if (helperType === 'mint') {
-        const userBalance = parseUnits(collateralTokenBalance, Number(collateralTokenDecimals));
-        setHasInsufficientBalance(userBalance < amount);
-      } else {
-        const userSharesBalance = parseUnits(sharesBalance, Number(sharesDecimals));
-        setHasInsufficientBalance(userSharesBalance < shares);
-      }
-    } catch (err) {
-      console.error('Error loading preview:', err);
-      setPreviewData(null);
-      setHasInsufficientBalance(false);
-    } finally {
-      setIsLoadingPreview(false);
-    }
-  };
-
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      loadPreview(sharesToProcess);
-    }, 500);
-
-    return () => clearTimeout(timeoutId);
-  }, [sharesToProcess, helperType, collateralTokenBalance, sharesBalance]);
 
   const checkAndApproveToken = async () => {
     if (!previewData || !address || !helperAddress || !sharesToProcess) {
@@ -218,6 +172,9 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     }
   };
 
+  const userBalance = helperType === 'mint' ? collateralTokenBalance : sharesBalance;
+  const userBalanceToken = helperType === 'mint' ? collateralTokenSymbol : sharesSymbol;
+
   return (
     <div>
       <form onSubmit={handleSubmit} className="space-y-3">
@@ -244,178 +201,16 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
         </div>
 
         {/* Preview Section */}
-        {sharesToProcess !== null && sharesToProcess > 0n && (
-          <div className="bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-xl p-4 space-y-4 shadow-sm">
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <h4 className="text-sm font-semibold text-gray-900">Preview</h4>
-            </div>
-
-            {renderWithTransition(
-              (() => {
-                if (!previewData) return null;
-
-                return (
-                  <div className="space-y-3">
-                    {/* What you need to provide */}
-                    <div className={`border rounded-lg p-3 ${
-                      hasInsufficientBalance ? 'border-red-300 bg-red-50' : 'border-orange-200 bg-orange-50'
-                    }`}>
-                      <div className="flex items-center space-x-2 mb-2">
-                        <svg
-                          className={`w-4 h-4 ${hasInsufficientBalance ? 'text-red-600' : 'text-orange-600'}`}
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M20 12H4m16 0l-4-4m4 4l-4 4"
-                          />
-                        </svg>
-                        <p className={`text-sm font-semibold ${hasInsufficientBalance ? 'text-red-800' : 'text-orange-800'}`}>
-                          You Provide
-                        </p>
-                      </div>
-                      
-                      {helperType === 'mint' ? (
-                        // For mint: show collateral required
-                        <>
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-gray-700">
-                              {collateralTokenSymbol}:
-                            </span>
-                            <div className="flex items-center space-x-1">
-                              <span className="text-sm">
-                                <NumberDisplay
-                                  value={formatUnits(previewData.amount, Number(collateralTokenDecimals))}
-                                />
-                              </span>
-                              <span className="font-medium text-gray-700">
-                                {collateralTokenSymbol}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between mt-1 pt-2 border-t border-gray-200">
-                            <span className="text-xs text-gray-600">
-                              Your balance:
-                            </span>
-                            <span className={`text-xs ${hasInsufficientBalance ? 'text-red-600 font-semibold' : 'text-gray-600'}`}>
-                              <NumberDisplay value={collateralTokenBalance} /> {collateralTokenSymbol}
-                            </span>
-                          </div>
-                        </>
-                      ) : (
-                        // For redeem: show shares required
-                        <>
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-gray-700">
-                              {sharesSymbol}:
-                            </span>
-                            <div className="flex items-center space-x-1">
-                              <span className="text-sm">
-                                <NumberDisplay
-                                  value={formatUnits(sharesToProcess!, Number(sharesDecimals))}
-                                />
-                              </span>
-                              <span className="font-medium text-gray-700">
-                                {sharesSymbol}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between mt-1 pt-2 border-t border-gray-200">
-                            <span className="text-xs text-gray-600">
-                              Your balance:
-                            </span>
-                            <span className={`text-xs ${hasInsufficientBalance ? 'text-red-600 font-semibold' : 'text-gray-600'}`}>
-                              <NumberDisplay value={sharesBalance} /> {sharesSymbol}
-                            </span>
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    {/* What you will receive */}
-                    <div className="border border-green-200 rounded-lg p-3 bg-green-50">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <svg
-                          className="w-4 h-4 text-green-600"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                          />
-                        </svg>
-                        <p className="text-sm font-semibold text-green-800">
-                          You Receive
-                        </p>
-                      </div>
-                      
-                      {helperType === 'mint' ? (
-                        // For mint: show shares to receive
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-gray-700">
-                            {sharesSymbol}:
-                          </span>
-                          <div className="flex items-center space-x-1">
-                            <span className="text-sm">
-                              <NumberDisplay
-                                value={formatUnits(sharesToProcess!, Number(sharesDecimals))}
-                              />
-                            </span>
-                            <span className="font-medium text-gray-700">
-                              {sharesSymbol}
-                            </span>
-                          </div>
-                        </div>
-                      ) : (
-                        // For redeem: show borrow tokens to receive
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-gray-700">
-                            {borrowTokenSymbol}:
-                          </span>
-                          <div className="flex items-center space-x-1">
-                            <span className="text-sm">
-                              <NumberDisplay
-                                value={formatUnits(previewData.amount, Number(borrowTokenDecimals))}
-                              />
-                            </span>
-                            <span className="font-medium text-gray-700">
-                              {borrowTokenSymbol}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })(),
-              isLoadingPreview
-            )}
-          </div>
+        {sharesToProcess !== null && sharesToProcess > 0n && previewData && (
+          <PreviewBox
+            receive={receive}
+            provide={provide}
+            isLoading={isLoadingPreview}
+            title="Transaction Preview"
+          />
         )}
 
-        <button
-          type="submit"
-          disabled={loading || isApproving || sharesToProcess === null || sharesToProcess <= 0n || hasInsufficientBalance}
-          className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isApproving
-            ? `Approving ${helperType === 'mint' ? 'Collateral' : 'Shares'}...`
-            : loading
-            ? 'Processing...'
-            : hasInsufficientBalance
-            ? 'Insufficient Balance'
-            : `${helperType === 'mint' ? 'Mint' : 'Redeem'} with Flash Loan`}
-        </button>
-
+        {/* Balance warning */}
         {hasInsufficientBalance && sharesToProcess !== null && sharesToProcess > 0n && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
             <div className="flex items-center space-x-2">
@@ -433,15 +228,26 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
                 />
               </svg>
               <span>
-                {helperType === 'mint' ? (
-                  <>Insufficient {collateralTokenSymbol} balance. You need more tokens to complete this transaction.</>
-                ) : (
-                  <>Insufficient {sharesSymbol} balance. You need more shares to complete this transaction.</>
-                )}
+                Insufficient {userBalanceToken} balance. You have{' '}
+                <NumberDisplay value={userBalance} /> {userBalanceToken}.
               </span>
             </div>
           </div>
         )}
+
+        <button
+          type="submit"
+          disabled={loading || isApproving || sharesToProcess === null || sharesToProcess <= 0n || hasInsufficientBalance}
+          className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isApproving
+            ? `Approving ${helperType === 'mint' ? 'Collateral' : 'Shares'}...`
+            : loading
+            ? 'Processing...'
+            : hasInsufficientBalance
+            ? 'Insufficient Balance'
+            : `${helperType === 'mint' ? 'Mint' : 'Redeem'} with Flash Loan`}
+        </button>
 
         {approvalError && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">

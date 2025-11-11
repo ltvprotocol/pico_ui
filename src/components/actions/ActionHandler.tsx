@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { parseUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
 import { isUserRejected, wrapEth } from '@/utils';
-import { ActionForm } from '@/components/ui';
+import { ActionForm, PreviewBox } from '@/components/ui';
 import { isWETHAddress } from '@/constants';
 import { WETH } from '@/typechain-types';
 import { ActionType, TokenType } from '@/types/actions';
@@ -30,6 +30,11 @@ export default function ActionHandler({ actionType, tokenType }: ActionHandlerPr
   const [success, setSuccess] = useState<string | null>(null);
   const [amount, setAmount] = useState('');
   const [isMaxSelected, setIsMaxSelected] = useState(false);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  const [previewData, setPreviewData] = useState<{
+    assets?: bigint;
+    shares?: bigint;
+  } | null>(null);
 
   const { publicProvider, address } = useAppContext();
 
@@ -37,6 +42,7 @@ export default function ActionHandler({ actionType, tokenType }: ActionHandlerPr
     setAmount('');
     setError(null);
     setSuccess(null);
+    setPreviewData(null);
   }, [tokenType, actionType]);
 
   const config = ACTION_CONFIGS[actionType];
@@ -93,6 +99,97 @@ export default function ActionHandler({ actionType, tokenType }: ActionHandlerPr
 
   const displayTokenSymbol = config.usesShares ? sharesSymbol : tokenSymbol;
   const displayDecimals = config.usesShares ? sharesDecimals : tokenDecimals;
+
+  const loadPreview = async (previewAmount: string) => {
+    if (!vaultLens || !previewAmount || previewAmount === '' || previewAmount === '.') {
+      setPreviewData(null);
+      return;
+    }
+
+    setIsLoadingPreview(true);
+
+    try {
+      const parsed = parseUnits(previewAmount, displayDecimals);
+
+      if (actionType === 'deposit') {
+        const shares = isBorrow
+          ? await vaultLens.previewDeposit(parsed)
+          : await vaultLens.previewDepositCollateral(parsed);
+        setPreviewData({ shares });
+      } else if (actionType === 'mint') {
+        const assets = isBorrow
+          ? await vaultLens.previewMint(parsed)
+          : await vaultLens.previewMintCollateral(parsed);
+        setPreviewData({ assets });
+      } else if (actionType === 'withdraw') {
+        const shares = isBorrow
+          ? await vaultLens.previewWithdraw(parsed)
+          : await vaultLens.previewWithdrawCollateral(parsed);
+        setPreviewData({ shares });
+      } else if (actionType === 'redeem') {
+        const assets = isBorrow
+          ? await vaultLens.previewRedeem(parsed)
+          : await vaultLens.previewRedeemCollateral(parsed);
+        setPreviewData({ assets });
+      }
+    } catch (err) {
+      console.error('Error loading preview:', err);
+      setPreviewData(null);
+    } finally {
+      setIsLoadingPreview(false);
+    }
+  };
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      loadPreview(amount);
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [amount, actionType, tokenType]);
+
+  const getReceiveAndProvide = () => {
+    const receive: { amount: bigint; tokenType: TokenType }[] = [];
+    const provide: { amount: bigint; tokenType: TokenType }[] = [];
+
+    if (!amount || !previewData) {
+      return { receive, provide };
+    }
+
+    try {
+      const parsedAmount = parseUnits(amount, displayDecimals);
+
+      if (actionType === 'deposit') {
+        // Provide assets, receive shares
+        provide.push({ amount: parsedAmount, tokenType });
+        if (previewData.shares) {
+          receive.push({ amount: previewData.shares, tokenType: 'shares' });
+        }
+      } else if (actionType === 'mint') {
+        // Provide assets, receive shares
+        if (previewData.assets) {
+          provide.push({ amount: previewData.assets, tokenType });
+        }
+        receive.push({ amount: parsedAmount, tokenType: 'shares' });
+      } else if (actionType === 'withdraw') {
+        // Provide shares, receive assets
+        if (previewData.shares) {
+          provide.push({ amount: previewData.shares, tokenType: 'shares' });
+        }
+        receive.push({ amount: parsedAmount, tokenType });
+      } else if (actionType === 'redeem') {
+        // Provide shares, receive assets
+        provide.push({ amount: parsedAmount, tokenType: 'shares' });
+        if (previewData.assets) {
+          receive.push({ amount: previewData.assets, tokenType });
+        }
+      }
+    } catch (err) {
+      console.error('Error parsing amount for preview:', err);
+    }
+
+    return { receive, provide };
+  };
 
   const handleWrapIfNeeded = async (needed: bigint, balance: bigint): Promise<boolean> => {
     if (balance >= needed) return true;
@@ -274,6 +371,19 @@ export default function ActionHandler({ actionType, tokenType }: ActionHandlerPr
       setAmount={setAmount}
       handleSubmit={handleSubmit}
       setIsMaxSelected={setIsMaxSelected}
+      preview={
+        amount && previewData ? (() => {
+          const { receive, provide } = getReceiveAndProvide();
+          return (
+            <PreviewBox
+              receive={receive}
+              provide={provide}
+              isLoading={isLoadingPreview}
+              title="Transaction Preview"
+            />
+          );
+        })() : undefined
+      }
     />
   );
 }

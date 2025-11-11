@@ -16,7 +16,8 @@
         "lendingName": "HodlMyBeer",
         "dexLink": "https://app.uniswap.org/swap?inputCurrency=0xe2a7f267124ac3e4131f27b9159c78c521a44f3c&outputCurrency=0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14&chain=sepolia",
         "dexLinkName": "Uniswap V3 GME/WETH pool",
-        "description": "Use your MAE tokens as collateral to borrow WETH. Get 4x leverage through HodlMyBeer. Good to maximize your MAE holdings or get yield on your WETH."
+        "description": "Use your MAE tokens as collateral to borrow WETH. Get 4x leverage through HodlMyBeer. Good to maximize your MAE holdings or get yield on your WETH.",
+        "useSafeActions": true
       },
       {
         "address": "0xAa707a2a0e38DE55cA0b61dd32468e357b55b15f",

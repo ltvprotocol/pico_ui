@@ -12,14 +12,14 @@ import VaultNotFound from '@/components/vault/VaultNotFound';
 import WhitelistBanner from '@/components/vault/WhitelistBanner';
 
 function VaultContent() {
-  const { vaultExists, isWhitelistActivated, isWhitelisted } = useVaultContext();
+  const { vaultExists, isWhitelistActivated, isWhitelisted, vaultConfig } = useVaultContext();
   const { unrecognizedNetworkParam } = useAppContext();
 
   if (unrecognizedNetworkParam) {
     return <UnrecognizedNetwork />;
   }
 
-  if (vaultExists === false) {
+  if (!vaultExists) {
     return <VaultNotFound />;
   }
 
@@ -36,7 +36,7 @@ function VaultContent() {
             <Info />
           </div>
           <div className="flex-1">
-            <Actions />
+            <Actions isSafe={vaultConfig && (vaultConfig as any).useSafeActions} />
           </div>
         </div>
         <div className="mb-4">

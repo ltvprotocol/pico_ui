@@ -18,7 +18,8 @@
         "dexLinkName": "Uniswap V3 GME/WETH pool",
         "description": "Use your MAE tokens as collateral to borrow WETH. Get 4x leverage through HodlMyBeer. Good to maximize your MAE holdings or get yield on your WETH.",
         "flashLoanMintHelperAddress": "0x169D36086e2a68062ED36bAc5E0e733c5f0B872a",
-        "flashLoanRedeemHelperAddress": "0x5f3Eb9DAEf690364C2539b8148faA421B60427B2"
+        "flashLoanRedeemHelperAddress": "0x5f3Eb9DAEf690364C2539b8148faA421B60427B2",
+        "useSafeActions": true
       },
       {
         "address": "0xAa707a2a0e38DE55cA0b61dd32468e357b55b15f",

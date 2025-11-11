@@ -12,7 +12,8 @@ import Auction from '@/components/vault/Auction';
 import VaultNotFound from '@/components/vault/VaultNotFound';
 
 function VaultContent() {
-  const { vaultExists, flashLoanMintHelperAddress, flashLoanRedeemHelperAddress } = useVaultContext();
+  const { vaultExists, vaultConfig, flashLoanMintHelperAddress, flashLoanRedeemHelperAddress} = useVaultContext();
+
   const { unrecognizedNetworkParam } = useAppContext();
 
   const hasFlashLoanHelper =
@@ -35,7 +36,7 @@ function VaultContent() {
           <Info />
         </div>
         <div className="flex-1">
-          <Actions />
+          <Actions isSafe={vaultConfig && (vaultConfig as any).useSafeActions} />
         </div>
       </div>
       <div className="mb-4">

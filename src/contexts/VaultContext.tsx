@@ -32,6 +32,7 @@ interface VaultConfig {
   description?: string;
   flashLoanMintHelperAddress?: string;
   flashLoanRedeemHelperAddress?: string;
+  useSafeActions?: boolean;
 };
 
 interface VaultContextType {

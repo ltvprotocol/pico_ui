@@ -6,7 +6,7 @@ import { TokenType } from '@/types/actions';
 type HelperType = 'mint' | 'redeem';
 
 interface PreviewData {
-  amount: bigint; // For mint: collateral required, For redeem: borrow tokens to receive
+  amount: bigint; // mint: collateral required, redeem: borrow tokens to receive
 }
 
 interface UseFlashLoanPreviewParams {

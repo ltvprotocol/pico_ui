@@ -1,6 +1,8 @@
 import { createContext, ReactNode, useContext, useEffect, useState, useCallback } from 'react';
 import { BrowserProvider, JsonRpcSigner, JsonRpcProvider, Eip1193Provider } from 'ethers';
-import { SEPOLIA_CHAIN_ID, MAINNET_CHAIN_ID, NETWORK_CONFIGS, URL_PARAM_TO_CHAIN_ID } from '@/constants';
+import { SEPOLIA_CHAIN_ID, MAINNET_CHAIN_ID, NETWORK_CONFIGS, URL_PARAM_TO_CHAIN_ID, SAFE_HELPER_ADDRESSES } from '@/constants';
+import { Safe4626Helper, Safe4626CollateralHelper } from '@/typechain-types';
+import { Safe4626Helper__factory, Safe4626CollateralHelper__factory } from '@/typechain-types/factories';
 import { isUserRejected } from '@/utils';
 
 type DiscoveredWallet = {
@@ -32,6 +34,11 @@ interface AppContextType {
   switchToSepolia: () => Promise<void>;
   switchToMainnet: () => Promise<void>;
   switchToNetwork: (chainId: string) => Promise<void>;
+  // Safe helpers
+  safeHelperAddressBorrow?: string | null;
+  safeHelperAddressCollateral?: string | null;
+  safeHelperBorrow?: Safe4626Helper | null;
+  safeHelperCollateral?: Safe4626CollateralHelper | null;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -55,6 +62,12 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
   const [isConnected, setIsConnected] = useState(false);
 
   const [rawProvider, setRawProvider] = useState<Eip1193Provider | null>(null);
+
+  // Safe helper state
+  const [safeHelperAddressBorrow, setSafeHelperAddressBorrow] = useState<string | null>(null);
+  const [safeHelperAddressCollateral, setSafeHelperAddressCollateral] = useState<string | null>(null);
+  const [safeHelperBorrow, setSafeHelperBorrow] = useState<Safe4626Helper | null>(null);
+  const [safeHelperCollateral, setSafeHelperCollateral] = useState<Safe4626CollateralHelper | null>(null);
 
   const getNetworkFromUrl = useCallback(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -109,6 +122,46 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     setIsConnected(Boolean(provider && signer && address));
   }, [provider, signer, address]);
+
+  // Initialize mock helper addresses per network and instantiate helpers when signer is available
+  useEffect(() => {
+    const chainIdStr = currentNetwork;
+    if (!chainIdStr) {
+      setSafeHelperAddressBorrow(null);
+      setSafeHelperAddressCollateral(null);
+      setSafeHelperBorrow(null);
+      setSafeHelperCollateral(null);
+      return;
+    }
+
+    const cfg = SAFE_HELPER_ADDRESSES[chainIdStr];
+    if (!cfg) {
+      setSafeHelperAddressBorrow(null);
+      setSafeHelperAddressCollateral(null);
+      setSafeHelperBorrow(null);
+      setSafeHelperCollateral(null);
+      return;
+    }
+
+    setSafeHelperAddressBorrow(cfg.borrow);
+    setSafeHelperAddressCollateral(cfg.collateral);
+
+    if (signer) {
+      try {
+        const borrowHelper = Safe4626Helper__factory.connect(cfg.borrow, signer);
+        const collateralHelper = Safe4626CollateralHelper__factory.connect(cfg.collateral, signer);
+        setSafeHelperBorrow(borrowHelper);
+        setSafeHelperCollateral(collateralHelper);
+      } catch (e) {
+        console.error('Failed to initialize safe helpers:', e);
+        setSafeHelperBorrow(null);
+        setSafeHelperCollateral(null);
+      }
+    } else {
+      setSafeHelperBorrow(null);
+      setSafeHelperCollateral(null);
+    }
+  }, [currentNetwork, signer]);
 
   useEffect(() => {
     const defaultNetwork = getDefaultNetwork();
@@ -380,6 +433,10 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     switchToSepolia,
     switchToMainnet,
     switchToNetwork,
+    safeHelperAddressBorrow,
+    safeHelperAddressCollateral,
+    safeHelperBorrow,
+    safeHelperCollateral,
   };
 
   return <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>;

@@ -11,7 +11,7 @@ import Auction from '@/components/vault/Auction';
 import VaultNotFound from '@/components/vault/VaultNotFound';
 
 function VaultContent() {
-  const { vaultExists } = useVaultContext();
+  const { vaultExists, vaultConfig } = useVaultContext();
   const { unrecognizedNetworkParam } = useAppContext();
 
   if (unrecognizedNetworkParam) {
@@ -30,7 +30,7 @@ function VaultContent() {
           <Info />
         </div>
         <div className="flex-1">
-          <Actions />
+          <Actions isSafe={vaultConfig && (vaultConfig as any).useSafeActions} />
         </div>
       </div>
       <div className="mb-4">

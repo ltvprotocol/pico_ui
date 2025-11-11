@@ -24,6 +24,7 @@ interface VaultConfig {
   dexLink?: string;
   dexLinkName?: string;
   description?: string;
+  useSafeActions?: boolean;
 };
 
 interface VaultContextType {

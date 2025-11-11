@@ -13,7 +13,6 @@ import VaultNotFound from '@/components/vault/VaultNotFound';
 
 function VaultContent() {
   const { vaultExists, vaultConfig, flashLoanMintHelperAddress, flashLoanRedeemHelperAddress} = useVaultContext();
-
   const { unrecognizedNetworkParam } = useAppContext();
 
   const hasFlashLoanHelper =

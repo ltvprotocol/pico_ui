@@ -16,7 +16,9 @@
         "lendingName": "HodlMyBeer",
         "dexLink": "https://app.uniswap.org/swap?inputCurrency=0xe2a7f267124ac3e4131f27b9159c78c521a44f3c&outputCurrency=0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14&chain=sepolia",
         "dexLinkName": "Uniswap V3 GME/WETH pool",
-        "description": "Use your MAE tokens as collateral to borrow WETH. Get 4x leverage through HodlMyBeer. Good to maximize your MAE holdings or get yield on your WETH."
+        "description": "Use your MAE tokens as collateral to borrow WETH. Get 4x leverage through HodlMyBeer. Good to maximize your MAE holdings or get yield on your WETH.",
+        "flashLoanMintHelperAddress": "0x169D36086e2a68062ED36bAc5E0e733c5f0B872a",
+        "flashLoanRedeemHelperAddress": "0x5f3Eb9DAEf690364C2539b8148faA421B60427B2"
       },
       {
         "address": "0xAa707a2a0e38DE55cA0b61dd32468e357b55b15f",
@@ -28,7 +30,9 @@
         "borrowTokenSymbol": "WBTC",
         "leverage": "4",
         "lendingName": "AAVE V3",
-        "description": "Put up WETH to borrow WBTC with 4x leverage. Uses AAVE V3. Combines two fundamental assets with leverage."
+        "description": "Put up WETH to borrow WBTC with 4x leverage. Uses AAVE V3. Combines two fundamental assets with leverage.",
+        "flashLoanMintHelperAddress": "",
+        "flashLoanRedeemHelperAddress": ""
       },
       {
         "address": "0x9A1Fc3ff25083f33373Bbf9617E12892FF19E07A",
@@ -40,7 +44,9 @@
         "borrowTokenSymbol": "USDC",
         "leverage": "3",
         "lendingName": "Morpho",
-        "description": "Use WETH to borrow USDC with 3x leverage. Runs on Morpho. For those who are not afraid of the fall in the price of Ethereum"
+        "description": "Use WETH to borrow USDC with 3x leverage. Runs on Morpho. For those who are not afraid of the fall in the price of Ethereum",
+        "flashLoanMintHelperAddress": "",
+        "flashLoanRedeemHelperAddress": ""
       }
     ]
   },
@@ -61,7 +67,9 @@
         "lendingName": "AaveV3",
         "dexLink": "https://app.uniswap.org/swap?inputCurrency=0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0&outputCurrency=0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2&chain=ethereum",
         "dexLinkName": "Uniswap V3 wstETH/WETH pool",
-        "description": "Use your wstETH tokens as collateral to borrow WETH. Get 12x leverage through Aave V3. Good to maximize your wstETH holdings or get yield on your WETH."
+        "description": "Use your wstETH tokens as collateral to borrow WETH. Get 12x leverage through Aave V3. Good to maximize your wstETH holdings or get yield on your WETH.",
+        "flashLoanMintHelperAddress": "0xMockFlashLoanMintHelper",
+        "flashLoanRedeemHelperAddress": "0xMockFlashLoanRedeemHelper"
       },
       {
         "address": "0xSUSDE_USDT_X10_AAVEV3",
@@ -78,7 +86,9 @@
         "lendingName": "AaveV3",
         "dexLink": "https://app.uniswap.org/swap?inputCurrency=0x9D39A5DE30e57443BfF2A8307A4256c8797A3497&outputCurrency=0xdAC17F958D2ee523a2206206994597C13D831ec7&chain=ethereum",
         "dexLinkName": "Uniswap V3 SUSDE/USDT pool",
-        "description": "Use your SUSDE tokens as collateral to borrow USDT with 10x leverage. Uses Aave V3. Combines stablecoin assets with leverage."
+        "description": "Use your SUSDE tokens as collateral to borrow USDT with 10x leverage. Uses Aave V3. Combines stablecoin assets with leverage.",
+        "flashLoanMintHelperAddress": "",
+        "flashLoanRedeemHelperAddress": ""
       }
     ]
   },
@@ -95,7 +105,9 @@
         "maxSafeLTV": "",
         "minSafeLTV": "",
         "lendingName": "",
-        "lendingAddress": ""
+        "lendingAddress": "",
+        "flashLoanMintHelperAddress": "",
+        "flashLoanRedeemHelperAddress": ""
       }
     ]
   }

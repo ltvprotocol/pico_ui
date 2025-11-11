@@ -1,7 +1,13 @@
 import { createContext, ReactNode, useContext, useEffect, useState, useCallback } from 'react'
 import { formatUnits, formatEther, parseUnits, ZeroAddress, parseEther } from 'ethers'
 import { useAppContext } from '@/contexts/AppContext';
-import { Vault, WETH, ERC20, Vault__factory, WETH__factory, ERC20__factory } from '@/typechain-types';
+import {
+  Vault, Vault__factory,
+  WETH, WETH__factory,
+  ERC20, ERC20__factory,
+  FlashLoanMintHelper, FlashLoanMintHelper__factory,
+  FlashLoanRedeemHelper, FlashLoanRedeemHelper__factory
+} from '@/typechain-types';
 import { ltvToLeverage, getLendingProtocolAddress, isVaultExists } from '@/utils';
 import vaultsConfig from '../../vaults.config.json';
 import { isWETHAddress, GAS_RESERVE_WEI, SEPOLIA_CHAIN_ID_STRING, MORPHO_MARKET_ID, CONNECTOR_ADDRESSES} from '@/constants';
@@ -24,6 +30,8 @@ interface VaultConfig {
   dexLink?: string;
   dexLinkName?: string;
   description?: string;
+  flashLoanMintHelperAddress?: string;
+  flashLoanRedeemHelperAddress?: string;
 };
 
 interface VaultContextType {
@@ -47,6 +55,11 @@ interface VaultContextType {
   collateralTokenDecimals: bigint;
   vaultConfig: VaultConfig | undefined;
   description: string | null;
+  // Flash loan helpers
+  flashLoanMintHelper: FlashLoanMintHelper | null;
+  flashLoanRedeemHelper: FlashLoanRedeemHelper | null;
+  flashLoanMintHelperAddress: string | null;
+  flashLoanRedeemHelperAddress: string | null;
   // Vault existence
   vaultExists: boolean | null;
   isCheckingVaultExistence: boolean;
@@ -120,6 +133,11 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   const [sharesDecimals, setSharesDecimals] = useState<bigint>(18n);
   const [borrowTokenDecimals, setBorrowTokenDecimals] = useState<bigint>(18n);
   const [collateralTokenDecimals, setCollateralTokenDecimals] = useState<bigint>(18n);
+
+  const [flashLoanMintHelper, setFlashLoanMintHelper] = useState<FlashLoanMintHelper | null>(null);
+  const [flashLoanRedeemHelper, setFlashLoanRedeemHelper] = useState<FlashLoanRedeemHelper | null>(null);
+  const [flashLoanMintHelperAddress, setFlashLoanMintHelperAddress] = useState<string | null>(null);
+  const [flashLoanRedeemHelperAddress, setFlashLoanRedeemHelperAddress] = useState<string | null>(null);
 
   const [ethBalance, setEthBalance] = useState<string>('0');
   const [sharesBalance, setSharesBalance] = useState<string>('0');
@@ -231,6 +249,23 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         setBorrowToken(isWETHAddress(newBorrowTokenAddress)
           ? WETH__factory.connect(newBorrowTokenAddress, signer)
           : ERC20__factory.connect(newBorrowTokenAddress, signer));
+
+        // Initialize flash loan helpers if addresses are configured
+        if (vaultConfig?.flashLoanMintHelperAddress && vaultConfig.flashLoanMintHelperAddress !== '') {
+          setFlashLoanMintHelper(FlashLoanMintHelper__factory.connect(vaultConfig.flashLoanMintHelperAddress, signer));
+          setFlashLoanMintHelperAddress(vaultConfig.flashLoanMintHelperAddress);
+        } else {
+          setFlashLoanMintHelper(null);
+          setFlashLoanMintHelperAddress(null);
+        }
+
+        if (vaultConfig?.flashLoanRedeemHelperAddress && vaultConfig.flashLoanRedeemHelperAddress !== '') {
+          setFlashLoanRedeemHelper(FlashLoanRedeemHelper__factory.connect(vaultConfig.flashLoanRedeemHelperAddress, signer));
+          setFlashLoanRedeemHelperAddress(vaultConfig.flashLoanRedeemHelperAddress);
+        } else {
+          setFlashLoanRedeemHelper(null);
+          setFlashLoanRedeemHelperAddress(null);
+        }
       }
 
       if (!vaultConfig?.sharesSymbol) {
@@ -575,6 +610,10 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         collateralTokenDecimals,
         vaultConfig,
         description,
+        flashLoanMintHelper,
+        flashLoanRedeemHelper,
+        flashLoanMintHelperAddress,
+        flashLoanRedeemHelperAddress,
         vaultExists,
         isCheckingVaultExistence,
         ethBalance,

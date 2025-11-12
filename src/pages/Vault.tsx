@@ -29,7 +29,7 @@ function VaultContent() {
     return <UnrecognizedNetwork />;
   }
 
-  if (!vaultExists) {
+  if (vaultExists === false) {
     return <VaultNotFound />;
   }
 

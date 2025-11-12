@@ -66,7 +66,7 @@
   "1": {
     "vaults": [
       {
-        "address": "0xwstETH_WETH_x12_AAVEV3",
+        "address": "0xa260b049ddD6567E739139404C7554435c456d9E",
         "collateralTokenAddress": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
         "borrowTokenAddress": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
         "lendingAddress": "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
@@ -75,14 +75,12 @@
         "borrowTokenSymbol": "WETH",
         "leverage": "12",
         "targetLTV": "0.9167",
-        "maxSafeLTV": "0.9286",
-        "minProfitLTV": "0.9000",
-        "lendingName": "AaveV3",
-        "dexLink": "https://app.uniswap.org/swap?inputCurrency=0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0&outputCurrency=0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2&chain=ethereum",
-        "dexLinkName": "Uniswap V3 wstETH/WETH pool",
+        "maxSafeLTV": "0.9259",
+        "minProfitLTV": "0.9118",
+        "lendingName": "AAVE V3",
         "description": "Use your wstETH tokens as collateral to borrow WETH. Get 12x leverage through Aave V3. Good to maximize your wstETH holdings or get yield on your WETH.",
-        "flashLoanMintHelperAddress": "0xMockFlashLoanMintHelper",
-        "flashLoanRedeemHelperAddress": "0xMockFlashLoanRedeemHelper"
+        "flashLoanMintHelperAddress": "0x2f5636d96ed34cd9f3eb3ab5b657175a36408645",
+        "flashLoanRedeemHelperAddress": "0xa5836756b1d5db03dfccbafc4083a1e675a1f644"
       },
       {
         "address": "0xSUSDE_USDT_X10_AAVEV3",

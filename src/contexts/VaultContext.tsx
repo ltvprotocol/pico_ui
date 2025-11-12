@@ -9,7 +9,7 @@ import {
   FlashLoanRedeemHelper, FlashLoanRedeemHelper__factory,
   WhitelistRegistry__factory
 } from '@/typechain-types';
-import { ltvToLeverage, getLendingProtocolAddress, isVaultExists, isUserRejected } from '@/utils';
+import { ltvToLeverage, getLendingProtocolAddress, isVaultExists, isUserRejected, fetchApy, fetchPointsRate } from '@/utils';
 import vaultsConfig from '../../vaults.config.json';
 import signaturesConfig from '../../signatures.config.json';
 import { isWETHAddress, GAS_RESERVE_WEI, SEPOLIA_CHAIN_ID_STRING, MORPHO_MARKET_ID, CONNECTOR_ADDRESSES} from '@/constants';
@@ -237,11 +237,46 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
     setBorrowTokenSymbol(params.borrowTokenSymbol ?? config?.borrowTokenSymbol ?? null);
     setCollateralTokenSymbol(params.collateralTokenSymbol ?? config?.collateralTokenSymbol ?? null);
     setDescription(config?.description ?? null);
-    setApy(params.apy);
-    setPointsRate(params.pointsRate);
-    setApyLoadFailed(params.apy === null);
-    setPointsRateLoadFailed(params.pointsRate === null);
+    
+    if (params.apy !== null) {
+      setApy(params.apy);
+      setApyLoadFailed(false);
+    }
+    if (params.pointsRate !== null) {
+      setPointsRate(params.pointsRate);
+      setPointsRateLoadFailed(false);
+    }
   }, [vaultAddress, params, currentNetwork]);
+
+  const loadApyData = useCallback(async () => {
+    if (params.apy !== null && params.pointsRate !== null) {
+      return;
+    }
+
+    try {
+      const [apyResult, pointsRateResult] = await Promise.all([
+        params.apy === null ? fetchApy(vaultAddress, currentNetwork) : Promise.resolve(params.apy),
+        params.pointsRate === null ? fetchPointsRate(vaultAddress, currentNetwork) : Promise.resolve(params.pointsRate)
+      ]);
+
+      if (params.apy === null) {
+        setApy(apyResult);
+        setApyLoadFailed(apyResult === null);
+      }
+      if (params.pointsRate === null) {
+        setPointsRate(pointsRateResult);
+        setPointsRateLoadFailed(pointsRateResult === null);
+      }
+    } catch (err) {
+      console.error('Error loading APY data:', err);
+      if (params.apy === null) {
+        setApyLoadFailed(true);
+      }
+      if (params.pointsRate === null) {
+        setPointsRateLoadFailed(true);
+      }
+    }
+  }, [vaultAddress, currentNetwork, params.apy, params.pointsRate]);
 
   const initializeContracts = useCallback(async () => {
     if (!publicProvider) return;
@@ -751,12 +786,17 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
     loadConfigAndParams();
   }, [loadConfigAndParams]);
 
+  // Load APY data from API if not provided in params
+  useEffect(() => {
+    loadApyData();
+  }, [loadApyData]);
+
   // Initialize contracts
   useEffect(() => {
-    if (vaultConfig) {
+    if (vaultConfig && publicProvider) {
       initializeContracts();
     }
-  }, [vaultConfig, initializeContracts]);
+  }, [vaultConfig, publicProvider, initializeContracts]);
 
   // Load balances
   useEffect(() => {

@@ -100,8 +100,8 @@ export default function VaultBlock({ address }: VaultBlockProps) {
       setPointsRateLoadFailed(false);
       
       const [apyResult, pointsRateResult] = await Promise.all([
-        fetchApy(address),
-        fetchPointsRate(address)
+        fetchApy(address, currentNetwork),
+        fetchPointsRate(address, currentNetwork)
       ]);
       
       setApyData({
@@ -122,7 +122,7 @@ export default function VaultBlock({ address }: VaultBlockProps) {
     } finally {
       setIsLoadingApy(false);
     }
-  }, [address]);
+  }, [address, currentNetwork]);
 
   const memoizedApyData = useMemo(() => apyData, [apyData.apy, apyData.pointsRate]);
 

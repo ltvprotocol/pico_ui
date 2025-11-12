@@ -1,4 +1,5 @@
-import { CONFIG } from '@/config';
+import { API_URLS } from '@/config';
+import { SEPOLIA_CHAIN_ID_STRING } from '@/constants';
 
 export interface ApyResponse {
   apy: number;
@@ -8,9 +9,10 @@ export interface PointsRateResponse {
   pointsPerDay: number;
 }
 
-export async function fetchApy(vaultAddress: string): Promise<number | null> {
+export async function fetchApy(vaultAddress: string, chainId: string | null): Promise<number | null> {
   try {
-    const response = await fetch(`${CONFIG.API}/apy/${vaultAddress}`);
+    const apiUrl = API_URLS[chainId || SEPOLIA_CHAIN_ID_STRING];
+    const response = await fetch(`${apiUrl}/apy/${vaultAddress}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch APY: ${response.status}`);
     }
@@ -22,9 +24,10 @@ export async function fetchApy(vaultAddress: string): Promise<number | null> {
   }
 }
 
-export async function fetchPointsRate(vaultAddress: string): Promise<number | null> {
+export async function fetchPointsRate(vaultAddress: string, chainId: string | null): Promise<number | null> {
   try {
-    const response = await fetch(`${CONFIG.API}/points-rate/${vaultAddress}`);
+    const apiUrl = API_URLS[chainId || SEPOLIA_CHAIN_ID_STRING] || API_URLS[SEPOLIA_CHAIN_ID_STRING];
+    const response = await fetch(`${apiUrl}/points-rate/${vaultAddress}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch points rate: ${response.status}`);
     }

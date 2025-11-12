@@ -1,13 +1,14 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { formatUnits } from "ethers";
+import { formatUnits, ZeroAddress } from "ethers";
 import { useAppContext } from "@/contexts";
 import { ltvToLeverage, fetchApy, fetchPointsRate } from "@/utils";
 import { useAdaptiveInterval } from "@/hooks";
-import { Vault__factory, ERC20__factory } from "@/typechain-types";
+import { Vault__factory, ERC20__factory, WhitelistRegistry__factory } from "@/typechain-types";
 import { NumberDisplay } from "@/components/ui";
 import { renderWithTransition } from "@/helpers/renderWithTransition";
 import vaultsConfig from "../../../vaults.config.json";
+import signaturesConfig from "../../../signatures.config.json";
 
 interface VaultBlockProps {
   address: string;
@@ -18,6 +19,12 @@ interface StaticVaultData {
   collateralTokenSymbol: string | null;
   maxLeverage: string | null;
   lendingName: string | null;
+  isWhitelistActivated: boolean | null;
+}
+
+interface WhitelistData {
+  isWhitelisted: boolean | null;
+  hasSignature: boolean;
 }
 
 interface DynamicVaultData {
@@ -47,6 +54,7 @@ export default function VaultBlock({ address }: VaultBlockProps) {
     collateralTokenSymbol: null,
     maxLeverage: null,
     lendingName: null,
+    isWhitelistActivated: null,
   });
 
   const [dynamicData, setDynamicData] = useState<DynamicVaultData>({
@@ -78,7 +86,12 @@ export default function VaultBlock({ address }: VaultBlockProps) {
     hasLoadedDecimals: false,
   });
 
-  const { publicProvider, currentNetwork } = useAppContext();
+  const [whitelistData, setWhitelistData] = useState<WhitelistData>({
+    isWhitelisted: null,
+    hasSignature: false,
+  });
+
+  const { publicProvider, currentNetwork, address: userAddress, isConnected } = useAppContext();
 
   const loadApyAndPointsRate = useCallback(async () => {
     try {
@@ -139,12 +152,13 @@ export default function VaultBlock({ address }: VaultBlockProps) {
           hasLoadedLeverage: hasLeverageFromConfig,
         }));
 
-        setStaticData({
+        setStaticData(prev => ({
+          ...prev,
           collateralTokenSymbol: vaultConfig.collateralTokenSymbol || null,
           borrowTokenSymbol: vaultConfig.borrowTokenSymbol || null,
           maxLeverage: vaultConfig.leverage || null,
           lendingName: vaultConfig.lendingName || null,
-        });
+        }));
       }
     }
   }, [vaultConfig]);
@@ -225,6 +239,66 @@ export default function VaultBlock({ address }: VaultBlockProps) {
     }
   }, [vaultContract]);
 
+  const loadWhitelistActivation = useCallback(async () => {
+    if (!vaultContract) return;
+
+    try {
+      const isActivated = await vaultContract.isWhitelistActivated();
+      setStaticData(prev => ({ ...prev, isWhitelistActivated: isActivated }));
+    } catch (err) {
+      console.error('Error loading whitelist activation:', err);
+      setStaticData(prev => ({ ...prev, isWhitelistActivated: null }));
+    }
+  }, [vaultContract]);
+
+  const checkUserSignature = useCallback(() => {
+    if (!userAddress || !currentNetwork) {
+      setWhitelistData(prev => ({ ...prev, hasSignature: false }));
+      return;
+    }
+
+    const networkSignatures = (signaturesConfig as any)[currentNetwork];
+    const vaultSignatures = networkSignatures?.vaults?.[address.toLowerCase()];
+    const signaturesMap = vaultSignatures?.signatures;
+
+    if (!signaturesMap) {
+      setWhitelistData(prev => ({ ...prev, hasSignature: false }));
+      return;
+    }
+
+    const addressLower = userAddress.toLowerCase();
+    const hasSignature = !!signaturesMap[addressLower];
+    
+    setWhitelistData(prev => ({ ...prev, hasSignature }));
+  }, [userAddress, currentNetwork, address]);
+
+  const checkUserWhitelist = useCallback(async () => {
+    if (!vaultContract || !userAddress || !isConnected || staticData.isWhitelistActivated === null) {
+      return;
+    }
+
+    // If whitelist is not activated, everyone is whitelisted
+    if (!staticData.isWhitelistActivated) {
+      setWhitelistData(prev => ({ ...prev, isWhitelisted: true }));
+      return;
+    }
+
+    try {
+      const whitelistRegistryAddress = await vaultContract.whitelistRegistry();
+      if (whitelistRegistryAddress === ZeroAddress) {
+        setWhitelistData(prev => ({ ...prev, isWhitelisted: null }));
+        return;
+      }
+
+      const whitelistRegistry = WhitelistRegistry__factory.connect(whitelistRegistryAddress, publicProvider!);
+      const whitelisted = await whitelistRegistry.isAddressWhitelisted(userAddress);
+      setWhitelistData(prev => ({ ...prev, isWhitelisted: whitelisted }));
+    } catch (err) {
+      console.error('Error checking whitelist status:', err);
+      setWhitelistData(prev => ({ ...prev, isWhitelisted: null }));
+    }
+  }, [vaultContract, userAddress, isConnected, staticData.isWhitelistActivated, publicProvider]);
+
   useEffect(() => {
     if (vaultContract && publicProvider && !vaultConfig?.collateralTokenSymbol) {
       loadCollateralTokenSymbol();
@@ -254,6 +328,24 @@ export default function VaultBlock({ address }: VaultBlockProps) {
       loadDecimals();
     }
   }, [vaultContract, loadDecimals]);
+
+  useEffect(() => {
+    if (vaultContract) {
+      loadWhitelistActivation();
+    }
+  }, [vaultContract, loadWhitelistActivation]);
+
+  // Check user signature when address or network changes
+  useEffect(() => {
+    checkUserSignature();
+  }, [address, currentNetwork, checkUserSignature]);
+
+  // Check user whitelist status when whitelist activation status is known
+  useEffect(() => {
+    if (staticData.isWhitelistActivated !== null) {
+      checkUserWhitelist();
+    }
+  }, [staticData.isWhitelistActivated, address, currentNetwork, checkUserWhitelist]);
 
   const loadTvl = useCallback(async () => {
     if (!vaultContract) return;
@@ -309,7 +401,10 @@ export default function VaultBlock({ address }: VaultBlockProps) {
           maxLeverage: staticData.maxLeverage,
           lendingName: staticData.lendingName,
           apy: memoizedApyData.apy,
-          pointsRate: memoizedApyData.pointsRate
+          pointsRate: memoizedApyData.pointsRate,
+          isWhitelistActivated: staticData.isWhitelistActivated,
+          isWhitelisted: whitelistData.isWhitelisted,
+          hasSignature: whitelistData.hasSignature
         }}
         className="wrapper block w-full bg-gray-50 transition-colors border border-gray-50 rounded-lg mb-4 last:mb-0 p-3">
         <div className="w-full">

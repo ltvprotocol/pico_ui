@@ -48,6 +48,18 @@
         "description": "Use WETH to borrow USDC with 3x leverage. Runs on Morpho. For those who are not afraid of the fall in the price of Ethereum",
         "flashLoanMintHelperAddress": "",
         "flashLoanRedeemHelperAddress": ""
+      },
+      {
+        "address": "0x94E6014565f790Fee82890eE647F1855B910bd98",
+        "collateralTokenAddress": "0xC558DBdd856501FCd9aaF1E62eae57A9F0629a3c",
+        "borrowTokenAddress": "0x29f2D40B0605204364af54EC677bD022dA425d03",
+        "lendingAddress": "0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951",
+        "sharesSymbol": "WETH_WBTC_x4_AAVEV3_PERMISSIONED",
+        "collateralTokenSymbol": "WETH",
+        "borrowTokenSymbol": "WBTC",
+        "leverage": "4",
+        "lendingName": "AAVE V3",
+        "description": "Put up WETH to borrow WBTC with 4x leverage. Uses AAVE V3. Combines two fundamental assets with leverage."
       }
     ]
   },

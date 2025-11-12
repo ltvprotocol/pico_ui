@@ -6,13 +6,21 @@ import {
   WETH, WETH__factory,
   ERC20, ERC20__factory,
   FlashLoanMintHelper, FlashLoanMintHelper__factory,
-  FlashLoanRedeemHelper, FlashLoanRedeemHelper__factory
+  FlashLoanRedeemHelper, FlashLoanRedeemHelper__factory,
+  WhitelistRegistry__factory
 } from '@/typechain-types';
-import { ltvToLeverage, getLendingProtocolAddress, isVaultExists } from '@/utils';
+import { ltvToLeverage, getLendingProtocolAddress, isVaultExists, isUserRejected } from '@/utils';
 import vaultsConfig from '../../vaults.config.json';
+import signaturesConfig from '../../signatures.config.json';
 import { isWETHAddress, GAS_RESERVE_WEI, SEPOLIA_CHAIN_ID_STRING, MORPHO_MARKET_ID, CONNECTOR_ADDRESSES} from '@/constants';
 import { useAdaptiveInterval } from '@/hooks';
 import { loadGhostLtv, loadAaveLtv, loadMorphoLtv } from '@/utils';
+
+interface Signature {
+  v: number;
+  r: string;
+  s: string;
+}
 
 interface VaultConfig {
   address: string;
@@ -93,6 +101,15 @@ interface VaultContextType {
   apyLoadFailed: boolean;
   pointsRateLoadFailed: boolean;
   currentLtv: string | null;
+  // Whitelist
+  isWhitelistActivated: boolean | null;
+  isWhitelisted: boolean | null;
+  hasSignature: boolean;
+  signature: Signature | null;
+  isCheckingWhitelist: boolean;
+  activateWhitelist: () => Promise<void>;
+  isActivatingWhitelist: boolean;
+  whitelistError: string | null;
   // Refresh functions
   refreshBalances: () => Promise<void>;
   refreshVaultLimits: () => Promise<void>;
@@ -104,7 +121,10 @@ interface Params {
   maxLeverage: string | null,
   lendingName: string | null,
   apy: number | null,
-  pointsRate: number | null
+  pointsRate: number | null,
+  isWhitelistActivated: boolean | null,
+  isWhitelisted: boolean | null,
+  hasSignature: boolean | undefined
 }
 
 const VaultContext = createContext<VaultContextType | undefined>(undefined);
@@ -170,6 +190,17 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   const [pointsRateLoadFailed, setPointsRateLoadFailed] = useState<boolean>(false);
 
   const [currentLtv, setCurrentLtv] = useState<string | null>(null);
+
+  // Whitelist state
+  const [isWhitelistActivated, setIsWhitelistActivated] = useState<boolean | null>(params.isWhitelistActivated ?? null);
+  const [isWhitelisted, setIsWhitelisted] = useState<boolean | null>(null);
+  const [hasSignature, setHasSignature] = useState<boolean>(false);
+  const [signature, setSignature] = useState<Signature | null>(null);
+  const [isCheckingWhitelist, setIsCheckingWhitelist] = useState<boolean>(false);
+  const [isActivatingWhitelist, setIsActivatingWhitelist] = useState<boolean>(false);
+  const [whitelistError, setWhitelistError] = useState<string | null>(null);
+  const [lastCheckedAddressForSignature, setLastCheckedAddressForSignature] = useState<string | null>(null);
+  const [hasUsedInitialWhitelistParams, setHasUsedInitialWhitelistParams] = useState<boolean>(false);
 
   const { publicProvider, signer, isConnected, address, currentNetwork } = useAppContext();
 
@@ -522,6 +553,187 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
     }
   }, [publicProvider, vaultLens, lendingAddress, vaultAddress, borrowTokenDecimals]);
   
+  // Check whitelist activation status
+  const checkWhitelistActivation = useCallback(async () => {
+    if (!vaultLens || params.isWhitelistActivated !== null) {
+      return;
+    }
+
+    try {
+      const activated = await vaultLens.isWhitelistActivated();
+      setIsWhitelistActivated(activated);
+    } catch (err) {
+      console.error('Error checking whitelist activation:', err);
+      setIsWhitelistActivated(null);
+    }
+  }, [vaultLens, params.isWhitelistActivated]);
+
+  // Check if user has signature and load signature data
+  useEffect(() => {
+    if (!address || !currentNetwork || !vaultAddress) {
+      setHasSignature(false);
+      setSignature(null);
+      setLastCheckedAddressForSignature(null);
+      return;
+    }
+
+    // If we have params and haven't checked any address yet, use params
+    if (!lastCheckedAddressForSignature && params.hasSignature !== undefined) {
+      setHasSignature(params.hasSignature);
+      setLastCheckedAddressForSignature(address);
+      
+      // If params say user has signature, load the signature data
+      if (params.hasSignature) {
+        const networkSignatures = (signaturesConfig as any)[currentNetwork];
+        const vaultSignatures = networkSignatures?.vaults?.[vaultAddress.toLowerCase()];
+        const signaturesMap = vaultSignatures?.signatures;
+        const addressLower = address.toLowerCase();
+        const signatureData = signaturesMap?.[addressLower];
+        
+        if (signatureData) {
+          setSignature({
+            v: signatureData.v,
+            r: signatureData.r,
+            s: signatureData.s
+          });
+        }
+      }
+      return;
+    }
+
+    // If address changed or no params were provided, check signature
+    if (address !== lastCheckedAddressForSignature) {
+      const networkSignatures = (signaturesConfig as any)[currentNetwork];
+      const vaultSignatures = networkSignatures?.vaults?.[vaultAddress.toLowerCase()];
+      const signaturesMap = vaultSignatures?.signatures;
+
+      if (!signaturesMap) {
+        setHasSignature(false);
+        setSignature(null);
+        setLastCheckedAddressForSignature(address);
+        return;
+      }
+
+      const addressLower = address.toLowerCase();
+      const signatureData = signaturesMap[addressLower];
+      
+      if (signatureData) {
+        setHasSignature(true);
+        setSignature({
+          v: signatureData.v,
+          r: signatureData.r,
+          s: signatureData.s
+        });
+      } else {
+        setHasSignature(false);
+        setSignature(null);
+      }
+      
+      setLastCheckedAddressForSignature(address);
+    }
+  }, [address, currentNetwork, vaultAddress, params.hasSignature, lastCheckedAddressForSignature]);
+
+  // Use initial params only once, then always check
+  useEffect(() => {
+    if (!hasUsedInitialWhitelistParams && params.isWhitelisted !== null && isWhitelistActivated !== null) {
+      if (isWhitelistActivated) {
+        setIsWhitelisted(params.isWhitelisted);
+      }
+      setHasUsedInitialWhitelistParams(true);
+    }
+  }, [params.isWhitelisted, hasUsedInitialWhitelistParams, isWhitelistActivated]);
+
+  // Check if user is whitelisted - always check from registry, don't rely on params after initial load
+  const checkWhitelistStatus = useCallback(async () => {
+    if (!vaultLens || !address || !isConnected || isWhitelistActivated === null) {
+      setIsWhitelisted(null);
+      return;
+    }
+
+    // If whitelist is not activated, everyone is whitelisted
+    if (!isWhitelistActivated) {
+      setIsWhitelisted(true);
+      setIsCheckingWhitelist(false);
+      return;
+    }
+
+    setIsCheckingWhitelist(true);
+    try {
+      const whitelistRegistryAddress = await vaultLens.whitelistRegistry();
+      if (whitelistRegistryAddress === ZeroAddress) {
+        setIsWhitelisted(null);
+        return;
+      }
+
+      const whitelistRegistry = WhitelistRegistry__factory.connect(whitelistRegistryAddress, publicProvider!);
+      const whitelisted = await whitelistRegistry.isAddressWhitelisted(address);
+      setIsWhitelisted(whitelisted);
+    } catch (err) {
+      console.error('Error checking whitelist status:', err);
+      setIsWhitelisted(null);
+    } finally {
+      setIsCheckingWhitelist(false);
+    }
+  }, [vaultLens, address, isConnected, isWhitelistActivated, publicProvider]);
+
+  const activateWhitelist = useCallback(async () => {
+    if (!vaultLens || !signer || !address || !signature || !isWhitelistActivated) {
+      console.error('Missing required data for whitelist activation');
+      return;
+    }
+
+    setIsActivatingWhitelist(true);
+    setWhitelistError(null);
+
+    try {
+      const whitelistRegistryAddress = await vaultLens.whitelistRegistry();
+      if (whitelistRegistryAddress === ZeroAddress) {
+        setWhitelistError('Whitelist registry not found');
+        return;
+      }
+
+      const whitelistRegistry = WhitelistRegistry__factory.connect(whitelistRegistryAddress, signer);
+
+      const tx = await whitelistRegistry.addAddressToWhitelistBySignature(
+        address,
+        signature.v,
+        signature.r,
+        signature.s
+      );
+
+      console.log('Whitelist activation transaction submitted:', tx.hash);
+      await tx.wait();
+      console.log('Whitelist activation transaction confirmed');
+
+      await checkWhitelistStatus();
+      
+    } catch (err: any) {
+      console.error('Error activating whitelist:', err);
+      
+      if (isUserRejected(err)) {
+        setWhitelistError('Transaction rejected by user');
+      } else if (err.message?.includes('AddressWhitelistingBySignatureDisabled')) {
+        setWhitelistError('This address has already used its whitelist signature');
+      } else if (err.message?.includes('InvalidSignature')) {
+        setWhitelistError('Invalid signature provided');
+      } else {
+        setWhitelistError('Failed to activate whitelist. Please try again.');
+      }
+    } finally {
+      setIsActivatingWhitelist(false);
+    }
+  }, [vaultLens, signer, address, signature, isWhitelistActivated, checkWhitelistStatus]);
+
+  useEffect(() => {
+    if (vaultLens) {
+      checkWhitelistActivation();
+    }
+  }, [address, currentNetwork, vaultLens, checkWhitelistActivation]);
+
+  useEffect(() => {
+    checkWhitelistStatus();
+  }, [address, currentNetwork, checkWhitelistStatus]);
+
   // Load ltv
   useEffect(() => {
     if (vaultLens && borrowTokenDecimals && lendingAddress) {
@@ -643,6 +855,14 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         apyLoadFailed,
         pointsRateLoadFailed,
         currentLtv,
+        isWhitelistActivated,
+        isWhitelisted,
+        hasSignature,
+        signature,
+        isCheckingWhitelist,
+        activateWhitelist,
+        isActivatingWhitelist,
+        whitelistError,
         refreshBalances: loadBalances,
         refreshVaultLimits: loadVaultLimits
       }}

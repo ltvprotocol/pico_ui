@@ -7,13 +7,23 @@ import Actions from "@/components/vault/Actions";
 import VaultHeader from '@/components/vault/VaultHeader';
 import Info from '@/components/vault/Info';
 import LowLevelRebalance from '@/components/vault/LowLevelRebalance';
+import FlashLoanHelper from '@/components/vault/FlashLoanHelper';
 import Auction from '@/components/vault/Auction';
 import VaultNotFound from '@/components/vault/VaultNotFound';
 import WhitelistBanner from '@/components/vault/WhitelistBanner';
 
 function VaultContent() {
-  const { vaultExists, isWhitelistActivated, isWhitelisted, vaultConfig } = useVaultContext();
+  const { 
+    vaultExists, vaultConfig,
+    isWhitelistActivated, isWhitelisted,
+    flashLoanMintHelperAddress, flashLoanRedeemHelperAddress
+  } = useVaultContext();
+
   const { unrecognizedNetworkParam } = useAppContext();
+
+  const hasFlashLoanHelper =
+    (flashLoanMintHelperAddress && flashLoanMintHelperAddress !== '') ||
+    (flashLoanRedeemHelperAddress && flashLoanRedeemHelperAddress !== '');
 
   if (unrecognizedNetworkParam) {
     return <UnrecognizedNetwork />;
@@ -42,6 +52,11 @@ function VaultContent() {
         <div className="mb-4">
           <LowLevelRebalance />
         </div>
+        {hasFlashLoanHelper && (
+          <div className="mb-4">
+            <FlashLoanHelper />
+          </div>
+        )}
         <div className="mb-4">
           <Auction />
         </div>

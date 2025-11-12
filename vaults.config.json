@@ -78,47 +78,9 @@
         "maxSafeLTV": "0.9259",
         "minProfitLTV": "0.9118",
         "lendingName": "AAVE V3",
-        "description": "Use your wstETH tokens as collateral to borrow WETH. Get 12x leverage through Aave V3. Good to maximize your wstETH holdings or get yield on your WETH.",
+        "description": "Deposit ETH or wstETH to maximize your staking yield. Vault will use your wstETH tokens as collateral to borrow WETH - creating a 12x leverage poisition through Aave V3.",
         "flashLoanMintHelperAddress": "0x2f5636d96ed34cd9f3eb3ab5b657175a36408645",
         "flashLoanRedeemHelperAddress": "0xa5836756b1d5db03dfccbafc4083a1e675a1f644"
-      },
-      {
-        "address": "0xSUSDE_USDT_X10_AAVEV3",
-        "collateralTokenAddress": "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
-        "borrowTokenAddress": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
-        "lendingAddress": "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
-        "sharesSymbol": "SUSDE_USDT_X10_AAVEV3",
-        "collateralTokenSymbol": "SUSDE",
-        "borrowTokenSymbol": "USDT",
-        "leverage": "10",
-        "targetLTV": "0.8920",
-        "maxSafeLTV": "0.9000",
-        "minProfitLTV": "0.8840",
-        "lendingName": "AaveV3",
-        "dexLink": "https://app.uniswap.org/swap?inputCurrency=0x9D39A5DE30e57443BfF2A8307A4256c8797A3497&outputCurrency=0xdAC17F958D2ee523a2206206994597C13D831ec7&chain=ethereum",
-        "dexLinkName": "Uniswap V3 SUSDE/USDT pool",
-        "description": "Use your SUSDE tokens as collateral to borrow USDT with 10x leverage. Uses Aave V3. Combines stablecoin assets with leverage.",
-        "flashLoanMintHelperAddress": "",
-        "flashLoanRedeemHelperAddress": ""
-      }
-    ]
-  },
-  "137": {
-    "vaults": [
-      {
-        "address": "0xPolygonVaultAddress",
-        "collateralTokenAddress": "",
-        "borrowTokenAddress": "",
-        "collateralTokenSymbol": "",
-        "borrowTokenSymbol": "",
-        "leverage": "",
-        "targetLTV": "",
-        "maxSafeLTV": "",
-        "minSafeLTV": "",
-        "lendingName": "",
-        "lendingAddress": "",
-        "flashLoanMintHelperAddress": "",
-        "flashLoanRedeemHelperAddress": ""
       }
     ]
   }

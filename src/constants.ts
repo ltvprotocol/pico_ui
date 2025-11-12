@@ -89,7 +89,7 @@ export const SAFE_HELPER_ADDRESSES: Record<string, { borrow: string; collateral:
     collateral: '0x25cd7dc2ffb7c453241a8c530e73c34bd642809c'
   },
   [MAINNET_CHAIN_ID_STRING]: {
-    borrow: '0xMainnetBorrowHelperAddress',
-    collateral: '0xMainnetCollateralHelperAddress'
+    borrow: '0xb79baeb8eed4d53f040dfea46703812bbd0a1d9e',
+    collateral: '0x25cd7dc2ffb7c453241a8c530e73c34bd642809c'
   }
 };

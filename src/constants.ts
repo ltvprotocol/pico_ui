@@ -1,17 +1,18 @@
 import { parseEther } from "ethers";
 
-// TODO: Remove this and use WETH_ADDRESSES
-export const WETH_ADDRESS = '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14';
-
-const WETH_ADDRESSES = [
+const SEPOLIA_WETH_ADDRESSES = [
   '0x2d5ee574e710219a521449679a4a7f2b43f046ad',
   '0xc558dbdd856501fcd9aaf1e62eae57a9f0629a3c',
   '0xfff9976782d46cc05630d1f6ebab18b2324d6b14'
 ];
 
-export const isWETHAddress = (address: string): boolean => {
+const MAINNET_WETH_ADDRESS = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
+
+export const isWETHAddress = (address: string, network: string): boolean => {
   const lowerAddress = address.toLowerCase().trim();
-  const result = WETH_ADDRESSES.includes(lowerAddress);
+  const result = network === SEPOLIA_CHAIN_ID_STRING
+    ? SEPOLIA_WETH_ADDRESSES.includes(lowerAddress) 
+    : MAINNET_WETH_ADDRESS === lowerAddress;
   return result;
 };
 

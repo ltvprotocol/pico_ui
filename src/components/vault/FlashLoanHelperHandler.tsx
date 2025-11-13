@@ -83,6 +83,9 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
         if (currentAllowance < previewData.amount) {
           const tx = await collateralToken.approve(helperAddress, previewData.amount);
           await tx.wait();
+          setSuccess(`Successfully approved ${collateralTokenSymbol}.`);
+        } else {
+          setSuccess(`Already approved ${collateralTokenSymbol}.`);
         }
       } else {
         if (!vault) return;
@@ -91,6 +94,9 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
         if (sharesAllowance < sharesToProcess) {
           const tx = await vault.approve(helperAddress, sharesToProcess);
           await tx.wait();
+          setSuccess(`Successfully approved ${sharesSymbol}.`);
+        } else {
+          setSuccess(`Already approved ${sharesSymbol}.`);
         }
       }
     } catch (err) {

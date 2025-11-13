@@ -16,14 +16,8 @@ export const isWETHAddress = (address: string, network: string): boolean => {
   return result;
 };
 
-export const CONNECTOR_ADDRESSES = {
-  MORPHO: '0x2F7E5B3f16120363E9d6C6a46744D3a90D426CB0',
-  AAVE: '0x87e1d99D8Af73a7DB9d80827076A283E17a1f431',
-  GHOST: '0x899645f1AF07511e112f737027BCF13F122aa5A6'
-};
-
 // TODO: Get the correct market ID from config or contract
-export const MORPHO_MARKET_ID = '0xffd695adfd08031184633c49ce9296a58ddbddd0d5fed1e65fbe83a0ba43a5dd';
+export const SEPOLIA_MORPHO_MARKET_ID = '0xffd695adfd08031184633c49ce9296a58ddbddd0d5fed1e65fbe83a0ba43a5dd';
 
 // Gas reserve in ETH (0.002 ETH = 2,000,000,000,000,000 wei)
 export const GAS_RESERVE_ETH = 0.002;
@@ -81,6 +75,18 @@ export const NETWORK_CONFIGS = {
 export const URL_PARAM_TO_CHAIN_ID = {
   'sepolia': SEPOLIA_CHAIN_ID_STRING,
   'ethereum': MAINNET_CHAIN_ID_STRING
+};
+
+// Connector addresses per network
+export const CONNECTOR_ADDRESSES: Record<string, { MORPHO?: string; AAVE?: string; GHOST?: string }> = {
+  [SEPOLIA_CHAIN_ID_STRING]: {
+    MORPHO: '0xb241c66c61Adb67CD261e71F425bC38cFF6F00A4',
+    AAVE: '0x433D9AA49Dd184863AC818fF8aA359047510Dc30',
+    GHOST: '0x435Fd4A70AB890A7F22CDDf0B6667Dc0e564d333'
+  },
+  [MAINNET_CHAIN_ID_STRING]: {
+    AAVE: '0x3233963016660814482E20b54181f5A96dF4dC99'
+  }
 };
 
 // Mock helper addresses per network (borrow/collateral)

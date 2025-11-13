@@ -80,7 +80,8 @@
         "lendingName": "AAVE V3",
         "description": "Deposit ETH or wstETH to maximize your staking yield. Vault will use your wstETH tokens as collateral to borrow WETH - creating a 12x leverage poisition through Aave V3.",
         "flashLoanMintHelperAddress": "0x2f5636d96ed34cd9f3eb3ab5b657175a36408645",
-        "flashLoanRedeemHelperAddress": "0xa5836756b1d5db03dfccbafc4083a1e675a1f644"
+        "flashLoanRedeemHelperAddress": "0xa5836756b1d5db03dfccbafc4083a1e675a1f644",
+        "useSafeActions": true
       }
     ]
   }

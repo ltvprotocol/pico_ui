@@ -4,6 +4,8 @@ export { allowOnlyNumbers, allowOnlySignedNumbers } from './allowOnlyNumbers';
 export { truncate } from './truncate';
 export { ltvToLeverage } from './ltvToLeverage';
 export { wrapEth } from './wrapEth';
+export { wrapEthToWstEth, isWstETHAddress, WSTETH_ADDRESS, STETH_ADDRESS, previewWrapEthToWstEth, calculateEthNeededForWstEth, calculateEthWrapForFlashLoan } from './wrapWstEth';
+export type { EthWrapCalculationParams, EthWrapCalculationResult } from './wrapWstEth';
 export { formatForInput } from './formatForInput';
 export { formatLtv } from './formatLtv';
 export { getLendingProtocolAddress } from './getLendingProtocolAddress';

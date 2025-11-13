@@ -127,8 +127,8 @@ export default function VaultBlock({ address }: VaultBlockProps) {
   const memoizedApyData = useMemo(() => apyData, [apyData.apy, apyData.pointsRate]);
 
   const vaultConfig = useMemo(() => {
-    const chainId = currentNetwork || "11155111"; // Default to Sepolia if no network
-    const vaults = (vaultsConfig as any)[chainId]?.vaults || [];
+    if (!currentNetwork) return;
+    const vaults = (vaultsConfig as any)[currentNetwork]?.vaults || [];
     return vaults.find((v: any) => v.address.toLowerCase() === address.toLowerCase());
   }, [address, currentNetwork]);
 

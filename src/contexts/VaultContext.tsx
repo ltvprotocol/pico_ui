@@ -12,7 +12,7 @@ import {
 import { ltvToLeverage, getLendingProtocolAddress, isVaultExists, isUserRejected, fetchApy, fetchPointsRate } from '@/utils';
 import vaultsConfig from '../../vaults.config.json';
 import signaturesConfig from '../../signatures.config.json';
-import { isWETHAddress, GAS_RESERVE_WEI, SEPOLIA_CHAIN_ID_STRING, MORPHO_MARKET_ID, CONNECTOR_ADDRESSES} from '@/constants';
+import { isWETHAddress, GAS_RESERVE_WEI, MORPHO_MARKET_ID, CONNECTOR_ADDRESSES} from '@/constants';
 import { useAdaptiveInterval } from '@/hooks';
 import { loadGhostLtv, loadAaveLtv, loadMorphoLtv } from '@/utils';
 
@@ -223,8 +223,8 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   }, [vaultAddress, publicProvider]);
 
   const loadConfigAndParams = useCallback(() => {
-    const chainId = currentNetwork || SEPOLIA_CHAIN_ID_STRING; // Use current network or default to Sepolia
-    const vaults = (vaultsConfig as any)[chainId]?.vaults || [];
+    if (!currentNetwork) return;
+    const vaults = (vaultsConfig as any)[currentNetwork]?.vaults || [];
     const config = vaults.find((v: any) => v.address.toLowerCase() === vaultAddress.toLowerCase());
     setVaultConfig(config);
 
@@ -279,7 +279,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   }, [vaultAddress, currentNetwork, params.apy, params.pointsRate]);
 
   const initializeContracts = useCallback(async () => {
-    if (!publicProvider) return;
+    if (!publicProvider || !currentNetwork) return;
 
     try {
       const vaultLensInstance = Vault__factory.connect(vaultAddress, publicProvider);
@@ -291,12 +291,12 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
       setCollateralTokenAddress(newCollateralTokenAddress);
       setBorrowTokenAddress(newBorrowTokenAddress);
 
-      const collateralContract = isWETHAddress(newCollateralTokenAddress)
+      const collateralContract = isWETHAddress(newCollateralTokenAddress, currentNetwork)
         ? WETH__factory.connect(newCollateralTokenAddress, publicProvider)
         : ERC20__factory.connect(newCollateralTokenAddress, publicProvider);
       setCollateralTokenLens(collateralContract);
 
-      const borrowContract = isWETHAddress(newBorrowTokenAddress)
+      const borrowContract = isWETHAddress(newBorrowTokenAddress, currentNetwork)
         ? WETH__factory.connect(newBorrowTokenAddress, publicProvider)
         : ERC20__factory.connect(newBorrowTokenAddress, publicProvider);
       setBorrowTokenLens(borrowContract);
@@ -310,10 +310,10 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
 
       if (signer) {
         setVault(Vault__factory.connect(vaultAddress, signer));
-        setCollateralToken(isWETHAddress(newCollateralTokenAddress)
+        setCollateralToken(isWETHAddress(newCollateralTokenAddress, currentNetwork)
           ? WETH__factory.connect(newCollateralTokenAddress, signer)
           : ERC20__factory.connect(newCollateralTokenAddress, signer));
-        setBorrowToken(isWETHAddress(newBorrowTokenAddress)
+        setBorrowToken(isWETHAddress(newBorrowTokenAddress, currentNetwork)
           ? WETH__factory.connect(newBorrowTokenAddress, signer)
           : ERC20__factory.connect(newBorrowTokenAddress, signer));
 
@@ -433,11 +433,18 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   }, [publicProvider, address, vaultLens, sharesDecimals, borrowTokenDecimals, collateralTokenDecimals]);
 
   const calculateMaxValues = useCallback(async () => {
-    if (!publicProvider || !address || !vaultLens || !borrowTokenLens || !collateralTokenLens) return;
+    if (
+      !publicProvider ||
+      !currentNetwork ||
+      !address ||
+      !vaultLens ||
+      !borrowTokenLens ||
+      !collateralTokenLens
+    ) return;
 
     try {
-      const isBorrowTokenWeth = isWETHAddress(borrowTokenAddress);
-      const isCollateralTokenWeth = isWETHAddress(collateralTokenAddress);
+      const isBorrowTokenWeth = isWETHAddress(borrowTokenAddress, currentNetwork);
+      const isCollateralTokenWeth = isWETHAddress(collateralTokenAddress, currentNetwork);
 
       const dShares = Number(sharesDecimals);
       const dBorrow = Number(borrowTokenDecimals);

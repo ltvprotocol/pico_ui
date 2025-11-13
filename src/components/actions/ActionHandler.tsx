@@ -32,7 +32,7 @@ export default function ActionHandler({ actionType, tokenType }: ActionHandlerPr
   const [amount, setAmount] = useState('');
   const [isMaxSelected, setIsMaxSelected] = useState(false);
 
-  const { publicProvider, address } = useAppContext();
+  const { publicProvider, address, currentNetwork } = useAppContext();
 
   useEffect(() => {
     setAmount('');
@@ -107,7 +107,13 @@ export default function ActionHandler({ actionType, tokenType }: ActionHandlerPr
   const handleWrapIfNeeded = async (needed: bigint, balance: bigint): Promise<boolean> => {
     if (balance >= needed) return true;
 
-    if (!isWETHAddress(tokenAddress)) {
+    if (!currentNetwork) {
+      setError('Wrong network.');
+      console.error('Wrong network.');
+      return false;
+    }
+
+    if (!isWETHAddress(tokenAddress, currentNetwork)) {
       setError(`Not enough tokens to ${actionType}.`);
       console.error(`Not enough tokens to ${actionType}`);
       return false;

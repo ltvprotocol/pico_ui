@@ -5,6 +5,14 @@ import { TokenType } from '@/types/actions';
 
 type HelperType = 'mint' | 'redeem';
 
+function reduceByPrecisionBuffer(value: bigint): bigint {
+  // (10^-6)% = 0.000001% = 10^-8
+  const numerator = 99_999_999n;   // 1 - 10^-8
+  const denominator = 100_000_000n;
+
+  return (value * numerator) / denominator;
+}
+
 interface PreviewData {
   amount: bigint; // mint: collateral required, redeem: borrow tokens to receive
 }
@@ -60,6 +68,7 @@ export const useFlashLoanPreview = ({
         // @ts-expect-error - helper is FlashLoanRedeemHelper when helperType is 'redeem'
         amount = await helper.previewRedeemSharesWithCurveAndFlashLoanBorrow(shares);
       }
+      amount = reduceByPrecisionBuffer(amount);
       setPreviewData({ amount });
 
       if (helperType === 'mint') {

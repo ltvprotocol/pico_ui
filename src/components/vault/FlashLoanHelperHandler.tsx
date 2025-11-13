@@ -32,6 +32,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
   const [previewedWstEthAmount, setPreviewedWstEthAmount] = useState<bigint | null>(null);
   const [effectiveCollateralBalance, setEffectiveCollateralBalance] = useState('');
 
+  
   const { address, provider, signer } = useAppContext();
 
   const {
@@ -80,15 +81,8 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
   }, [helperType]);
 
   useEffect(() => {
-      if (helperType === 'redeem') {
-        const userSharesBalance = parseUnits(sharesBalance, Number(sharesDecimals));
-        setHasInsufficientBalance(userSharesBalance < sharesToProcess!);
-      }
-  }, []);
-
-  useEffect(() => {
     const determineRequiredWrapAmount = async () => {
-      if (!useEthWrapToWSTETH || helperType !== 'mint' || !isWstETHVault) {
+      if (!useEthWrapToWSTETH || !isWstETHVault) {
         setPreviewedWstEthAmount(null);
         setEthToWrapValue('');
         return;
@@ -100,7 +94,8 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
         return;
       }
 
-      console.log('Determining required ETH wrap amount for wstETH vault...');
+      setSuccess(null);
+      setError(null);
 
       const result = await calculateEthWrapForFlashLoan({
         provider,
@@ -129,7 +124,17 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
       }
     };
 
-    determineRequiredWrapAmount();
+    if (helperType === 'redeem') {
+      const userSharesBalance = parseUnits(sharesBalance, Number(sharesDecimals));
+      setHasInsufficientBalance(userSharesBalance < sharesToProcess!);
+      if (sharesToProcess && sharesToProcess >0n) {
+        setSuccess(null);
+        setError(null)
+      }
+      return;
+    } else {
+      determineRequiredWrapAmount();
+    }
   }, [ previewData ]);
 
   const applySlippage = (amount: bigint) => {

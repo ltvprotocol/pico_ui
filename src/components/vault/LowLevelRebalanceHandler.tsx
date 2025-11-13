@@ -174,6 +174,9 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
         return;
       }
       
+      let anyApproved = false;
+      let allAlreadyApproved = true;
+      
       for (const item of provide) {
         if (item.tokenType === 'shares') {
           continue;
@@ -188,10 +191,15 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
           if (currentAllowance < item.amount) {
             const tx = await token.approve(vaultAddress, item.amount);
             await tx.wait();
-          } else {
-            return;
+            anyApproved = true;
+            allAlreadyApproved = false;
+            setSuccess(`Successfully approved ${metadata.symbol}.`);
           }
         }
+      }
+      
+      if (allAlreadyApproved && !anyApproved) {
+        setSuccess('All tokens already approved.');
       }
     } catch (err) {
       if (isUserRejected(err)) {

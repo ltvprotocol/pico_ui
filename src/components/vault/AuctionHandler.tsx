@@ -193,6 +193,7 @@ export default function AuctionHandler({ futureBorrowAssets, futureCollateralAss
 
     try {
       const token = auctionType === 'provide_borrow' ? borrowToken : collateralToken;
+      const tokenSymbol = auctionType === 'provide_borrow' ? borrowTokenSymbol : collateralTokenSymbol;
       
       if (token && amount > 0n) {
         const currentAllowance = await token.allowance(address, vaultAddress);
@@ -200,6 +201,9 @@ export default function AuctionHandler({ futureBorrowAssets, futureCollateralAss
         if (currentAllowance < amount) {
           const tx = await token.approve(vaultAddress, amount);
           await tx.wait();
+          setSuccess(`Successfully approved ${tokenSymbol}.`);
+        } else {
+          setSuccess(`Already approved ${tokenSymbol}.`);
         }
       }
     } catch (err) {

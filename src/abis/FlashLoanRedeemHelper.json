@@ -123,6 +123,11 @@
         "internalType": "uint256",
         "name": "sharesToRedeem",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "minBorrowTokensOut",
+        "type": "uint256"
       }
     ],
     "name": "redeemSharesWithCurveAndFlashLoanBorrow",

@@ -11,6 +11,10 @@ interface FlashLoanHelperHandlerProps {
   helperType: HelperType;
 }
 
+// fixed slippage for redeem, 0.1%
+const SLIPPAGE_DIVIDEND = 999;
+const SLIPPAGE_DIVIDER=1000;
+
 export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHandlerProps) {
   const [inputValue, setInputValue] = useState('');
   const [sharesToProcess, setSharesToProcess] = useState<bigint | null>(null);
@@ -59,6 +63,10 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     setApprovalError(null);
     setSuccess(null);
   }, [helperType]);
+
+  const applySlippage = (amount: bigint) => {
+    return amount * BigInt(SLIPPAGE_DIVIDEND) / BigInt(SLIPPAGE_DIVIDER);
+  }
 
   const checkAndApproveToken = async () => {
     if (!previewData || !address || !helperAddress || !sharesToProcess) {
@@ -118,7 +126,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
         tx = await helper.mintSharesWithFlashLoanCollateral(sharesToProcess);
       } else {
         // @ts-expect-error - helper is FlashLoanRedeemHelper when helperType is 'redeem'
-        tx = await helper.redeemSharesWithCurveAndFlashLoanBorrow(sharesToProcess);
+        tx = await helper.redeemSharesWithCurveAndFlashLoanBorrow(sharesToProcess, applySlippage(previewData.amount));
       }
 
       await tx.wait();

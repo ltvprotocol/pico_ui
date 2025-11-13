@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { parseUnits } from 'ethers';
 import { FlashLoanMintHelper, FlashLoanRedeemHelper } from '@/typechain-types';
 import { TokenType } from '@/types/actions';
 
@@ -21,7 +20,6 @@ interface UseFlashLoanPreviewParams {
   sharesToProcess: bigint | null;
   helperType: HelperType;
   helper: FlashLoanMintHelper | FlashLoanRedeemHelper | null;
-  collateralTokenBalance: string;
   collateralTokenDecimals: bigint;
   sharesBalance: string;
   sharesDecimals: bigint;
@@ -30,7 +28,6 @@ interface UseFlashLoanPreviewParams {
 interface UseFlashLoanPreviewReturn {
   isLoadingPreview: boolean;
   previewData: PreviewData | null;
-  hasInsufficientBalance: boolean;
   receive: Array<{ amount: bigint; tokenType: TokenType }>;
   provide: Array<{ amount: bigint; tokenType: TokenType }>;
 }
@@ -39,19 +36,16 @@ export const useFlashLoanPreview = ({
   sharesToProcess,
   helperType,
   helper,
-  collateralTokenBalance,
-  collateralTokenDecimals,
   sharesBalance,
-  sharesDecimals,
 }: UseFlashLoanPreviewParams): UseFlashLoanPreviewReturn => {
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [previewData, setPreviewData] = useState<PreviewData | null>(null);
-  const [hasInsufficientBalance, setHasInsufficientBalance] = useState(false);
+  // const [hasInsufficientBalance, setHasInsufficientBalance] = useState(false);
 
   const loadPreview = async (shares: bigint | null) => {
     if (!helper || shares === null || shares <= 0n) {
       setPreviewData(null);
-      setHasInsufficientBalance(false);
+      // setHasInsufficientBalance(false);
       return;
     }
 
@@ -71,17 +65,9 @@ export const useFlashLoanPreview = ({
       amount = reduceByPrecisionBuffer(amount);
       setPreviewData({ amount });
 
-      if (helperType === 'mint') {
-        const userBalance = parseUnits(collateralTokenBalance, Number(collateralTokenDecimals));
-        setHasInsufficientBalance(userBalance < amount);
-      } else {
-        const userSharesBalance = parseUnits(sharesBalance, Number(sharesDecimals));
-        setHasInsufficientBalance(userSharesBalance < shares);
-      }
     } catch (err) {
       console.error('Error loading preview:', err);
       setPreviewData(null);
-      setHasInsufficientBalance(false);
     } finally {
       setIsLoadingPreview(false);
     }
@@ -93,12 +79,11 @@ export const useFlashLoanPreview = ({
     }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [sharesToProcess, helperType, collateralTokenBalance, sharesBalance]);
+  }, [sharesToProcess, helperType, sharesBalance]);
 
   // Reset preview data when helper type changes
   useEffect(() => {
     setPreviewData(null);
-    setHasInsufficientBalance(false);
   }, [helperType]);
 
   const getReceiveAndProvide = () => {
@@ -127,7 +112,6 @@ export const useFlashLoanPreview = ({
   return {
     isLoadingPreview,
     previewData,
-    hasInsufficientBalance,
     receive,
     provide,
   };

@@ -61,15 +61,14 @@ export const wrapEthToWstEth = async (
   try {
     // Create contract instances
     const wstEthContract = new Contract(WSTETH_ADDRESS, WSTETH_ABI, signer);
-   
 
     // Send ETH to the wstETH contract address.
     // No special ABI interaction needed, just send ETH directly.
-    const tx = await signer.sendTransaction!({
+    const tx = await signer!.sendTransaction!({
       to: WSTETH_ADDRESS,
       value: ethAmount,
     });
-    await tx.wait();
+    await tx.wait()
 
     const wstEthBalance = await wstEthContract.balanceOf(userAddress);
 

@@ -5,6 +5,7 @@ import { isUserRejected, allowOnlyNumbers, isWstETHAddress, wrapEthToWstEth, cal
 import { PreviewBox, NumberDisplay } from '@/components/ui';
 import { useFlashLoanPreview } from '@/hooks';
 import { GAS_RESERVE_WEI } from '@/constants';
+import { renderWithTransition } from '@/helpers/renderWithTransition';
 
 type HelperType = 'mint' | 'redeem';
 
@@ -13,13 +14,17 @@ interface FlashLoanHelperHandlerProps {
 }
 
 // fixed slippage for redeem, 0.1%
-const SLIPPAGE_DIVIDEND = 999;
-const SLIPPAGE_DIVIDER=1000;
+const REDEEM_SLIPPAGE_DIVIDEND = 999;
+const REDEEM_SLIPPAGE_DIVIDER = 1000;
+
+const MINT_SLIPPAGE_DIVIDEND = 999999;
+const MINT_SLIPPAGE_DIVIDER = 1000000;
 
 export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHandlerProps) {
   const [inputValue, setInputValue] = useState('');
   const [sharesToProcess, setSharesToProcess] = useState<bigint | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isDisabled, setIsDisabled] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [isApproving, setIsApproving] = useState(false);
@@ -31,8 +36,9 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
   const [isWrapping, setIsWrapping] = useState(false);
   const [previewedWstEthAmount, setPreviewedWstEthAmount] = useState<bigint | null>(null);
   const [effectiveCollateralBalance, setEffectiveCollateralBalance] = useState('');
+  const [maxAmount, setMaxAmount] = useState('');
 
-  
+
   const { address, provider, signer } = useAppContext();
 
   const {
@@ -50,6 +56,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     collateralTokenDecimals,
     collateralTokenBalance,
     ethBalance,
+    maxLowLevelRebalanceShares,
     refreshBalances,
     refreshVaultLimits,
   } = useVaultContext();
@@ -59,7 +66,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
 
   // Check if this is a wstETH vault that supports ETH input
   const isWstETHVault = helperType === 'mint' && collateralToken && isWstETHAddress(collateralTokenAddress || '');
-  
+
   const { isLoadingPreview, previewData, receive, provide } = useFlashLoanPreview({
     sharesToProcess,
     helperType,
@@ -79,6 +86,27 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     setEthToWrapValue('');
     setPreviewedWstEthAmount(null);
   }, [helperType]);
+
+
+  const applyRedeemSlippage = (amount: bigint) => {
+    return amount * BigInt(REDEEM_SLIPPAGE_DIVIDEND) / BigInt(REDEEM_SLIPPAGE_DIVIDER);
+  }
+
+  const applyMintSlippage = (amount: bigint) => {
+    return amount * BigInt(MINT_SLIPPAGE_DIVIDEND) / BigInt(MINT_SLIPPAGE_DIVIDER);
+  }
+
+
+  useEffect(() => {
+    if (helperType === 'mint') {
+      const maxLowLevelRebalanceSharesUnits = parseUnits(maxLowLevelRebalanceShares, sharesDecimals);
+      const maxMint = applyMintSlippage(maxLowLevelRebalanceSharesUnits);
+      setMaxAmount(formatUnits(maxMint, sharesDecimals));
+    } else {
+      setMaxAmount(sharesBalance);
+    }
+    setIsDisabled(loading || !sharesToProcess || sharesToProcess > parseUnits(maxAmount, sharesDecimals));
+  }, [maxLowLevelRebalanceShares, sharesBalance, helperType, sharesToProcess]);
 
   useEffect(() => {
     const determineRequiredWrapAmount = async () => {
@@ -127,7 +155,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     if (helperType === 'redeem') {
       const userSharesBalance = parseUnits(sharesBalance, Number(sharesDecimals));
       setHasInsufficientBalance(userSharesBalance < sharesToProcess!);
-      if (sharesToProcess && sharesToProcess >0n) {
+      if (sharesToProcess && sharesToProcess > 0n) {
         setSuccess(null);
         setError(null)
       }
@@ -135,11 +163,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     } else {
       determineRequiredWrapAmount();
     }
-  }, [ previewData ]);
-
-  const applySlippage = (amount: bigint) => {
-    return amount * BigInt(SLIPPAGE_DIVIDEND) / BigInt(SLIPPAGE_DIVIDER);
-  }
+  }, [previewData]);
 
   const checkAndApproveToken = async () => {
     if (!previewData || !address || !helperAddress || !sharesToProcess) {
@@ -225,11 +249,12 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
 
       let tx;
       if (helperType === 'mint') {
+        console.log('mintSharesWithFlashLoanCollateral', sharesToProcess);
         // @ts-expect-error - helper is FlashLoanMintHelper when helperType is 'mint'
         tx = await helper.mintSharesWithFlashLoanCollateral(sharesToProcess);
       } else {
         // @ts-expect-error - helper is FlashLoanRedeemHelper when helperType is 'redeem'
-        tx = await helper.redeemSharesWithCurveAndFlashLoanBorrow(sharesToProcess, applySlippage(previewData.amount));
+        tx = await helper.redeemSharesWithCurveAndFlashLoanBorrow(sharesToProcess, applyRedeemSlippage(previewData.amount));
       }
 
       await tx.wait();
@@ -313,6 +338,18 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
           </div>
         </div>
 
+
+        <div className="flex gap-1 mt-1 text-sm text-gray-500">
+          Max Available: {renderWithTransition(
+            <>
+              <NumberDisplay value={maxAmount} />
+              {' '}
+              {sharesSymbol}
+            </>,
+            !maxAmount
+          )}
+        </div>
+
         {isWstETHVault && helperType === 'mint' && (
           <>
             {useEthWrapToWSTETH && (
@@ -367,7 +404,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
 
         <button
           type="submit"
-          disabled={loading || isApproving || isWrapping || sharesToProcess === null || sharesToProcess <= 0n || hasInsufficientBalance}
+          disabled={isDisabled || isApproving || isWrapping || sharesToProcess === null || sharesToProcess <= 0n || hasInsufficientBalance}
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isWrapping

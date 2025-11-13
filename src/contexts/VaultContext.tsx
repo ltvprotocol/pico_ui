@@ -96,6 +96,7 @@ interface VaultContextType {
   maxRedeemCollateral: string;
   maxMintCollateral: string;
   maxWithdrawCollateral: string;
+  maxLowLevelRebalanceShares: string;
   apy: number | null;
   pointsRate: number | null;
   apyLoadFailed: boolean;
@@ -174,7 +175,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   const [vaultMaxMintCollateral, setVaultMaxMintCollateral] = useState<string>('0');
   const [vaultMaxWithdrawCollateral, setVaultMaxWithdrawCollateral] = useState<string>('0');
   const [totalAssets, setTotalAssets] = useState<string>('0');
-
+  
   const [maxDeposit, setMaxDeposit] = useState<string>('0');
   const [maxRedeem, setMaxRedeem] = useState<string>('0');
   const [maxMint, setMaxMint] = useState<string>('0');
@@ -183,6 +184,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   const [maxRedeemCollateral, setMaxRedeemCollateral] = useState<string>('0');
   const [maxMintCollateral, setMaxMintCollateral] = useState<string>('0');
   const [maxWithdrawCollateral, setMaxWithdrawCollateral] = useState<string>('0');
+  const [maxLowLevelRebalanceShares, setMaxLowLevelRebalanceShares] = useState<string>('0');
 
   const [apy, setApy] = useState<number | null>(null);
   const [pointsRate, setPointsRate] = useState<number | null>(null);
@@ -404,7 +406,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
       const [
         rawVaultMaxDeposit, rawVaultMaxRedeem, rawVaultMaxMint, rawVaultMaxWithdraw,
         rawVaultMaxDepositCollateral, rawVaultMaxRedeemCollateral, rawVaultMaxMintCollateral, rawVaultMaxWithdrawCollateral,
-        rawTotalAssets
+        rawMaxLowLevelRebalanceShares, rawTotalAssets
       ] = await Promise.all([
         vaultLens.maxDeposit(address),
         vaultLens.maxRedeem(address),
@@ -414,6 +416,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         vaultLens.maxRedeemCollateral(address),
         vaultLens.maxMintCollateral(address),
         vaultLens.maxWithdrawCollateral(address),
+        vaultLens.maxLowLevelRebalanceShares(),
         vaultLens["totalAssets()"]()
       ]);
 
@@ -425,8 +428,9 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
       setVaultMaxRedeemCollateral(formatUnits(rawVaultMaxRedeemCollateral, sharesDecimals));
       setVaultMaxMintCollateral(formatUnits(rawVaultMaxMintCollateral, sharesDecimals));
       setVaultMaxWithdrawCollateral(formatUnits(rawVaultMaxWithdrawCollateral, collateralTokenDecimals));
+      setMaxLowLevelRebalanceShares(formatUnits(rawMaxLowLevelRebalanceShares, sharesDecimals));
+      console.log('rawMaxLowLevelRebalanceShares', rawMaxLowLevelRebalanceShares);
       setTotalAssets(formatUnits(rawTotalAssets, borrowTokenDecimals));
-
     } catch (err) {
       console.error('Error loading vault limits:', err);
     }
@@ -915,6 +919,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         maxRedeemCollateral,
         maxMintCollateral,
         maxWithdrawCollateral,
+        maxLowLevelRebalanceShares,
         apy,
         pointsRate,
         apyLoadFailed,

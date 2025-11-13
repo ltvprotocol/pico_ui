@@ -249,7 +249,6 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
 
       let tx;
       if (helperType === 'mint') {
-        console.log('mintSharesWithFlashLoanCollateral', sharesToProcess);
         // @ts-expect-error - helper is FlashLoanMintHelper when helperType is 'mint'
         tx = await helper.mintSharesWithFlashLoanCollateral(sharesToProcess);
       } else {

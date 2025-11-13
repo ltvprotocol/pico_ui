@@ -108,9 +108,6 @@ export const previewWrapEthToWstEth = async (
     const totalShares: bigint = await stEthContract.getTotalShares();
     const totalPooledEther: bigint = await stEthContract.getTotalPooledEther(); 
 
-    console.log('Previewing ETH to wstETH wrap:', { ethAmount, totalShares, totalPooledEther });
-    console.log('Result:', (ethAmount * totalShares) / totalPooledEther);
-
     return (ethAmount * totalShares) / totalPooledEther;
   } catch (error) {
     console.error('Error previewing ETH to wstETH wrap:', error);
@@ -131,8 +128,6 @@ export const calculateEthNeededForWstEth = async (
 
     const totalShares: bigint = await stEthContract.getTotalShares();
     const totalPooledEther: bigint = await stEthContract.getTotalPooledEther(); 
-    console.log('Calculating ETH needed for wstETH:', { wstEthAmount, totalShares, totalPooledEther });
-    console.log('Result:', (wstEthAmount * totalPooledEther + totalShares - 1n) / totalShares);
 
     return (wstEthAmount * totalPooledEther + totalShares - 1n) / totalShares;
 
@@ -176,7 +171,6 @@ export const calculateEthWrapForFlashLoan = async ({
   }
 
   const wstETHToProvide = previewData.amount;
-  console.log('wstETH to provide from flash loan:', wstETHToProvide);
 
   let currentWstEthBalance = 0n;
   try {
@@ -187,8 +181,6 @@ export const calculateEthWrapForFlashLoan = async ({
   } catch {
     currentWstEthBalance = 0n;
   }
-
-  console.log('Current wstETH balance:', currentWstEthBalance);
 
   if (wstETHToProvide <= currentWstEthBalance) {
     return defaultResult;
@@ -208,9 +200,6 @@ export const calculateEthWrapForFlashLoan = async ({
   const maxWrappableEth = ethBalanceWei - gasReserveWei;
   const missingWstEthAmount = wstETHToProvide - currentWstEthBalance;
   const ethNeeded = await calculateEthNeededForWstEth(provider, missingWstEthAmount);
-
-  console.log('Missing wstETH amount:', missingWstEthAmount);
-  console.log('ETH needed for wrapping to get missing wstETH:', ethNeeded);
 
   if (!ethNeeded || ethNeeded > maxWrappableEth) {
     return defaultResult;

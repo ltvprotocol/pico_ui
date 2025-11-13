@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { parseUnits } from 'ethers';
 import { FlashLoanMintHelper, FlashLoanRedeemHelper } from '@/typechain-types';
 import { TokenType } from '@/types/actions';
 
@@ -37,9 +36,7 @@ export const useFlashLoanPreview = ({
   sharesToProcess,
   helperType,
   helper,
-  collateralTokenDecimals,
   sharesBalance,
-  sharesDecimals,
 }: UseFlashLoanPreviewParams): UseFlashLoanPreviewReturn => {
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [previewData, setPreviewData] = useState<PreviewData | null>(null);

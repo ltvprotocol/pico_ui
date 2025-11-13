@@ -60,33 +60,17 @@ export const wrapEthToWstEth = async (
 
   try {
     // Create contract instances
-    const stEthContract = new Contract(STETH_ADDRESS, STETH_ABI, signer);
     const wstEthContract = new Contract(WSTETH_ADDRESS, WSTETH_ABI, signer);
+   
 
-    // Step 1: Submit ETH to get stETH
-    console.log('Submitting ETH to get stETH...');
-    const submitTx = await stEthContract.submit(userAddress, { value: ethAmount });
-    await submitTx.wait();
+    // Send ETH to the wstETH contract address.
+    // No special ABI interaction needed, just send ETH directly.
+    const tx = await signer.sendTransaction!({
+      to: WSTETH_ADDRESS,
+      value: ethAmount,
+    });
+    await tx.wait();
 
-    // Step 2: Get stETH balance
-    const stEthBalance = await stEthContract.balanceOf(userAddress);
-    
-    if (stEthBalance === 0n) {
-      setError('Failed to receive stETH from submission.');
-      return null;
-    }
-
-    // Step 3: Approve wstETH contract to spend stETH
-    console.log('Approving wstETH contract to spend stETH...');
-    const approveTx = await stEthContract.approve(WSTETH_ADDRESS, stEthBalance);
-    await approveTx.wait();
-
-    // Step 4: Wrap stETH to get wstETH
-    console.log('Wrapping stETH to wstETH...');
-    const wrapTx = await wstEthContract.wrap(stEthBalance);
-    await wrapTx.wait();
-
-    // Step 5: Get final wstETH balance
     const wstEthBalance = await wstEthContract.balanceOf(userAddress);
 
     setSuccess('Successfully wrapped ETH to wstETH!');

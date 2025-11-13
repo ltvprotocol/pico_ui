@@ -8,12 +8,11 @@ import { isVaultExists } from "@/utils";
 export default function Home() {
   const { currentNetwork, unrecognizedNetworkParam, publicProvider } = useAppContext();
 
-  if (unrecognizedNetworkParam) {
+  if (unrecognizedNetworkParam || !currentNetwork) {
     return <UnrecognizedNetwork />;
   }
 
-  const chainId = currentNetwork || "11155111";
-  const configuredVaults = (vaultsConfig as any)[chainId]?.vaults || [];
+  const configuredVaults = (vaultsConfig as any)[currentNetwork]?.vaults || [];
 
   const [existingVaultAddresses, setExistingVaultAddresses] = useState<string[]>([]);
   const [checksDone, setChecksDone] = useState<boolean>(false);
@@ -42,7 +41,7 @@ export default function Home() {
     setChecksDone(false);
     setExistingVaultAddresses([]);
     checkAll();
-  }, [publicProvider, chainId]);
+  }, [publicProvider, currentNetwork]);
 
   return (
     <div className="w-full flex flex-col">

@@ -9,10 +9,10 @@ import {
   FlashLoanRedeemHelper, FlashLoanRedeemHelper__factory,
   WhitelistRegistry__factory
 } from '@/typechain-types';
-import { ltvToLeverage, getLendingProtocolAddress, isVaultExists, isUserRejected } from '@/utils';
+import { ltvToLeverage, getLendingProtocolAddress, isVaultExists, isUserRejected, fetchApy, fetchPointsRate } from '@/utils';
 import vaultsConfig from '../../vaults.config.json';
 import signaturesConfig from '../../signatures.config.json';
-import { isWETHAddress, GAS_RESERVE_WEI, SEPOLIA_CHAIN_ID_STRING, MORPHO_MARKET_ID, CONNECTOR_ADDRESSES} from '@/constants';
+import { isWETHAddress, GAS_RESERVE_WEI, SEPOLIA_CHAIN_ID_STRING, SEPOLIA_MORPHO_MARKET_ID, CONNECTOR_ADDRESSES} from '@/constants';
 import { useAdaptiveInterval } from '@/hooks';
 import { loadGhostLtv, loadAaveLtv, loadMorphoLtv } from '@/utils';
 
@@ -223,8 +223,8 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   }, [vaultAddress, publicProvider]);
 
   const loadConfigAndParams = useCallback(() => {
-    const chainId = currentNetwork || SEPOLIA_CHAIN_ID_STRING; // Use current network or default to Sepolia
-    const vaults = (vaultsConfig as any)[chainId]?.vaults || [];
+    if (!currentNetwork) return;
+    const vaults = (vaultsConfig as any)[currentNetwork]?.vaults || [];
     const config = vaults.find((v: any) => v.address.toLowerCase() === vaultAddress.toLowerCase());
     setVaultConfig(config);
 
@@ -237,14 +237,49 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
     setBorrowTokenSymbol(params.borrowTokenSymbol ?? config?.borrowTokenSymbol ?? null);
     setCollateralTokenSymbol(params.collateralTokenSymbol ?? config?.collateralTokenSymbol ?? null);
     setDescription(config?.description ?? null);
-    setApy(params.apy);
-    setPointsRate(params.pointsRate);
-    setApyLoadFailed(params.apy === null);
-    setPointsRateLoadFailed(params.pointsRate === null);
+    
+    if (params.apy !== null) {
+      setApy(params.apy);
+      setApyLoadFailed(false);
+    }
+    if (params.pointsRate !== null) {
+      setPointsRate(params.pointsRate);
+      setPointsRateLoadFailed(false);
+    }
   }, [vaultAddress, params, currentNetwork]);
 
+  const loadApyData = useCallback(async () => {
+    if (params.apy !== null && params.pointsRate !== null) {
+      return;
+    }
+
+    try {
+      const [apyResult, pointsRateResult] = await Promise.all([
+        params.apy === null ? fetchApy(vaultAddress, currentNetwork) : Promise.resolve(params.apy),
+        params.pointsRate === null ? fetchPointsRate(vaultAddress, currentNetwork) : Promise.resolve(params.pointsRate)
+      ]);
+
+      if (params.apy === null) {
+        setApy(apyResult);
+        setApyLoadFailed(apyResult === null);
+      }
+      if (params.pointsRate === null) {
+        setPointsRate(pointsRateResult);
+        setPointsRateLoadFailed(pointsRateResult === null);
+      }
+    } catch (err) {
+      console.error('Error loading APY data:', err);
+      if (params.apy === null) {
+        setApyLoadFailed(true);
+      }
+      if (params.pointsRate === null) {
+        setPointsRateLoadFailed(true);
+      }
+    }
+  }, [vaultAddress, currentNetwork, params.apy, params.pointsRate]);
+
   const initializeContracts = useCallback(async () => {
-    if (!publicProvider) return;
+    if (!publicProvider || !currentNetwork) return;
 
     try {
       const vaultLensInstance = Vault__factory.connect(vaultAddress, publicProvider);
@@ -256,12 +291,12 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
       setCollateralTokenAddress(newCollateralTokenAddress);
       setBorrowTokenAddress(newBorrowTokenAddress);
 
-      const collateralContract = isWETHAddress(newCollateralTokenAddress)
+      const collateralContract = isWETHAddress(newCollateralTokenAddress, currentNetwork)
         ? WETH__factory.connect(newCollateralTokenAddress, publicProvider)
         : ERC20__factory.connect(newCollateralTokenAddress, publicProvider);
       setCollateralTokenLens(collateralContract);
 
-      const borrowContract = isWETHAddress(newBorrowTokenAddress)
+      const borrowContract = isWETHAddress(newBorrowTokenAddress, currentNetwork)
         ? WETH__factory.connect(newBorrowTokenAddress, publicProvider)
         : ERC20__factory.connect(newBorrowTokenAddress, publicProvider);
       setBorrowTokenLens(borrowContract);
@@ -275,10 +310,10 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
 
       if (signer) {
         setVault(Vault__factory.connect(vaultAddress, signer));
-        setCollateralToken(isWETHAddress(newCollateralTokenAddress)
+        setCollateralToken(isWETHAddress(newCollateralTokenAddress, currentNetwork)
           ? WETH__factory.connect(newCollateralTokenAddress, signer)
           : ERC20__factory.connect(newCollateralTokenAddress, signer));
-        setBorrowToken(isWETHAddress(newBorrowTokenAddress)
+        setBorrowToken(isWETHAddress(newBorrowTokenAddress, currentNetwork)
           ? WETH__factory.connect(newBorrowTokenAddress, signer)
           : ERC20__factory.connect(newBorrowTokenAddress, signer));
 
@@ -398,11 +433,18 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   }, [publicProvider, address, vaultLens, sharesDecimals, borrowTokenDecimals, collateralTokenDecimals]);
 
   const calculateMaxValues = useCallback(async () => {
-    if (!publicProvider || !address || !vaultLens || !borrowTokenLens || !collateralTokenLens) return;
+    if (
+      !publicProvider ||
+      !currentNetwork ||
+      !address ||
+      !vaultLens ||
+      !borrowTokenLens ||
+      !collateralTokenLens
+    ) return;
 
     try {
-      const isBorrowTokenWeth = isWETHAddress(borrowTokenAddress);
-      const isCollateralTokenWeth = isWETHAddress(collateralTokenAddress);
+      const isBorrowTokenWeth = isWETHAddress(borrowTokenAddress, currentNetwork);
+      const isCollateralTokenWeth = isWETHAddress(collateralTokenAddress, currentNetwork);
 
       const dShares = Number(sharesDecimals);
       const dBorrow = Number(borrowTokenDecimals);
@@ -510,28 +552,46 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   ]);
 
   const loadLtv = useCallback(async () => {
-    if (!publicProvider || !vaultLens || !vaultAddress || !lendingAddress) return;
+    if (!publicProvider || !vaultLens || !vaultAddress || !lendingAddress || !currentNetwork) return;
 
     try {
       const lendingConnectorAddress = await vaultLens.lendingConnector();
+      const networkConnectors = CONNECTOR_ADDRESSES[currentNetwork];
+      
+      if (!networkConnectors) {
+        console.log('No connectors configured for network:', currentNetwork);
+        setCurrentLtv('UNKNOWN_NETWORK');
+        return;
+      }
 
-      if (lendingConnectorAddress.toLowerCase() === CONNECTOR_ADDRESSES.AAVE.toLowerCase()) {
+      if (networkConnectors.AAVE && lendingConnectorAddress.toLowerCase() === networkConnectors.AAVE.toLowerCase()) {
         const aaveLtv = await loadAaveLtv(lendingAddress, vaultAddress, publicProvider);
         if (aaveLtv) {
           setCurrentLtv(aaveLtv);
           return;
         }
-      } else if (lendingConnectorAddress.toLowerCase() === CONNECTOR_ADDRESSES.GHOST.toLowerCase()) {
+      } else if (networkConnectors.GHOST && lendingConnectorAddress.toLowerCase() === networkConnectors.GHOST.toLowerCase()) {
         const ghostLtv = await loadGhostLtv(lendingAddress, vaultAddress, publicProvider);
         if (ghostLtv) {
           setCurrentLtv(ghostLtv);
           return;
         }
-      } else if (lendingConnectorAddress.toLowerCase() === CONNECTOR_ADDRESSES.MORPHO.toLowerCase()) {
+      } else if (networkConnectors.MORPHO && lendingConnectorAddress.toLowerCase() === networkConnectors.MORPHO.toLowerCase()) {
+        // Use SEPOLIA_MORPHO_MARKET_ID only on Sepolia network
+        const marketId = currentNetwork === SEPOLIA_CHAIN_ID_STRING 
+          ? SEPOLIA_MORPHO_MARKET_ID 
+          : ''; // TODO: Get market ID from config or contract for non-Sepolia networks
+        
+        if (!marketId) {
+          console.log('No Morpho market ID configured for network:', currentNetwork);
+          setCurrentLtv('MISSING_MARKET_ID');
+          return;
+        }
+        
         const morphoLtv = await loadMorphoLtv(
           lendingAddress,
           vaultAddress,
-          MORPHO_MARKET_ID,
+          marketId,
           borrowTokenDecimals,
           publicProvider
         );
@@ -551,7 +611,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
       console.error('Error loading LTV:', err);
       setCurrentLtv('LOAD_FAILED');
     }
-  }, [publicProvider, vaultLens, lendingAddress, vaultAddress, borrowTokenDecimals]);
+  }, [publicProvider, vaultLens, lendingAddress, vaultAddress, borrowTokenDecimals, currentNetwork, vaultConfig]);
   
   // Check whitelist activation status
   const checkWhitelistActivation = useCallback(async () => {
@@ -751,12 +811,17 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
     loadConfigAndParams();
   }, [loadConfigAndParams]);
 
+  // Load APY data from API if not provided in params
+  useEffect(() => {
+    loadApyData();
+  }, [loadApyData]);
+
   // Initialize contracts
   useEffect(() => {
-    if (vaultConfig) {
+    if (vaultConfig && publicProvider) {
       initializeContracts();
     }
-  }, [vaultConfig, initializeContracts]);
+  }, [vaultConfig, publicProvider, initializeContracts]);
 
   // Load balances
   useEffect(() => {

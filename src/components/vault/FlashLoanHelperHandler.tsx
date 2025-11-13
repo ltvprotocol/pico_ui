@@ -12,6 +12,10 @@ interface FlashLoanHelperHandlerProps {
   helperType: HelperType;
 }
 
+// fixed slippage for redeem, 0.1%
+const SLIPPAGE_DIVIDEND = 999;
+const SLIPPAGE_DIVIDER=1000;
+
 export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHandlerProps) {
   const [inputValue, setInputValue] = useState('');
   const [sharesToProcess, setSharesToProcess] = useState<bigint | null>(null);
@@ -75,7 +79,6 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     setPreviewedWstEthAmount(null);
   }, [helperType]);
 
-
   useEffect(() => {
       if (helperType === 'redeem') {
         const userSharesBalance = parseUnits(sharesBalance, Number(sharesDecimals));
@@ -129,6 +132,10 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     determineRequiredWrapAmount();
   }, [ previewData ]);
 
+  const applySlippage = (amount: bigint) => {
+    return amount * BigInt(SLIPPAGE_DIVIDEND) / BigInt(SLIPPAGE_DIVIDER);
+  }
+
   const checkAndApproveToken = async () => {
     if (!previewData || !address || !helperAddress || !sharesToProcess) {
       return;
@@ -144,6 +151,9 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
         if (currentAllowance < previewData.amount) {
           const tx = await collateralToken.approve(helperAddress, previewData.amount);
           await tx.wait();
+          setSuccess(`Successfully approved ${collateralTokenSymbol}.`);
+        } else {
+          setSuccess(`Already approved ${collateralTokenSymbol}.`);
         }
       } else {
         if (!vault) return;
@@ -152,6 +162,9 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
         if (sharesAllowance < sharesToProcess) {
           const tx = await vault.approve(helperAddress, sharesToProcess);
           await tx.wait();
+          setSuccess(`Successfully approved ${sharesSymbol}.`);
+        } else {
+          setSuccess(`Already approved ${sharesSymbol}.`);
         }
       }
     } catch (err) {
@@ -211,7 +224,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
         tx = await helper.mintSharesWithFlashLoanCollateral(sharesToProcess);
       } else {
         // @ts-expect-error - helper is FlashLoanRedeemHelper when helperType is 'redeem'
-        tx = await helper.redeemSharesWithCurveAndFlashLoanBorrow(sharesToProcess);
+        tx = await helper.redeemSharesWithCurveAndFlashLoanBorrow(sharesToProcess, applySlippage(previewData.amount));
       }
 
       await tx.wait();

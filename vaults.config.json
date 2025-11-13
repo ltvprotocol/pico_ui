@@ -16,7 +16,7 @@
         "lendingName": "HodlMyBeer",
         "dexLink": "https://app.uniswap.org/swap?inputCurrency=0xe2a7f267124ac3e4131f27b9159c78c521a44f3c&outputCurrency=0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14&chain=sepolia",
         "dexLinkName": "Uniswap V3 GME/WETH pool",
-        "description": "Use your MAE tokens as collateral to borrow WETH. Get 4x leverage through HodlMyBeer. Good to maximize your MAE holdings or get yield on your WETH.",
+        "description": "Deposit MAE tokens to leverage your position. Vault will use your MAE as collateral to borrow WETH - creating a 4x leverage position through HodlMyBeer.",
         "flashLoanMintHelperAddress": "0x169D36086e2a68062ED36bAc5E0e733c5f0B872a",
         "flashLoanRedeemHelperAddress": "0x5f3Eb9DAEf690364C2539b8148faA421B60427B2",
         "useSafeActions": true
@@ -31,7 +31,7 @@
         "borrowTokenSymbol": "WBTC",
         "leverage": "4",
         "lendingName": "AAVE V3",
-        "description": "Put up WETH to borrow WBTC with 4x leverage. Uses AAVE V3. Combines two fundamental assets with leverage.",
+        "description": "Deposit WETH to gain exposure to WBTC with leverage. Vault will use your WETH as collateral to borrow WBTC - creating a 4x leverage position through Aave V3.",
         "flashLoanMintHelperAddress": "",
         "flashLoanRedeemHelperAddress": ""
       },
@@ -45,7 +45,7 @@
         "borrowTokenSymbol": "USDC",
         "leverage": "3",
         "lendingName": "Morpho",
-        "description": "Use WETH to borrow USDC with 3x leverage. Runs on Morpho. For those who are not afraid of the fall in the price of Ethereum",
+        "description": "Deposit WETH to borrow stablecoins with leverage. Vault will use your WETH as collateral to borrow USDC - creating a 3x leverage position through Morpho.",
         "flashLoanMintHelperAddress": "",
         "flashLoanRedeemHelperAddress": ""
       },
@@ -59,7 +59,31 @@
         "borrowTokenSymbol": "WBTC",
         "leverage": "4",
         "lendingName": "AAVE V3",
-        "description": "Put up WETH to borrow WBTC with 4x leverage. Uses AAVE V3. Combines two fundamental assets with leverage."
+        "description": "Deposit WETH to gain exposure to WBTC with leverage. Vault will use your WETH as collateral to borrow WBTC - creating a 4x leverage position through Aave V3."
+      },
+      {
+        "address": "0x685D1257671c9a0Ec816E4d74b4912af26BE98fb",
+        "collateralTokenAddress": "0xC558DBdd856501FCd9aaF1E62eae57A9F0629a3c",
+        "borrowTokenAddress": "0x29f2D40B0605204364af54EC677bD022dA425d03",
+        "lendingAddress": "0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951",
+        "sharesSymbol": "WETH_WBTC_x4_AAVEV3_KAMIKAZE",
+        "collateralTokenSymbol": "WETH",
+        "borrowTokenSymbol": "WBTC",
+        "leverage": "4",
+        "lendingName": "AAVE V3",
+        "description": "Deposit WETH to gain exposure to WBTC with leverage. Vault will use your WETH as collateral to borrow WBTC - creating a 4x leverage position through Aave V3."
+      },
+      {
+        "address": "0xEC7925E679440271BD9d243EfD158e96A604A233",
+        "collateralTokenAddress": "0xC558DBdd856501FCd9aaF1E62eae57A9F0629a3c",
+        "borrowTokenAddress": "0x29f2D40B0605204364af54EC677bD022dA425d03",
+        "lendingAddress": "0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951",
+        "sharesSymbol": "WETH_WBTC_x4_AAVEV3_NEW_BEACON_PROXY",
+        "collateralTokenSymbol": "WETH",
+        "borrowTokenSymbol": "WBTC",
+        "leverage": "4",
+        "lendingName": "AAVE V3",
+        "description": "Deposit WETH to gain exposure to WBTC with leverage. Vault will use your WETH as collateral to borrow WBTC - creating a 4x leverage position through Aave V3."
       }
     ]
   },

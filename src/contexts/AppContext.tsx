@@ -275,6 +275,18 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
       setAddress(newAddress);
       setChainId(newChainId);
       setRawProvider(eip1193Provider);
+
+      // Update publicProvider to match the wallet's network
+      // Only do this if there's no URL network param, or if it matches
+      const urlNetwork = getNetworkFromUrl();
+      if (!urlNetwork || urlNetwork === chainIdString) {
+        const networkConfig = (NETWORK_CONFIGS as any)[chainIdString];
+        if (networkConfig) {
+          const newPublicProvider = new JsonRpcProvider(networkConfig.rpcUrls[0]);
+          setPublicProvider(newPublicProvider);
+        }
+      }
+      // If URL network differs, the auto-switch effect will handle it
     } catch (err) {
       console.error("Error in setupProviderConnection:", err);
       disconnectWallet();
@@ -295,6 +307,22 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
       
       if (expectedAddress && expectedAddress.toLowerCase() !== currentAddress.toLowerCase()) {
         console.warn("Address mismatch, user selected another account");
+      }
+
+      // Update URL to reflect the connected network
+      const network = await tempProvider.getNetwork();
+      const chainIdString = network.chainId.toString();
+      const networkConfig = (NETWORK_CONFIGS as any)[chainIdString];
+      if (networkConfig) {
+        const urlParam = Object.keys(URL_PARAM_TO_CHAIN_ID).find(
+          key => URL_PARAM_TO_CHAIN_ID[key as keyof typeof URL_PARAM_TO_CHAIN_ID] === chainIdString
+        );
+        
+        if (urlParam) {
+          const url = new URL(window.location.href);
+          url.searchParams.set('network', urlParam);
+          window.history.pushState({}, '', url.toString());
+        }
       }
 
       localStorage.setItem('connectedWallet', JSON.stringify({
@@ -381,16 +409,27 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
 
         const chainIdBigInt = BigInt(chainIdHex);
         const chainIdString = chainIdBigInt.toString();
-        
-        const isSepoliaNetwork = chainIdBigInt === SEPOLIA_CHAIN_ID;
-        const isMainnetNetwork = chainIdBigInt === MAINNET_CHAIN_ID;
 
+        // Update URL parameter to match the new network
+        const networkConfig = (NETWORK_CONFIGS as any)[chainIdString];
+        if (networkConfig) {
+          const urlParam = Object.keys(URL_PARAM_TO_CHAIN_ID).find(
+            key => URL_PARAM_TO_CHAIN_ID[key as keyof typeof URL_PARAM_TO_CHAIN_ID] === chainIdString
+          );
+          
+          if (urlParam) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('network', urlParam);
+            window.history.pushState({}, '', url.toString());
+          }
+
+          // Update publicProvider to match the new network
+          const newPublicProvider = new JsonRpcProvider(networkConfig.rpcUrls[0]);
+          setPublicProvider(newPublicProvider);
+        }
+
+        // Update all wallet connection state (this also sets currentNetwork, chainId, etc.)
         await setupProviderConnection(rawProvider);
-
-        setIsSepolia(isSepoliaNetwork);
-        setIsMainnet(isMainnetNetwork);
-        setCurrentNetwork(chainIdString);
-        setChainId(chainIdBigInt);
       };
 
       eip1193Provider.on('accountsChanged', onAccountsChangedHandler);

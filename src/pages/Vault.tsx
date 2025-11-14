@@ -34,7 +34,7 @@ function VaultContent() {
   }
 
   // Only disable UI when we confirmed user is NOT whitelisted (don't disable while checking)
-  const isWhitelistDisabled = isWhitelistActivated === true && isWhitelisted === false;
+  const isUIDisabled = isWhitelistDisabled || isTermsDisabled;
   
   // Also disable UI when terms are not signed (only when we confirmed they're not signed, not while checking)
   const isTermsDisabled = isTermsSigned === false;

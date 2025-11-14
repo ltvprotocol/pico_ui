@@ -19,7 +19,8 @@
         "description": "Deposit MAE tokens to leverage your position. Vault will use your MAE as collateral to borrow WETH - creating a 4x leverage position through HodlMyBeer.",
         "flashLoanMintHelperAddress": "0x169D36086e2a68062ED36bAc5E0e733c5f0B872a",
         "flashLoanRedeemHelperAddress": "0x5f3Eb9DAEf690364C2539b8148faA421B60427B2",
-        "useSafeActions": true
+        "useSafeActions": true,
+        "partiallyDisabled": true
       },
       {
         "address": "0xAa707a2a0e38DE55cA0b61dd32468e357b55b15f",

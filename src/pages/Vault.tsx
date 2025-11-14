@@ -35,31 +35,38 @@ function VaultContent() {
 
   // Only disable UI when we confirmed user is NOT whitelisted (don't disable while checking)
   const isUIDisabled = isWhitelistActivated === true && isWhitelisted === false;
+  const isPartiallyDisabled = vaultConfig?.partiallyDisabled === true;
+
+  const partiallyDisabledMode = isUIDisabled || isPartiallyDisabled;
 
   return (
     <>
       <VaultHeader />
       <WhitelistBanner />
-      <div className={isUIDisabled ? 'opacity-50 pointer-events-none' : ''}>
-        <div className="flex flex-col [@media(min-width:768px)]:flex-row gap-4 mb-4">
-          <div className="flex-1">
+      <div className="flex flex-col [@media(min-width:768px)]:flex-row gap-4 mb-4">
+        <div className="flex-1">
+          <div className={isUIDisabled ? 'opacity-50 pointer-events-none' : ''}>
             <Info />
           </div>
-          <div className="flex-1">
+        </div>
+        <div className="flex-1">
+          <div className={partiallyDisabledMode ? 'opacity-50 pointer-events-none' : ''}>
             <Actions isSafe={vaultConfig && (vaultConfig as any).useSafeActions} />
           </div>
         </div>
-        <div className="mb-4">
-          <LowLevelRebalance />
+      </div>
+      <div className={`mb-4 ${partiallyDisabledMode ? 'opacity-50 pointer-events-none' : ''}`}>
+        <LowLevelRebalance />
+      </div>
+      {hasFlashLoanHelper && (
+        <div className={`mb-4 ${isUIDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
+          <FlashLoanHelper />
         </div>
-        {hasFlashLoanHelper && (
-          <div className="mb-4">
-            <FlashLoanHelper />
-          </div>
-        )}
-        <div className="mb-4">
-          <Auction />
-        </div>
+      )}
+      <div className={`mb-4 ${partiallyDisabledMode ? 'opacity-50 pointer-events-none' : ''}`}>
+        <Auction />
+      </div>
+      <div className={isUIDisabled ? 'opacity-50 pointer-events-none' : ''}>
         <MoreInfo />
       </div>
     </>

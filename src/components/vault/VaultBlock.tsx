@@ -427,7 +427,7 @@ export default function VaultBlock({ address }: VaultBlockProps) {
           </div>
         </div>
         <div className="flex justify-between text-sm">
-          <div className="font-medium text-gray-700">Deposits: </div>
+          <div className="font-medium text-gray-700">Deposited TVL: </div>
           <div className="font-normal text-gray-700 min-w-[100px] text-right">
             {renderWithTransition(
               formattedDeposits && staticData.borrowTokenSymbol ? (

@@ -203,50 +203,9 @@ export default function Info() {
           )}
         </div>
       </div>
-      <div className="w-full flex justify-between items-center text-sm mb-2">
-        <div className="font-medium text-gray-700">Deposits:</div>
-        <div className="min-w-[60px] text-right">
-          <div className="flex flex-col items-end">
-            <div className="flex">
-              <div className="mr-2 min-w-[60px] text-right">
-                {renderWithTransition(
-                  <NumberDisplay value={totalAssets} />,
-                  !totalAssets || totalAssets === '0'
-                )}
-              </div>
-              <div className="font-medium text-gray-700">
-                {renderWithTransition(
-                  borrowTokenSymbol,
-                  !borrowTokenSymbol
-                )}
-              </div>
-            </div>
-            {isMainnet && (
-              <div className="text-gray-700 text-xs mt-0.5">
-                {isLoadingPrice && !hasLoadedPriceOnce.current ? (
-                  renderWithTransition(
-                    priceLoadFailed ? (
-                      <span className="text-red-500 italic">Failed to load</span>
-                    ) : (
-                      formatUsdValue(usdValue)
-                    ),
-                    true
-                  )
-                ) : (
-                  priceLoadFailed ? (
-                    <span className="text-red-500 italic">Failed to load</span>
-                  ) : (
-                    formatUsdValue(usdValue)
-                  )
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
       {tvl && (
         <div className="w-full flex justify-between items-center text-sm mb-2">
-          <div className="font-medium text-gray-700">TVL:</div>
+          <div className="font-medium text-gray-700">Leveraged TVL:</div>
           <div className="min-w-[60px] text-right">
             <div className="flex flex-col items-end">
               <div className="flex">
@@ -287,6 +246,47 @@ export default function Info() {
           </div>
         </div>
       )}
+      <div className="w-full flex justify-between items-center text-sm mb-2">
+        <div className="font-medium text-gray-700">Deposited TVL:</div>
+        <div className="min-w-[60px] text-right">
+          <div className="flex flex-col items-end">
+            <div className="flex">
+              <div className="mr-2 min-w-[60px] text-right">
+                {renderWithTransition(
+                  <NumberDisplay value={totalAssets} />,
+                  !totalAssets || totalAssets === '0'
+                )}
+              </div>
+              <div className="font-medium text-gray-700">
+                {renderWithTransition(
+                  borrowTokenSymbol,
+                  !borrowTokenSymbol
+                )}
+              </div>
+            </div>
+            {isMainnet && (
+              <div className="text-gray-700 text-xs mt-0.5">
+                {isLoadingPrice && !hasLoadedPriceOnce.current ? (
+                  renderWithTransition(
+                    priceLoadFailed ? (
+                      <span className="text-red-500 italic">Failed to load</span>
+                    ) : (
+                      formatUsdValue(usdValue)
+                    ),
+                    true
+                  )
+                ) : (
+                  priceLoadFailed ? (
+                    <span className="text-red-500 italic">Failed to load</span>
+                  ) : (
+                    formatUsdValue(usdValue)
+                  )
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
       <div className="w-full flex justify-between items-center text-sm mb-3">
         <div className="font-medium text-gray-700">Your Position:</div>
         <div className="min-w-[60px] text-right">

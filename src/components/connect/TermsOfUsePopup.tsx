@@ -6,7 +6,7 @@ interface TermsOfUsePopupProps {
 }
 
 export default function TermsOfUsePopup({ isOpen }: TermsOfUsePopupProps) {
-  const { signTermsOfUse, isSigningTerms, termsError } = useAppContext();
+  const { signTermsOfUse, isSigningTerms, termsError, termsTextFetchFailed, termsText } = useAppContext();
 
   if (!isOpen) return null;
 
@@ -32,14 +32,16 @@ export default function TermsOfUsePopup({ isOpen }: TermsOfUsePopupProps) {
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-900 mb-1">Terms of Use Required</p>
               <p className="text-xs text-gray-500 leading-relaxed">
-                {termsError || 'Please sign the terms of use to access the application.'}
+                {termsTextFetchFailed 
+                  ? 'Unable to load terms of use. Please try again.' 
+                  : termsError || 'Please sign the terms of use to access the application.'}
               </p>
             </div>
           </div>
           
           <button
             onClick={handleSign}
-            disabled={isSigningTerms}
+            disabled={isSigningTerms || termsTextFetchFailed || !termsText}
             className="
               w-full flex justify-center items-center space-x-2 py-2 px-4
               bg-indigo-600 hover:bg-indigo-700

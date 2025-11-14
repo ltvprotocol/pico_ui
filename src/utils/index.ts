@@ -12,4 +12,6 @@ export { getLendingProtocolAddress } from './getLendingProtocolAddress';
 export { loadAaveLtv, loadGhostLtv, loadMorphoLtv } from './ltv-loaders';
 export { shortAddress } from './shortAddress';
 export { isVaultExists } from './isVaultExists';
+export { fetchTokenPrice } from './fetchTokenPrice';
+export { loadTVL } from './loadTVL';
 export * from './api';

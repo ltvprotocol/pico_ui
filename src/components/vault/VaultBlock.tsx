@@ -28,7 +28,7 @@ interface WhitelistData {
 }
 
 interface DynamicVaultData {
-  tvl: bigint | null;
+  deposits: bigint | null;
 }
 
 interface VaultDecimals {
@@ -58,7 +58,7 @@ export default function VaultBlock({ address }: VaultBlockProps) {
   });
 
   const [dynamicData, setDynamicData] = useState<DynamicVaultData>({
-    tvl: null,
+    deposits: null,
   });
 
   const [apyData, setApyData] = useState<{ apy: number | null; pointsRate: number | null }>({
@@ -347,26 +347,26 @@ export default function VaultBlock({ address }: VaultBlockProps) {
     }
   }, [staticData.isWhitelistActivated, address, currentNetwork, checkUserWhitelist]);
 
-  const loadTvl = useCallback(async () => {
+  const loadDeposits = useCallback(async () => {
     if (!vaultContract) return;
 
     try {
-      const tvl = await vaultContract["totalAssets()"]();
-      setDynamicData({ tvl });
+      const deposits = await vaultContract["totalAssets()"]();
+      setDynamicData(prev => ({ ...prev, deposits }));
       setLoadingState(prev => ({ ...prev, hasLoadedAssets: true, isLoadingAssets: false }));
     } catch (err) {
-      console.error('Error loading TVL:', err);
+      console.error('Error loading Deposits:', err);
       setLoadingState(prev => ({ ...prev, isLoadingAssets: false }));
     }
   }, [vaultContract]);
 
   useEffect(() => {
     if (vaultContract) {
-      loadTvl();
+      loadDeposits();
     }
-  }, [vaultContract, loadTvl]);
+  }, [vaultContract, loadDeposits]);
 
-  useAdaptiveInterval(loadTvl, {
+  useAdaptiveInterval(loadDeposits, {
     initialDelay: 12000,
     enabled: !!vaultContract
   });
@@ -375,13 +375,13 @@ export default function VaultBlock({ address }: VaultBlockProps) {
     loadApyAndPointsRate();
   }, [loadApyAndPointsRate]);
 
-  const formattedTvl = useMemo(() => {
-    if (!dynamicData.tvl) return null;
-    return formatUnits(dynamicData.tvl, vaultDecimals.borrowTokenDecimals);
-  }, [dynamicData.tvl, vaultDecimals.borrowTokenDecimals]);
+  const formattedDeposits = useMemo(() => {
+    if (!dynamicData.deposits) return null;
+    return formatUnits(dynamicData.deposits, vaultDecimals.borrowTokenDecimals);
+  }, [dynamicData.deposits, vaultDecimals.borrowTokenDecimals]);
 
   useEffect(() => {
-    setDynamicData({ tvl: null });
+    setDynamicData({ deposits: null });
     setLoadingState(prev => ({ ...prev, isLoadingAssets: true, hasLoadedAssets: false }));
   }, [currentNetwork, address]);
 
@@ -427,13 +427,13 @@ export default function VaultBlock({ address }: VaultBlockProps) {
           </div>
         </div>
         <div className="flex justify-between text-sm">
-          <div className="font-medium text-gray-700">TVL: </div>
+          <div className="font-medium text-gray-700">Deposits: </div>
           <div className="font-normal text-gray-700 min-w-[100px] text-right">
             {renderWithTransition(
-              formattedTvl && staticData.borrowTokenSymbol ? (
+              formattedDeposits && staticData.borrowTokenSymbol ? (
                 <div className="flex justify-end">
                   <div className="font-normal text-gray-700 mr-2">
-                    <NumberDisplay value={formattedTvl} />
+                    <NumberDisplay value={formattedDeposits} />
                   </div>
                   <div className="font-medium text-gray-700">{staticData.borrowTokenSymbol}</div>
                 </div>

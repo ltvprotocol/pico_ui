@@ -6,7 +6,7 @@ import UnrecognizedNetwork from "@/components/vault/UnrecognizedNetwork";
 import { isVaultExists } from "@/utils";
 
 export default function Home() {
-  const { currentNetwork, unrecognizedNetworkParam, publicProvider } = useAppContext();
+  const { currentNetwork, unrecognizedNetworkParam, publicProvider, isTermsSigned } = useAppContext();
 
   if (unrecognizedNetworkParam || !currentNetwork) {
     return <UnrecognizedNetwork />;
@@ -43,11 +43,14 @@ export default function Home() {
     checkAll();
   }, [publicProvider, currentNetwork]);
 
+  const isTermsDisabled = isTermsSigned === false;
+  const disabledClassName = isTermsDisabled ? 'opacity-50 pointer-events-none' : '';
+
   return (
-    <div className="w-full flex flex-col">
+    <div className={`w-full flex flex-col ${disabledClassName}`}>
       <h3 className="text-lg font-medium text-gray-900 mb-2">Vaults:</h3>
       {checksDone && existingVaultAddresses.length === 0 && (
-        <div className="text-sm text-gray-600 italic">No vaults available yet. We’re preparing new opportunities, please return later to explore the latest vaults once they’re deployed.</div>
+        <div className="text-sm text-gray-600 italic">No vaults available yet. We're preparing new opportunities, please return later to explore the latest vaults once they're deployed.</div>
       )}
       {existingVaultAddresses.map((address) => (
         <VaultBlock address={address} key={address} />

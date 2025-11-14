@@ -19,7 +19,7 @@ function VaultContent() {
     flashLoanMintHelperAddress, flashLoanRedeemHelperAddress
   } = useVaultContext();
 
-  const { unrecognizedNetworkParam } = useAppContext();
+  const { unrecognizedNetworkParam, isTermsSigned } = useAppContext();
 
   const hasFlashLoanHelper =
     (flashLoanMintHelperAddress && flashLoanMintHelperAddress !== '') ||
@@ -34,7 +34,10 @@ function VaultContent() {
   }
 
   // Only disable UI when we confirmed user is NOT whitelisted (don't disable while checking)
-  const isUIDisabled = isWhitelistActivated === true && isWhitelisted === false;
+  const isWhitelistDisabled = isWhitelistActivated === true && isWhitelisted === false;
+  // Also disable UI when terms are not signed (only when we confirmed they're not signed, not while checking)
+  const isTermsDisabled = isTermsSigned === false;
+  const isUIDisabled = isWhitelistDisabled || isTermsDisabled;
 
   return (
     <>

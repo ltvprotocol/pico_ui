@@ -19,8 +19,7 @@
         "description": "Deposit MAE tokens to leverage your position. Vault will use your MAE as collateral to borrow WETH - creating a 4x leverage position through HodlMyBeer.",
         "flashLoanMintHelperAddress": "0x169D36086e2a68062ED36bAc5E0e733c5f0B872a",
         "flashLoanRedeemHelperAddress": "0x5f3Eb9DAEf690364C2539b8148faA421B60427B2",
-        "useSafeActions": true,
-        "partiallyDisabled": true
+        "useSafeActions": true
       },
       {
         "address": "0xAa707a2a0e38DE55cA0b61dd32468e357b55b15f",
@@ -106,7 +105,8 @@
         "description": "Deposit ETH or wstETH to maximize your staking yield. Vault will use your wstETH tokens as collateral to borrow WETH - creating a 12x leverage poisition through Aave V3.",
         "flashLoanMintHelperAddress": "0x2f5636d96ed34cd9f3eb3ab5b657175a36408645",
         "flashLoanRedeemHelperAddress": "0xa5836756b1d5db03dfccbafc4083a1e675a1f644",
-        "useSafeActions": true
+        "useSafeActions": true,
+        "partiallyDisabled": true
       }
     ]
   }

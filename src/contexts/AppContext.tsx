@@ -476,7 +476,6 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
   // Load terms text on mount
   useEffect(() => {
     const loadTermsText = async () => {
-      setTermsTextFetchFailed(false);
       try {
         const text = await fetchTermsOfUseText(currentNetwork);
         if (text) {

@@ -3,7 +3,7 @@ import { BrowserProvider, JsonRpcSigner, JsonRpcProvider, Eip1193Provider } from
 import { SEPOLIA_CHAIN_ID, MAINNET_CHAIN_ID, NETWORK_CONFIGS, URL_PARAM_TO_CHAIN_ID, SAFE_HELPER_ADDRESSES } from '@/constants';
 import { Safe4626Helper, Safe4626CollateralHelper } from '@/typechain-types';
 import { Safe4626Helper__factory, Safe4626CollateralHelper__factory } from '@/typechain-types/factories';
-import { isUserRejected } from '@/utils';
+import { isUserRejected, checkTermsOfUseStatus, fetchTermsOfUseText, submitTermsOfUseSignature } from '@/utils';
 
 type DiscoveredWallet = {
   info: {
@@ -39,6 +39,14 @@ interface AppContextType {
   safeHelperAddressCollateral?: string | null;
   safeHelperBorrow?: Safe4626Helper | null;
   safeHelperCollateral?: Safe4626CollateralHelper | null;
+  // Terms of use
+  isTermsSigned: boolean | null;
+  termsText: string | null;
+  isCheckingTerms: boolean;
+  isSigningTerms: boolean;
+  termsError: string | null;
+  checkTermsStatus: () => Promise<void>;
+  signTermsOfUse: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -68,6 +76,13 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
   const [safeHelperAddressCollateral, setSafeHelperAddressCollateral] = useState<string | null>(null);
   const [safeHelperBorrow, setSafeHelperBorrow] = useState<Safe4626Helper | null>(null);
   const [safeHelperCollateral, setSafeHelperCollateral] = useState<Safe4626CollateralHelper | null>(null);
+
+  // Terms of use state
+  const [isTermsSigned, setIsTermsSigned] = useState<boolean | null>(null);
+  const [termsText, setTermsText] = useState<string | null>(null);
+  const [isCheckingTerms, setIsCheckingTerms] = useState(false);
+  const [isSigningTerms, setIsSigningTerms] = useState(false);
+  const [termsError, setTermsError] = useState<string | null>(null);
 
   const getNetworkFromUrl = useCallback(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -247,6 +262,8 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     setIsSepolia(false);
     setIsMainnet(false);
     setRawProvider(null);
+    setIsTermsSigned(null);
+    setTermsError(null);
     localStorage.removeItem('connectedWallet');
   }, []);
 
@@ -452,6 +469,121 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     await switchToNetwork('1');
   }, [switchToNetwork]);
 
+  // Load terms text on mount
+  useEffect(() => {
+    const loadTermsText = async () => {
+      const text = await fetchTermsOfUseText(currentNetwork);
+      if (text) {
+        setTermsText(text);
+      }
+    };
+    loadTermsText();
+  }, [currentNetwork]);
+
+  const checkTermsStatus = useCallback(async () => {
+    if (!address || !currentNetwork) {
+      setIsTermsSigned(null);
+      return;
+    }
+
+    setIsCheckingTerms(true);
+    setTermsError(null);
+    try {
+      const status = await checkTermsOfUseStatus(address, currentNetwork);
+      if (status) {
+        setIsTermsSigned(status.signed);
+      } else {
+        setIsTermsSigned(null);
+      }
+    } catch (error) {
+      console.error('Error checking terms status:', error);
+      setTermsError('Failed to check terms of use status');
+      setIsTermsSigned(null);
+    } finally {
+      setIsCheckingTerms(false);
+    }
+  }, [address, currentNetwork]);
+
+  const signTermsOfUse = useCallback(async () => {
+    if (!signer || !address || !termsText || !currentNetwork) {
+      setTermsError('Missing required data to sign terms');
+      return;
+    }
+
+    setIsSigningTerms(true);
+    setTermsError(null);
+    try {
+      const signature = await signer.signMessage(termsText);
+      
+      const result = await submitTermsOfUseSignature(address, signature, currentNetwork);
+      if (result && result.success) {
+        setIsTermsSigned(true);
+      } else {
+        setTermsError('Failed to submit signature');
+      }
+    } catch (error: any) {
+      if (isUserRejected(error)) {
+        setTermsError('Signature canceled by user');
+      } else {
+        console.error('Error signing terms:', error);
+        setTermsError('Failed to sign terms of use');
+      }
+    } finally {
+      setIsSigningTerms(false);
+    }
+  }, [signer, address, termsText, currentNetwork]);
+
+  const [hasAttemptedAutoSign, setHasAttemptedAutoSign] = useState(false);
+
+  // Check terms when wallet connects or address changes
+  useEffect(() => {
+    if (isConnected && address) {
+      checkTermsStatus();
+      setHasAttemptedAutoSign(false); // Reset when address changes
+    } else {
+      setIsTermsSigned(null);
+      setHasAttemptedAutoSign(false);
+    }
+  }, [isConnected, address, checkTermsStatus]);
+
+  // Auto-sign terms when wallet connects and terms are not signed
+  useEffect(() => {
+    if (
+      isConnected &&
+      isTermsSigned === false &&
+      signer &&
+      address &&
+      termsText &&
+      currentNetwork &&
+      !isSigningTerms &&
+      !isCheckingTerms &&
+      !hasAttemptedAutoSign
+    ) {
+      setHasAttemptedAutoSign(true);
+      signTermsOfUse();
+    }
+  }, [
+    isConnected,
+    isTermsSigned,
+    signer,
+    address,
+    termsText,
+    currentNetwork,
+    isSigningTerms,
+    isCheckingTerms,
+    hasAttemptedAutoSign,
+    signTermsOfUse,
+  ]);
+
+  // Reset terms state on disconnect
+  useEffect(() => {
+    if (!isConnected) {
+      setIsTermsSigned(null);
+      setTermsError(null);
+      setHasAttemptedAutoSign(false);
+    }
+  }, [isConnected]);
+
   const contextValue: AppContextType = {
     wallets,
     publicProvider,
@@ -476,6 +608,14 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     safeHelperAddressCollateral,
     safeHelperBorrow,
     safeHelperCollateral,
+    // Terms of use
+    isTermsSigned,
+    termsText,
+    isCheckingTerms,
+    isSigningTerms,
+    termsError,
+    checkTermsStatus,
+    signTermsOfUse,
   };
 
   return <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>;

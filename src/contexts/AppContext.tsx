@@ -1,7 +1,9 @@
 import { createContext, ReactNode, useContext, useEffect, useState, useCallback } from 'react';
 import { BrowserProvider, JsonRpcSigner, JsonRpcProvider, Eip1193Provider } from 'ethers';
-import { SEPOLIA_CHAIN_ID, MAINNET_CHAIN_ID, NETWORK_CONFIGS, URL_PARAM_TO_CHAIN_ID } from '@/constants';
-import { isUserRejected } from '@/utils';
+import { SEPOLIA_CHAIN_ID, MAINNET_CHAIN_ID, NETWORK_CONFIGS, URL_PARAM_TO_CHAIN_ID, SAFE_HELPER_ADDRESSES } from '@/constants';
+import { Safe4626Helper, Safe4626CollateralHelper } from '@/typechain-types';
+import { Safe4626Helper__factory, Safe4626CollateralHelper__factory } from '@/typechain-types/factories';
+import { isUserRejected, checkTermsOfUseStatus, fetchTermsOfUseText, submitTermsOfUseSignature } from '@/utils';
 
 type DiscoveredWallet = {
   info: {
@@ -32,6 +34,21 @@ interface AppContextType {
   switchToSepolia: () => Promise<void>;
   switchToMainnet: () => Promise<void>;
   switchToNetwork: (chainId: string) => Promise<void>;
+  // Safe helpers
+  safeHelperAddressBorrow?: string | null;
+  safeHelperAddressCollateral?: string | null;
+  safeHelperBorrow?: Safe4626Helper | null;
+  safeHelperCollateral?: Safe4626CollateralHelper | null;
+  // Terms of use
+  isTermsSigned: boolean | null;
+  termsText: string | null;
+  isCheckingTerms: boolean;
+  isSigningTerms: boolean;
+  termsError: string | null;
+  termsTextFetchFailed: boolean;
+  isTermsBlockingUI: boolean;
+  checkTermsStatus: () => Promise<void>;
+  signTermsOfUse: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -55,6 +72,21 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
   const [isConnected, setIsConnected] = useState(false);
 
   const [rawProvider, setRawProvider] = useState<Eip1193Provider | null>(null);
+
+  // Safe helper state
+  const [safeHelperAddressBorrow, setSafeHelperAddressBorrow] = useState<string | null>(null);
+  const [safeHelperAddressCollateral, setSafeHelperAddressCollateral] = useState<string | null>(null);
+  const [safeHelperBorrow, setSafeHelperBorrow] = useState<Safe4626Helper | null>(null);
+  const [safeHelperCollateral, setSafeHelperCollateral] = useState<Safe4626CollateralHelper | null>(null);
+
+  // Terms of use state
+  const [isTermsSigned, setIsTermsSigned] = useState<boolean | null>(null);
+  const [termsText, setTermsText] = useState<string | null>(null);
+  const [isCheckingTerms, setIsCheckingTerms] = useState(false);
+  const [isSigningTerms, setIsSigningTerms] = useState(false);
+  const [termsError, setTermsError] = useState<string | null>(null);
+  const [termsTextFetchFailed, setTermsTextFetchFailed] = useState(false);
+  const [isTermsBlockingUI, setIsTermsBlockingUI] = useState(false);
 
   const getNetworkFromUrl = useCallback(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -109,6 +141,46 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     setIsConnected(Boolean(provider && signer && address));
   }, [provider, signer, address]);
+
+  // Initialize mock helper addresses per network and instantiate helpers when signer is available
+  useEffect(() => {
+    const chainIdStr = currentNetwork;
+    if (!chainIdStr) {
+      setSafeHelperAddressBorrow(null);
+      setSafeHelperAddressCollateral(null);
+      setSafeHelperBorrow(null);
+      setSafeHelperCollateral(null);
+      return;
+    }
+
+    const cfg = SAFE_HELPER_ADDRESSES[chainIdStr];
+    if (!cfg) {
+      setSafeHelperAddressBorrow(null);
+      setSafeHelperAddressCollateral(null);
+      setSafeHelperBorrow(null);
+      setSafeHelperCollateral(null);
+      return;
+    }
+
+    setSafeHelperAddressBorrow(cfg.borrow);
+    setSafeHelperAddressCollateral(cfg.collateral);
+
+    if (signer) {
+      try {
+        const borrowHelper = Safe4626Helper__factory.connect(cfg.borrow, signer);
+        const collateralHelper = Safe4626CollateralHelper__factory.connect(cfg.collateral, signer);
+        setSafeHelperBorrow(borrowHelper);
+        setSafeHelperCollateral(collateralHelper);
+      } catch (e) {
+        console.error('Failed to initialize safe helpers:', e);
+        setSafeHelperBorrow(null);
+        setSafeHelperCollateral(null);
+      }
+    } else {
+      setSafeHelperBorrow(null);
+      setSafeHelperCollateral(null);
+    }
+  }, [currentNetwork, signer]);
 
   useEffect(() => {
     const defaultNetwork = getDefaultNetwork();
@@ -194,6 +266,8 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     setIsSepolia(false);
     setIsMainnet(false);
     setRawProvider(null);
+    setIsTermsSigned(null);
+    setTermsError(null);
     localStorage.removeItem('connectedWallet');
   }, []);
 
@@ -222,6 +296,18 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
       setAddress(newAddress);
       setChainId(newChainId);
       setRawProvider(eip1193Provider);
+
+      // Update publicProvider to match the wallet's network
+      // Only do this if there's no URL network param, or if it matches
+      const urlNetwork = getNetworkFromUrl();
+      if (!urlNetwork || urlNetwork === chainIdString) {
+        const networkConfig = (NETWORK_CONFIGS as any)[chainIdString];
+        if (networkConfig) {
+          const newPublicProvider = new JsonRpcProvider(networkConfig.rpcUrls[0]);
+          setPublicProvider(newPublicProvider);
+        }
+      }
+      // If URL network differs, the auto-switch effect will handle it
     } catch (err) {
       console.error("Error in setupProviderConnection:", err);
       disconnectWallet();
@@ -242,6 +328,22 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
       
       if (expectedAddress && expectedAddress.toLowerCase() !== currentAddress.toLowerCase()) {
         console.warn("Address mismatch, user selected another account");
+      }
+
+      // Update URL to reflect the connected network
+      const network = await tempProvider.getNetwork();
+      const chainIdString = network.chainId.toString();
+      const networkConfig = (NETWORK_CONFIGS as any)[chainIdString];
+      if (networkConfig) {
+        const urlParam = Object.keys(URL_PARAM_TO_CHAIN_ID).find(
+          key => URL_PARAM_TO_CHAIN_ID[key as keyof typeof URL_PARAM_TO_CHAIN_ID] === chainIdString
+        );
+        
+        if (urlParam) {
+          const url = new URL(window.location.href);
+          url.searchParams.set('network', urlParam);
+          window.history.pushState({}, '', url.toString());
+        }
       }
 
       localStorage.setItem('connectedWallet', JSON.stringify({
@@ -328,16 +430,27 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
 
         const chainIdBigInt = BigInt(chainIdHex);
         const chainIdString = chainIdBigInt.toString();
-        
-        const isSepoliaNetwork = chainIdBigInt === SEPOLIA_CHAIN_ID;
-        const isMainnetNetwork = chainIdBigInt === MAINNET_CHAIN_ID;
 
+        // Update URL parameter to match the new network
+        const networkConfig = (NETWORK_CONFIGS as any)[chainIdString];
+        if (networkConfig) {
+          const urlParam = Object.keys(URL_PARAM_TO_CHAIN_ID).find(
+            key => URL_PARAM_TO_CHAIN_ID[key as keyof typeof URL_PARAM_TO_CHAIN_ID] === chainIdString
+          );
+          
+          if (urlParam) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('network', urlParam);
+            window.history.pushState({}, '', url.toString());
+          }
+
+          // Update publicProvider to match the new network
+          const newPublicProvider = new JsonRpcProvider(networkConfig.rpcUrls[0]);
+          setPublicProvider(newPublicProvider);
+        }
+
+        // Update all wallet connection state (this also sets currentNetwork, chainId, etc.)
         await setupProviderConnection(rawProvider);
-
-        setIsSepolia(isSepoliaNetwork);
-        setIsMainnet(isMainnetNetwork);
-        setCurrentNetwork(chainIdString);
-        setChainId(chainIdBigInt);
       };
 
       eip1193Provider.on('accountsChanged', onAccountsChangedHandler);
@@ -360,6 +473,159 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     await switchToNetwork('1');
   }, [switchToNetwork]);
 
+  // Load terms text on mount
+  useEffect(() => {
+    const loadTermsText = async () => {
+      try {
+        const text = await fetchTermsOfUseText(currentNetwork);
+        if (text) {
+          setTermsText(text);
+          setTermsTextFetchFailed(false);
+        } else {
+          // If fetch returned null, it means the backend failed
+          setTermsTextFetchFailed(true);
+          setTermsText(null);
+        }
+      } catch (error) {
+        console.error('Error loading terms text:', error);
+        setTermsTextFetchFailed(true);
+        setTermsText(null);
+      }
+    };
+    loadTermsText();
+  }, [currentNetwork]);
+
+  const checkTermsStatus = useCallback(async () => {
+    if (!address || !currentNetwork) {
+      setIsTermsSigned(null);
+      return;
+    }
+
+    setIsCheckingTerms(true);
+    setTermsError(null);
+    try {
+      const status = await checkTermsOfUseStatus(address, currentNetwork);
+      if (status) {
+        setIsTermsSigned(status.signed);
+      } else {
+        setIsTermsSigned(null);
+      }
+    } catch (error) {
+      console.error('Error checking terms status:', error);
+      setTermsError('Failed to check terms of use status');
+      setIsTermsSigned(null);
+    } finally {
+      setIsCheckingTerms(false);
+    }
+  }, [address, currentNetwork]);
+
+  const signTermsOfUse = useCallback(async () => {
+    if (!signer || !address || !termsText || !currentNetwork) {
+      setTermsError('Missing required data to sign terms');
+      return;
+    }
+
+    setIsSigningTerms(true);
+    setTermsError(null);
+    try {
+      const signature = await signer.signMessage(termsText);
+      
+      const result = await submitTermsOfUseSignature(address, signature, currentNetwork);
+      if (result && result.success) {
+        setIsTermsSigned(true);
+      } else {
+        setTermsError('Failed to submit signature');
+      }
+    } catch (error: any) {
+      if (isUserRejected(error)) {
+        setTermsError('Signature canceled by user');
+      } else {
+        console.error('Error signing terms:', error);
+        setTermsError('Failed to sign terms of use');
+      }
+    } finally {
+      setIsSigningTerms(false);
+    }
+  }, [signer, address, termsText, currentNetwork]);
+
+  const [hasAttemptedAutoSign, setHasAttemptedAutoSign] = useState(false);
+
+  // Check terms when wallet connects or address changes
+  useEffect(() => {
+    if (isConnected && address) {
+      setIsTermsSigned(null);
+      setHasAttemptedAutoSign(false);
+      checkTermsStatus();
+    } else {
+      setIsTermsSigned(null);
+      setHasAttemptedAutoSign(false);
+    }
+  }, [isConnected, address, checkTermsStatus]);
+
+  // Auto-sign terms when wallet connects and terms are not signed
+  useEffect(() => {
+    if (
+      isConnected &&
+      isTermsSigned === false &&
+      signer &&
+      address &&
+      termsText &&
+      currentNetwork &&
+      !isSigningTerms &&
+      !isCheckingTerms &&
+      !hasAttemptedAutoSign
+    ) {
+      setHasAttemptedAutoSign(true);
+      signTermsOfUse();
+    }
+  }, [
+    isConnected,
+    isTermsSigned,
+    signer,
+    address,
+    termsText,
+    currentNetwork,
+    isSigningTerms,
+    isCheckingTerms,
+    hasAttemptedAutoSign,
+    signTermsOfUse,
+  ]);
+
+  // Reset terms state on disconnect
+  useEffect(() => {
+    if (!isConnected) {
+      setIsTermsSigned(null);
+      setTermsError(null);
+      setHasAttemptedAutoSign(false);
+      setTermsTextFetchFailed(false);
+    }
+  }, [isConnected]);
+
+  // Compute if UI should be blocked due to terms
+  useEffect(() => {
+    if (!isConnected) {
+      setIsTermsBlockingUI(false);
+      return;
+    }
+    if (isTermsSigned === true) {
+      setIsTermsBlockingUI(false);
+      return;
+    }
+    if (isTermsSigned === false) {
+      setIsTermsBlockingUI(true);
+      return;
+    }
+    if (isTermsSigned === null) {
+      setIsTermsBlockingUI(true);
+      return;
+    }
+    if (termsTextFetchFailed) {
+      setIsTermsBlockingUI(true);
+      return;
+    }
+    setIsTermsBlockingUI(true);
+  }, [isConnected, isTermsSigned, termsTextFetchFailed]);
+
   const contextValue: AppContextType = {
     wallets,
     publicProvider,
@@ -380,6 +646,20 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     switchToSepolia,
     switchToMainnet,
     switchToNetwork,
+    safeHelperAddressBorrow,
+    safeHelperAddressCollateral,
+    safeHelperBorrow,
+    safeHelperCollateral,
+    // Terms of use
+    isTermsSigned,
+    termsText,
+    isCheckingTerms,
+    isSigningTerms,
+    termsError,
+    termsTextFetchFailed,
+    isTermsBlockingUI,
+    checkTermsStatus,
+    signTermsOfUse,
   };
 
   return <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>;

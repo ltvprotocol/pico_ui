@@ -1,12 +1,26 @@
-import { createContext, ReactNode, useContext, useEffect, useState, useCallback } from 'react'
+import { createContext, ReactNode, useContext, useEffect, useState, useCallback, useRef } from 'react'
 import { formatUnits, formatEther, parseUnits, ZeroAddress, parseEther } from 'ethers'
 import { useAppContext } from '@/contexts/AppContext';
-import { Vault, WETH, ERC20, Vault__factory, WETH__factory, ERC20__factory } from '@/typechain-types';
-import { ltvToLeverage, getLendingProtocolAddress, isVaultExists } from '@/utils';
+import {
+  Vault, Vault__factory,
+  WETH, WETH__factory,
+  ERC20, ERC20__factory,
+  FlashLoanMintHelper, FlashLoanMintHelper__factory,
+  FlashLoanRedeemHelper, FlashLoanRedeemHelper__factory,
+  WhitelistRegistry__factory
+} from '@/typechain-types';
+import { ltvToLeverage, getLendingProtocolAddress, isVaultExists, isUserRejected, fetchApy, fetchPointsRate, loadTVL } from '@/utils';
 import vaultsConfig from '../../vaults.config.json';
-import { isWETHAddress, GAS_RESERVE_WEI, SEPOLIA_CHAIN_ID_STRING, MORPHO_MARKET_ID, CONNECTOR_ADDRESSES} from '@/constants';
+import signaturesConfig from '../../signatures.config.json';
+import { isWETHAddress, GAS_RESERVE_WEI, SEPOLIA_CHAIN_ID_STRING, SEPOLIA_MORPHO_MARKET_ID, CONNECTOR_ADDRESSES} from '@/constants';
 import { useAdaptiveInterval } from '@/hooks';
 import { loadGhostLtv, loadAaveLtv, loadMorphoLtv } from '@/utils';
+
+interface Signature {
+  v: number;
+  r: string;
+  s: string;
+}
 
 interface VaultConfig {
   address: string;
@@ -24,6 +38,10 @@ interface VaultConfig {
   dexLink?: string;
   dexLinkName?: string;
   description?: string;
+  flashLoanMintHelperAddress?: string;
+  flashLoanRedeemHelperAddress?: string;
+  useSafeActions?: boolean;
+  partiallyDisabled?: boolean;
 };
 
 interface VaultContextType {
@@ -47,6 +65,11 @@ interface VaultContextType {
   collateralTokenDecimals: bigint;
   vaultConfig: VaultConfig | undefined;
   description: string | null;
+  // Flash loan helpers
+  flashLoanMintHelper: FlashLoanMintHelper | null;
+  flashLoanRedeemHelper: FlashLoanRedeemHelper | null;
+  flashLoanMintHelperAddress: string | null;
+  flashLoanRedeemHelperAddress: string | null;
   // Vault existence
   vaultExists: boolean | null;
   isCheckingVaultExistence: boolean;
@@ -65,6 +88,7 @@ interface VaultContextType {
   vaultMaxMintCollateral: string;
   vaultMaxWithdrawCollateral: string;
   totalAssets: string;
+  tvl: string | null;
   // User max values
   maxDeposit: string;
   maxRedeem: string;
@@ -74,11 +98,21 @@ interface VaultContextType {
   maxRedeemCollateral: string;
   maxMintCollateral: string;
   maxWithdrawCollateral: string;
+  maxLowLevelRebalanceShares: string;
   apy: number | null;
   pointsRate: number | null;
   apyLoadFailed: boolean;
   pointsRateLoadFailed: boolean;
   currentLtv: string | null;
+  // Whitelist
+  isWhitelistActivated: boolean | null;
+  isWhitelisted: boolean | null;
+  hasSignature: boolean;
+  signature: Signature | null;
+  isCheckingWhitelist: boolean;
+  activateWhitelist: () => Promise<void>;
+  isActivatingWhitelist: boolean;
+  whitelistError: string | null;
   // Refresh functions
   refreshBalances: () => Promise<void>;
   refreshVaultLimits: () => Promise<void>;
@@ -90,7 +124,10 @@ interface Params {
   maxLeverage: string | null,
   lendingName: string | null,
   apy: number | null,
-  pointsRate: number | null
+  pointsRate: number | null,
+  isWhitelistActivated: boolean | null,
+  isWhitelisted: boolean | null,
+  hasSignature: boolean | undefined
 }
 
 const VaultContext = createContext<VaultContextType | undefined>(undefined);
@@ -121,6 +158,11 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   const [borrowTokenDecimals, setBorrowTokenDecimals] = useState<bigint>(18n);
   const [collateralTokenDecimals, setCollateralTokenDecimals] = useState<bigint>(18n);
 
+  const [flashLoanMintHelper, setFlashLoanMintHelper] = useState<FlashLoanMintHelper | null>(null);
+  const [flashLoanRedeemHelper, setFlashLoanRedeemHelper] = useState<FlashLoanRedeemHelper | null>(null);
+  const [flashLoanMintHelperAddress, setFlashLoanMintHelperAddress] = useState<string | null>(null);
+  const [flashLoanRedeemHelperAddress, setFlashLoanRedeemHelperAddress] = useState<string | null>(null);
+
   const [ethBalance, setEthBalance] = useState<string>('0');
   const [sharesBalance, setSharesBalance] = useState<string>('0');
   const [borrowTokenBalance, setBorrowTokenBalance] = useState<string>('0');
@@ -135,7 +177,9 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   const [vaultMaxMintCollateral, setVaultMaxMintCollateral] = useState<string>('0');
   const [vaultMaxWithdrawCollateral, setVaultMaxWithdrawCollateral] = useState<string>('0');
   const [totalAssets, setTotalAssets] = useState<string>('0');
-
+  const [tvl, setTvl] = useState<string | null>(null);
+  const hasLoadedTvlOnce = useRef<boolean>(false);
+  
   const [maxDeposit, setMaxDeposit] = useState<string>('0');
   const [maxRedeem, setMaxRedeem] = useState<string>('0');
   const [maxMint, setMaxMint] = useState<string>('0');
@@ -144,6 +188,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   const [maxRedeemCollateral, setMaxRedeemCollateral] = useState<string>('0');
   const [maxMintCollateral, setMaxMintCollateral] = useState<string>('0');
   const [maxWithdrawCollateral, setMaxWithdrawCollateral] = useState<string>('0');
+  const [maxLowLevelRebalanceShares, setMaxLowLevelRebalanceShares] = useState<string>('0');
 
   const [apy, setApy] = useState<number | null>(null);
   const [pointsRate, setPointsRate] = useState<number | null>(null);
@@ -151,6 +196,17 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   const [pointsRateLoadFailed, setPointsRateLoadFailed] = useState<boolean>(false);
 
   const [currentLtv, setCurrentLtv] = useState<string | null>(null);
+
+  // Whitelist state
+  const [isWhitelistActivated, setIsWhitelistActivated] = useState<boolean | null>(params.isWhitelistActivated ?? null);
+  const [isWhitelisted, setIsWhitelisted] = useState<boolean | null>(null);
+  const [hasSignature, setHasSignature] = useState<boolean>(false);
+  const [signature, setSignature] = useState<Signature | null>(null);
+  const [isCheckingWhitelist, setIsCheckingWhitelist] = useState<boolean>(false);
+  const [isActivatingWhitelist, setIsActivatingWhitelist] = useState<boolean>(false);
+  const [whitelistError, setWhitelistError] = useState<string | null>(null);
+  const [lastCheckedAddressForSignature, setLastCheckedAddressForSignature] = useState<string | null>(null);
+  const [hasUsedInitialWhitelistParams, setHasUsedInitialWhitelistParams] = useState<boolean>(false);
 
   const { publicProvider, signer, isConnected, address, currentNetwork } = useAppContext();
 
@@ -173,8 +229,8 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   }, [vaultAddress, publicProvider]);
 
   const loadConfigAndParams = useCallback(() => {
-    const chainId = currentNetwork || SEPOLIA_CHAIN_ID_STRING; // Use current network or default to Sepolia
-    const vaults = (vaultsConfig as any)[chainId]?.vaults || [];
+    if (!currentNetwork) return;
+    const vaults = (vaultsConfig as any)[currentNetwork]?.vaults || [];
     const config = vaults.find((v: any) => v.address.toLowerCase() === vaultAddress.toLowerCase());
     setVaultConfig(config);
 
@@ -187,14 +243,49 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
     setBorrowTokenSymbol(params.borrowTokenSymbol ?? config?.borrowTokenSymbol ?? null);
     setCollateralTokenSymbol(params.collateralTokenSymbol ?? config?.collateralTokenSymbol ?? null);
     setDescription(config?.description ?? null);
-    setApy(params.apy);
-    setPointsRate(params.pointsRate);
-    setApyLoadFailed(params.apy === null);
-    setPointsRateLoadFailed(params.pointsRate === null);
+    
+    if (params.apy !== null) {
+      setApy(params.apy);
+      setApyLoadFailed(false);
+    }
+    if (params.pointsRate !== null) {
+      setPointsRate(params.pointsRate);
+      setPointsRateLoadFailed(false);
+    }
   }, [vaultAddress, params, currentNetwork]);
 
+  const loadApyData = useCallback(async () => {
+    if (params.apy !== null && params.pointsRate !== null) {
+      return;
+    }
+
+    try {
+      const [apyResult, pointsRateResult] = await Promise.all([
+        params.apy === null ? fetchApy(vaultAddress, currentNetwork) : Promise.resolve(params.apy),
+        params.pointsRate === null ? fetchPointsRate(vaultAddress, currentNetwork) : Promise.resolve(params.pointsRate)
+      ]);
+
+      if (params.apy === null) {
+        setApy(apyResult);
+        setApyLoadFailed(apyResult === null);
+      }
+      if (params.pointsRate === null) {
+        setPointsRate(pointsRateResult);
+        setPointsRateLoadFailed(pointsRateResult === null);
+      }
+    } catch (err) {
+      console.error('Error loading APY data:', err);
+      if (params.apy === null) {
+        setApyLoadFailed(true);
+      }
+      if (params.pointsRate === null) {
+        setPointsRateLoadFailed(true);
+      }
+    }
+  }, [vaultAddress, currentNetwork, params.apy, params.pointsRate]);
+
   const initializeContracts = useCallback(async () => {
-    if (!publicProvider) return;
+    if (!publicProvider || !currentNetwork) return;
 
     try {
       const vaultLensInstance = Vault__factory.connect(vaultAddress, publicProvider);
@@ -206,12 +297,12 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
       setCollateralTokenAddress(newCollateralTokenAddress);
       setBorrowTokenAddress(newBorrowTokenAddress);
 
-      const collateralContract = isWETHAddress(newCollateralTokenAddress)
+      const collateralContract = isWETHAddress(newCollateralTokenAddress, currentNetwork)
         ? WETH__factory.connect(newCollateralTokenAddress, publicProvider)
         : ERC20__factory.connect(newCollateralTokenAddress, publicProvider);
       setCollateralTokenLens(collateralContract);
 
-      const borrowContract = isWETHAddress(newBorrowTokenAddress)
+      const borrowContract = isWETHAddress(newBorrowTokenAddress, currentNetwork)
         ? WETH__factory.connect(newBorrowTokenAddress, publicProvider)
         : ERC20__factory.connect(newBorrowTokenAddress, publicProvider);
       setBorrowTokenLens(borrowContract);
@@ -225,12 +316,29 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
 
       if (signer) {
         setVault(Vault__factory.connect(vaultAddress, signer));
-        setCollateralToken(isWETHAddress(newCollateralTokenAddress)
+        setCollateralToken(isWETHAddress(newCollateralTokenAddress, currentNetwork)
           ? WETH__factory.connect(newCollateralTokenAddress, signer)
           : ERC20__factory.connect(newCollateralTokenAddress, signer));
-        setBorrowToken(isWETHAddress(newBorrowTokenAddress)
+        setBorrowToken(isWETHAddress(newBorrowTokenAddress, currentNetwork)
           ? WETH__factory.connect(newBorrowTokenAddress, signer)
           : ERC20__factory.connect(newBorrowTokenAddress, signer));
+
+        // Initialize flash loan helpers if addresses are configured
+        if (vaultConfig?.flashLoanMintHelperAddress && vaultConfig.flashLoanMintHelperAddress !== '') {
+          setFlashLoanMintHelper(FlashLoanMintHelper__factory.connect(vaultConfig.flashLoanMintHelperAddress, signer));
+          setFlashLoanMintHelperAddress(vaultConfig.flashLoanMintHelperAddress);
+        } else {
+          setFlashLoanMintHelper(null);
+          setFlashLoanMintHelperAddress(null);
+        }
+
+        if (vaultConfig?.flashLoanRedeemHelperAddress && vaultConfig.flashLoanRedeemHelperAddress !== '') {
+          setFlashLoanRedeemHelper(FlashLoanRedeemHelper__factory.connect(vaultConfig.flashLoanRedeemHelperAddress, signer));
+          setFlashLoanRedeemHelperAddress(vaultConfig.flashLoanRedeemHelperAddress);
+        } else {
+          setFlashLoanRedeemHelper(null);
+          setFlashLoanRedeemHelperAddress(null);
+        }
       }
 
       if (!vaultConfig?.sharesSymbol) {
@@ -302,7 +410,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
       const [
         rawVaultMaxDeposit, rawVaultMaxRedeem, rawVaultMaxMint, rawVaultMaxWithdraw,
         rawVaultMaxDepositCollateral, rawVaultMaxRedeemCollateral, rawVaultMaxMintCollateral, rawVaultMaxWithdrawCollateral,
-        rawTotalAssets
+        rawMaxLowLevelRebalanceShares, rawTotalAssets
       ] = await Promise.all([
         vaultLens.maxDeposit(address),
         vaultLens.maxRedeem(address),
@@ -312,6 +420,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         vaultLens.maxRedeemCollateral(address),
         vaultLens.maxMintCollateral(address),
         vaultLens.maxWithdrawCollateral(address),
+        vaultLens.maxLowLevelRebalanceShares(),
         vaultLens["totalAssets()"]()
       ]);
 
@@ -323,19 +432,58 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
       setVaultMaxRedeemCollateral(formatUnits(rawVaultMaxRedeemCollateral, sharesDecimals));
       setVaultMaxMintCollateral(formatUnits(rawVaultMaxMintCollateral, sharesDecimals));
       setVaultMaxWithdrawCollateral(formatUnits(rawVaultMaxWithdrawCollateral, collateralTokenDecimals));
+      setMaxLowLevelRebalanceShares(formatUnits(rawMaxLowLevelRebalanceShares, sharesDecimals));
       setTotalAssets(formatUnits(rawTotalAssets, borrowTokenDecimals));
-
     } catch (err) {
       console.error('Error loading vault limits:', err);
     }
   }, [publicProvider, address, vaultLens, sharesDecimals, borrowTokenDecimals, collateralTokenDecimals]);
 
-  const calculateMaxValues = useCallback(async () => {
-    if (!publicProvider || !address || !vaultLens || !borrowTokenLens || !collateralTokenLens) return;
+  const loadTVLData = useCallback(async () => {
+    if (!publicProvider || !vaultLens || !lendingAddress || !collateralTokenAddress) return;
 
     try {
-      const isBorrowTokenWeth = isWETHAddress(borrowTokenAddress);
-      const isCollateralTokenWeth = isWETHAddress(collateralTokenAddress);
+      const lendingConnectorAddress = await vaultLens.lendingConnector();
+      const rawTvl = await loadTVL(
+        vaultAddress,
+        collateralTokenAddress,
+        lendingConnectorAddress,
+        lendingName,
+        publicProvider,
+        currentNetwork
+      );
+
+      if (rawTvl !== null) {
+        setTvl(formatUnits(rawTvl, collateralTokenDecimals));
+        hasLoadedTvlOnce.current = true;
+      } else {
+        // Only set to null if it hasn't been loaded before
+        if (!hasLoadedTvlOnce.current) {
+          setTvl(null);
+        }
+      }
+    } catch (err) {
+      console.error('Error loading TVL:', err);
+      // Only set to null if it hasn't been loaded before (preserve value on refetch errors)
+      if (!hasLoadedTvlOnce.current) {
+        setTvl(null);
+      }
+    }
+  }, [publicProvider, vaultLens, lendingAddress, collateralTokenAddress, vaultAddress, lendingName, currentNetwork, collateralTokenDecimals]);
+
+  const calculateMaxValues = useCallback(async () => {
+    if (
+      !publicProvider ||
+      !currentNetwork ||
+      !address ||
+      !vaultLens ||
+      !borrowTokenLens ||
+      !collateralTokenLens
+    ) return;
+
+    try {
+      const isBorrowTokenWeth = isWETHAddress(borrowTokenAddress, currentNetwork);
+      const isCollateralTokenWeth = isWETHAddress(collateralTokenAddress, currentNetwork);
 
       const dShares = Number(sharesDecimals);
       const dBorrow = Number(borrowTokenDecimals);
@@ -443,28 +591,46 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   ]);
 
   const loadLtv = useCallback(async () => {
-    if (!publicProvider || !vaultLens || !vaultAddress || !lendingAddress) return;
+    if (!publicProvider || !vaultLens || !vaultAddress || !lendingAddress || !currentNetwork) return;
 
     try {
       const lendingConnectorAddress = await vaultLens.lendingConnector();
+      const networkConnectors = CONNECTOR_ADDRESSES[currentNetwork];
+      
+      if (!networkConnectors) {
+        console.log('No connectors configured for network:', currentNetwork);
+        setCurrentLtv('UNKNOWN_NETWORK');
+        return;
+      }
 
-      if (lendingConnectorAddress.toLowerCase() === CONNECTOR_ADDRESSES.AAVE.toLowerCase()) {
+      if (networkConnectors.AAVE && lendingConnectorAddress.toLowerCase() === networkConnectors.AAVE.toLowerCase()) {
         const aaveLtv = await loadAaveLtv(lendingAddress, vaultAddress, publicProvider);
         if (aaveLtv) {
           setCurrentLtv(aaveLtv);
           return;
         }
-      } else if (lendingConnectorAddress.toLowerCase() === CONNECTOR_ADDRESSES.GHOST.toLowerCase()) {
+      } else if (networkConnectors.GHOST && lendingConnectorAddress.toLowerCase() === networkConnectors.GHOST.toLowerCase()) {
         const ghostLtv = await loadGhostLtv(lendingAddress, vaultAddress, publicProvider);
         if (ghostLtv) {
           setCurrentLtv(ghostLtv);
           return;
         }
-      } else if (lendingConnectorAddress.toLowerCase() === CONNECTOR_ADDRESSES.MORPHO.toLowerCase()) {
+      } else if (networkConnectors.MORPHO && lendingConnectorAddress.toLowerCase() === networkConnectors.MORPHO.toLowerCase()) {
+        // Use SEPOLIA_MORPHO_MARKET_ID only on Sepolia network
+        const marketId = currentNetwork === SEPOLIA_CHAIN_ID_STRING 
+          ? SEPOLIA_MORPHO_MARKET_ID 
+          : ''; // TODO: Get market ID from config or contract for non-Sepolia networks
+        
+        if (!marketId) {
+          console.log('No Morpho market ID configured for network:', currentNetwork);
+          setCurrentLtv('MISSING_MARKET_ID');
+          return;
+        }
+        
         const morphoLtv = await loadMorphoLtv(
           lendingAddress,
           vaultAddress,
-          MORPHO_MARKET_ID,
+          marketId,
           borrowTokenDecimals,
           publicProvider
         );
@@ -484,8 +650,189 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
       console.error('Error loading LTV:', err);
       setCurrentLtv('LOAD_FAILED');
     }
-  }, [publicProvider, vaultLens, lendingAddress, vaultAddress, borrowTokenDecimals]);
+  }, [publicProvider, vaultLens, lendingAddress, vaultAddress, borrowTokenDecimals, currentNetwork, vaultConfig]);
   
+  // Check whitelist activation status
+  const checkWhitelistActivation = useCallback(async () => {
+    if (!vaultLens || params.isWhitelistActivated !== null) {
+      return;
+    }
+
+    try {
+      const activated = await vaultLens.isWhitelistActivated();
+      setIsWhitelistActivated(activated);
+    } catch (err) {
+      console.error('Error checking whitelist activation:', err);
+      setIsWhitelistActivated(null);
+    }
+  }, [vaultLens, params.isWhitelistActivated]);
+
+  // Check if user has signature and load signature data
+  useEffect(() => {
+    if (!address || !currentNetwork || !vaultAddress) {
+      setHasSignature(false);
+      setSignature(null);
+      setLastCheckedAddressForSignature(null);
+      return;
+    }
+
+    // If we have params and haven't checked any address yet, use params
+    if (!lastCheckedAddressForSignature && params.hasSignature !== undefined) {
+      setHasSignature(params.hasSignature);
+      setLastCheckedAddressForSignature(address);
+      
+      // If params say user has signature, load the signature data
+      if (params.hasSignature) {
+        const networkSignatures = (signaturesConfig as any)[currentNetwork];
+        const vaultSignatures = networkSignatures?.vaults?.[vaultAddress.toLowerCase()];
+        const signaturesMap = vaultSignatures?.signatures;
+        const addressLower = address.toLowerCase();
+        const signatureData = signaturesMap?.[addressLower];
+        
+        if (signatureData) {
+          setSignature({
+            v: signatureData.v,
+            r: signatureData.r,
+            s: signatureData.s
+          });
+        }
+      }
+      return;
+    }
+
+    // If address changed or no params were provided, check signature
+    if (address !== lastCheckedAddressForSignature) {
+      const networkSignatures = (signaturesConfig as any)[currentNetwork];
+      const vaultSignatures = networkSignatures?.vaults?.[vaultAddress.toLowerCase()];
+      const signaturesMap = vaultSignatures?.signatures;
+
+      if (!signaturesMap) {
+        setHasSignature(false);
+        setSignature(null);
+        setLastCheckedAddressForSignature(address);
+        return;
+      }
+
+      const addressLower = address.toLowerCase();
+      const signatureData = signaturesMap[addressLower];
+      
+      if (signatureData) {
+        setHasSignature(true);
+        setSignature({
+          v: signatureData.v,
+          r: signatureData.r,
+          s: signatureData.s
+        });
+      } else {
+        setHasSignature(false);
+        setSignature(null);
+      }
+      
+      setLastCheckedAddressForSignature(address);
+    }
+  }, [address, currentNetwork, vaultAddress, params.hasSignature, lastCheckedAddressForSignature]);
+
+  // Use initial params only once, then always check
+  useEffect(() => {
+    if (!hasUsedInitialWhitelistParams && params.isWhitelisted !== null && isWhitelistActivated !== null) {
+      if (isWhitelistActivated) {
+        setIsWhitelisted(params.isWhitelisted);
+      }
+      setHasUsedInitialWhitelistParams(true);
+    }
+  }, [params.isWhitelisted, hasUsedInitialWhitelistParams, isWhitelistActivated]);
+
+  // Check if user is whitelisted - always check from registry, don't rely on params after initial load
+  const checkWhitelistStatus = useCallback(async () => {
+    if (!vaultLens || !address || !isConnected || isWhitelistActivated === null) {
+      setIsWhitelisted(null);
+      return;
+    }
+
+    // If whitelist is not activated, everyone is whitelisted
+    if (!isWhitelistActivated) {
+      setIsWhitelisted(true);
+      setIsCheckingWhitelist(false);
+      return;
+    }
+
+    setIsCheckingWhitelist(true);
+    try {
+      const whitelistRegistryAddress = await vaultLens.whitelistRegistry();
+      if (whitelistRegistryAddress === ZeroAddress) {
+        setIsWhitelisted(null);
+        return;
+      }
+
+      const whitelistRegistry = WhitelistRegistry__factory.connect(whitelistRegistryAddress, publicProvider!);
+      const whitelisted = await whitelistRegistry.isAddressWhitelisted(address);
+      setIsWhitelisted(whitelisted);
+    } catch (err) {
+      console.error('Error checking whitelist status:', err);
+      setIsWhitelisted(null);
+    } finally {
+      setIsCheckingWhitelist(false);
+    }
+  }, [vaultLens, address, isConnected, isWhitelistActivated, publicProvider]);
+
+  const activateWhitelist = useCallback(async () => {
+    if (!vaultLens || !signer || !address || !signature || !isWhitelistActivated) {
+      console.error('Missing required data for whitelist activation');
+      return;
+    }
+
+    setIsActivatingWhitelist(true);
+    setWhitelistError(null);
+
+    try {
+      const whitelistRegistryAddress = await vaultLens.whitelistRegistry();
+      if (whitelistRegistryAddress === ZeroAddress) {
+        setWhitelistError('Whitelist registry not found');
+        return;
+      }
+
+      const whitelistRegistry = WhitelistRegistry__factory.connect(whitelistRegistryAddress, signer);
+
+      const tx = await whitelistRegistry.addAddressToWhitelistBySignature(
+        address,
+        signature.v,
+        signature.r,
+        signature.s
+      );
+
+      console.log('Whitelist activation transaction submitted:', tx.hash);
+      await tx.wait();
+      console.log('Whitelist activation transaction confirmed');
+
+      await checkWhitelistStatus();
+      
+    } catch (err: any) {
+      console.error('Error activating whitelist:', err);
+      
+      if (isUserRejected(err)) {
+        setWhitelistError('Transaction rejected by user');
+      } else if (err.message?.includes('AddressWhitelistingBySignatureDisabled')) {
+        setWhitelistError('This address has already used its whitelist signature');
+      } else if (err.message?.includes('InvalidSignature')) {
+        setWhitelistError('Invalid signature provided');
+      } else {
+        setWhitelistError('Failed to activate whitelist. Please try again.');
+      }
+    } finally {
+      setIsActivatingWhitelist(false);
+    }
+  }, [vaultLens, signer, address, signature, isWhitelistActivated, checkWhitelistStatus]);
+
+  useEffect(() => {
+    if (vaultLens) {
+      checkWhitelistActivation();
+    }
+  }, [address, currentNetwork, vaultLens, checkWhitelistActivation]);
+
+  useEffect(() => {
+    checkWhitelistStatus();
+  }, [address, currentNetwork, checkWhitelistStatus]);
+
   // Load ltv
   useEffect(() => {
     if (vaultLens && borrowTokenDecimals && lendingAddress) {
@@ -503,12 +850,17 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
     loadConfigAndParams();
   }, [loadConfigAndParams]);
 
+  // Load APY data from API if not provided in params
+  useEffect(() => {
+    loadApyData();
+  }, [loadApyData]);
+
   // Initialize contracts
   useEffect(() => {
-    if (vaultConfig) {
+    if (vaultConfig && publicProvider) {
       initializeContracts();
     }
-  }, [vaultConfig, initializeContracts]);
+  }, [vaultConfig, publicProvider, initializeContracts]);
 
   // Load balances
   useEffect(() => {
@@ -552,6 +904,22 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
     enabled: isConnected && !!vaultLens
   });
 
+  // Load TVL initially
+  useEffect(() => {
+    if (vaultLens && lendingAddress && collateralTokenAddress) {
+      hasLoadedTvlOnce.current = false;
+      loadTVLData();
+    }
+  }, [vaultLens, lendingAddress, collateralTokenAddress, loadTVLData]);
+
+  // Refetch TVL every 24 seconds
+  useAdaptiveInterval(loadTVLData, {
+    initialDelay: 24000,
+    maxDelay: 60000,
+    multiplier: 2,
+    enabled: !!vaultLens && !!lendingAddress && !!collateralTokenAddress
+  });
+
   return (
     <VaultContext.Provider
       value={{
@@ -575,6 +943,10 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         collateralTokenDecimals,
         vaultConfig,
         description,
+        flashLoanMintHelper,
+        flashLoanRedeemHelper,
+        flashLoanMintHelperAddress,
+        flashLoanRedeemHelperAddress,
         vaultExists,
         isCheckingVaultExistence,
         ethBalance,
@@ -590,6 +962,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         vaultMaxMintCollateral,
         vaultMaxWithdrawCollateral,
         totalAssets,
+        tvl,
         maxDeposit,
         maxRedeem,
         maxMint,
@@ -598,11 +971,20 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         maxRedeemCollateral,
         maxMintCollateral,
         maxWithdrawCollateral,
+        maxLowLevelRebalanceShares,
         apy,
         pointsRate,
         apyLoadFailed,
         pointsRateLoadFailed,
         currentLtv,
+        isWhitelistActivated,
+        isWhitelisted,
+        hasSignature,
+        signature,
+        isCheckingWhitelist,
+        activateWhitelist,
+        isActivatingWhitelist,
+        whitelistError,
         refreshBalances: loadBalances,
         refreshVaultLimits: loadVaultLimits
       }}

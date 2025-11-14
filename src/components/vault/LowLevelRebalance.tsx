@@ -54,7 +54,7 @@ export default function LowLevelRebalance() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
-      <div className={`transition-all duration-200 overflow-hidden ${isOpen ? 'max-h-[2000px] opacity-100 p-3' : 'max-h-0 opacity-0 pb-0'}`}>
+      <div className={`transition-all duration-200 ${isOpen ? 'max-h-[2000px] opacity-100 p-3 overflow-visible' : 'max-h-0 opacity-0 pb-0 overflow-hidden'}`}>
         <div className="mb-3">
           <Tabs 
             activeTab={activeTab} 

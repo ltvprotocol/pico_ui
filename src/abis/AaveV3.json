@@ -5,41 +5,76 @@
         "internalType": "contract IPoolAddressesProvider",
         "name": "provider",
         "type": "address"
+      },
+      {
+        "internalType": "contract IReserveInterestRateStrategy",
+        "name": "interestRateStrategy_",
+        "type": "address"
       }
     ],
     "stateMutability": "nonpayable",
     "type": "constructor"
   },
   {
-    "anonymous": false,
     "inputs": [
       {
-        "indexed": true,
         "internalType": "address",
-        "name": "reserve",
+        "name": "target",
         "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "backer",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "fee",
-        "type": "uint256"
       }
     ],
-    "name": "BackUnbacked",
-    "type": "event"
+    "name": "AddressEmptyCode",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "AssetNotListed",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "CallerNotAToken",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "CallerNotPoolAdmin",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "CallerNotPoolConfigurator",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "CallerNotPositionManager",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "CallerNotUmbrella",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "EModeCategoryReserved",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "FailedCall",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "InvalidAddressesProvider",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ZeroAddressNotValid",
+    "type": "error"
   },
   {
     "anonymous": false,
@@ -88,6 +123,56 @@
       }
     ],
     "name": "Borrow",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "reserve",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "caller",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amountCovered",
+        "type": "uint256"
+      }
+    ],
+    "name": "DeficitCovered",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "debtAsset",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amountCreated",
+        "type": "uint256"
+      }
+    ],
+    "name": "DeficitCreated",
     "type": "event"
   },
   {
@@ -218,43 +303,6 @@
       },
       {
         "indexed": false,
-        "internalType": "address",
-        "name": "user",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "onBehalfOf",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      },
-      {
-        "indexed": true,
-        "internalType": "uint16",
-        "name": "referralCode",
-        "type": "uint16"
-      }
-    ],
-    "name": "MintUnbacked",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "reserve",
-        "type": "address"
-      },
-      {
-        "indexed": false,
         "internalType": "uint256",
         "name": "amountMinted",
         "type": "uint256"
@@ -269,17 +317,36 @@
       {
         "indexed": true,
         "internalType": "address",
-        "name": "reserve",
+        "name": "user",
         "type": "address"
       },
       {
         "indexed": true,
         "internalType": "address",
-        "name": "user",
+        "name": "positionManager",
         "type": "address"
       }
     ],
-    "name": "RebalanceStableBorrowRate",
+    "name": "PositionManagerApproved",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "positionManager",
+        "type": "address"
+      }
+    ],
+    "name": "PositionManagerRevoked",
     "type": "event"
   },
   {
@@ -443,31 +510,6 @@
       {
         "indexed": true,
         "internalType": "address",
-        "name": "reserve",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "user",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "enum DataTypes.InterestRateMode",
-        "name": "interestRateMode",
-        "type": "uint8"
-      }
-    ],
-    "name": "SwapBorrowRateMode",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
         "name": "user",
         "type": "address"
       },
@@ -527,19 +569,6 @@
   },
   {
     "inputs": [],
-    "name": "BRIDGE_PROTOCOL_FEE",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
     "name": "FLASHLOAN_PREMIUM_TOTAL",
     "outputs": [
       {
@@ -579,19 +608,6 @@
   },
   {
     "inputs": [],
-    "name": "MAX_STABLE_RATE_BORROW_SIZE_PERCENT",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
     "name": "POOL_REVISION",
     "outputs": [
       {
@@ -604,31 +620,46 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "RESERVE_INTEREST_RATE_STRATEGY",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "UMBRELLA",
+    "outputs": [
+      {
+        "internalType": "bytes32",
+        "name": "",
+        "type": "bytes32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "address",
-        "name": "asset",
+        "name": "positionManager",
         "type": "address"
       },
       {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "fee",
-        "type": "uint256"
+        "internalType": "bool",
+        "name": "approve",
+        "type": "bool"
       }
     ],
-    "name": "backUnbacked",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
+    "name": "approvePositionManager",
+    "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
@@ -690,22 +721,53 @@
             "type": "uint16"
           },
           {
-            "internalType": "address",
-            "name": "priceSource",
-            "type": "address"
-          },
-          {
             "internalType": "string",
             "name": "label",
             "type": "string"
           }
         ],
-        "internalType": "struct DataTypes.EModeCategory",
+        "internalType": "struct DataTypes.EModeCategoryBaseConfiguration",
         "name": "category",
         "type": "tuple"
       }
     ],
     "name": "configureEModeCategory",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint8",
+        "name": "id",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint128",
+        "name": "borrowableBitmap",
+        "type": "uint128"
+      }
+    ],
+    "name": "configureEModeCategoryBorrowableBitmap",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint8",
+        "name": "id",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint128",
+        "name": "collateralBitmap",
+        "type": "uint128"
+      }
+    ],
+    "name": "configureEModeCategoryCollateralBitmap",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -759,6 +821,30 @@
         "type": "address"
       },
       {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "eliminateReserveDeficit",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "asset",
+        "type": "address"
+      },
+      {
         "internalType": "address",
         "name": "from",
         "type": "address"
@@ -770,17 +856,17 @@
       },
       {
         "internalType": "uint256",
-        "name": "amount",
+        "name": "scaledAmount",
         "type": "uint256"
       },
       {
         "internalType": "uint256",
-        "name": "balanceFromBefore",
+        "name": "scaledBalanceFromBefore",
         "type": "uint256"
       },
       {
         "internalType": "uint256",
-        "name": "balanceToBefore",
+        "name": "scaledBalanceToBefore",
         "type": "uint256"
       }
     ],
@@ -866,6 +952,19 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "getBorrowLogic",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "pure",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "address",
@@ -885,6 +984,80 @@
         ],
         "internalType": "struct DataTypes.ReserveConfigurationMap",
         "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint8",
+        "name": "id",
+        "type": "uint8"
+      }
+    ],
+    "name": "getEModeCategoryBorrowableBitmap",
+    "outputs": [
+      {
+        "internalType": "uint128",
+        "name": "",
+        "type": "uint128"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint8",
+        "name": "id",
+        "type": "uint8"
+      }
+    ],
+    "name": "getEModeCategoryCollateralBitmap",
+    "outputs": [
+      {
+        "internalType": "uint128",
+        "name": "",
+        "type": "uint128"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint8",
+        "name": "id",
+        "type": "uint8"
+      }
+    ],
+    "name": "getEModeCategoryCollateralConfig",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint16",
+            "name": "ltv",
+            "type": "uint16"
+          },
+          {
+            "internalType": "uint16",
+            "name": "liquidationThreshold",
+            "type": "uint16"
+          },
+          {
+            "internalType": "uint16",
+            "name": "liquidationBonus",
+            "type": "uint16"
+          }
+        ],
+        "internalType": "struct DataTypes.CollateralConfig",
+        "name": "res",
         "type": "tuple"
       }
     ],
@@ -929,9 +1102,118 @@
             "type": "string"
           }
         ],
-        "internalType": "struct DataTypes.EModeCategory",
+        "internalType": "struct DataTypes.EModeCategoryLegacy",
         "name": "",
         "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint8",
+        "name": "id",
+        "type": "uint8"
+      }
+    ],
+    "name": "getEModeCategoryLabel",
+    "outputs": [
+      {
+        "internalType": "string",
+        "name": "",
+        "type": "string"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getEModeLogic",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "pure",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getFlashLoanLogic",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "pure",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "asset",
+        "type": "address"
+      }
+    ],
+    "name": "getLiquidationGracePeriod",
+    "outputs": [
+      {
+        "internalType": "uint40",
+        "name": "",
+        "type": "uint40"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getLiquidationLogic",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "pure",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getPoolLogic",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "pure",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "asset",
+        "type": "address"
+      }
+    ],
+    "name": "getReserveAToken",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -1051,9 +1333,28 @@
             "type": "uint128"
           }
         ],
-        "internalType": "struct DataTypes.ReserveData",
-        "name": "",
+        "internalType": "struct DataTypes.ReserveDataLegacy",
+        "name": "res",
         "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "asset",
+        "type": "address"
+      }
+    ],
+    "name": "getReserveDeficit",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -1098,6 +1399,38 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "asset",
+        "type": "address"
+      }
+    ],
+    "name": "getReserveVariableDebtToken",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getReservesCount",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "getReservesList",
     "outputs": [
@@ -1108,6 +1441,19 @@
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getSupplyLogic",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "pure",
     "type": "function"
   },
   {
@@ -1205,6 +1551,25 @@
         "internalType": "address",
         "name": "asset",
         "type": "address"
+      }
+    ],
+    "name": "getVirtualUnderlyingBalance",
+    "outputs": [
+      {
+        "internalType": "uint128",
+        "name": "",
+        "type": "uint128"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "asset",
+        "type": "address"
       },
       {
         "internalType": "address",
@@ -1213,17 +1578,7 @@
       },
       {
         "internalType": "address",
-        "name": "stableDebtAddress",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
         "name": "variableDebtAddress",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "interestRateStrategyAddress",
         "type": "address"
       }
     ],
@@ -1249,6 +1604,30 @@
     "inputs": [
       {
         "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "positionManager",
+        "type": "address"
+      }
+    ],
+    "name": "isApprovedPositionManager",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
         "name": "collateralAsset",
         "type": "address"
       },
@@ -1259,7 +1638,7 @@
       },
       {
         "internalType": "address",
-        "name": "user",
+        "name": "borrower",
         "type": "address"
       },
       {
@@ -1294,28 +1673,19 @@
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "asset",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "address",
-        "name": "onBehalfOf",
-        "type": "address"
-      },
-      {
-        "internalType": "uint16",
-        "name": "referralCode",
-        "type": "uint16"
+        "internalType": "bytes[]",
+        "name": "data",
+        "type": "bytes[]"
       }
     ],
-    "name": "mintUnbacked",
-    "outputs": [],
+    "name": "multicall",
+    "outputs": [
+      {
+        "internalType": "bytes[]",
+        "name": "results",
+        "type": "bytes[]"
+      }
+    ],
     "stateMutability": "nonpayable",
     "type": "function"
   },
@@ -1323,16 +1693,11 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "asset",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
         "name": "user",
         "type": "address"
       }
     ],
-    "name": "rebalanceStableBorrowRate",
+    "name": "renouncePositionManagerRole",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1523,12 +1888,12 @@
         "type": "address"
       },
       {
-        "internalType": "address",
-        "name": "rateStrategyAddress",
-        "type": "address"
+        "internalType": "uint40",
+        "name": "until",
+        "type": "uint40"
       }
     ],
-    "name": "setReserveInterestRateStrategyAddress",
+    "name": "setLiquidationGracePeriod",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1549,6 +1914,24 @@
   {
     "inputs": [
       {
+        "internalType": "uint8",
+        "name": "categoryId",
+        "type": "uint8"
+      },
+      {
+        "internalType": "address",
+        "name": "onBehalfOf",
+        "type": "address"
+      }
+    ],
+    "name": "setUserEModeOnBehalfOf",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "address",
         "name": "asset",
         "type": "address"
@@ -1560,6 +1943,29 @@
       }
     ],
     "name": "setUserUseReserveAsCollateral",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "asset",
+        "type": "address"
+      },
+      {
+        "internalType": "bool",
+        "name": "useAsCollateral",
+        "type": "bool"
+      },
+      {
+        "internalType": "address",
+        "name": "onBehalfOf",
+        "type": "address"
+      }
+    ],
+    "name": "setUserUseReserveAsCollateralOnBehalfOf",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1646,14 +2052,9 @@
         "internalType": "address",
         "name": "asset",
         "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "interestRateMode",
-        "type": "uint256"
       }
     ],
-    "name": "swapBorrowRateMode",
+    "name": "syncIndexesState",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1661,12 +2062,12 @@
   {
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "protocolFee",
-        "type": "uint256"
+        "internalType": "address",
+        "name": "asset",
+        "type": "address"
       }
     ],
-    "name": "updateBridgeProtocolFee",
+    "name": "syncRatesState",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1675,16 +2076,11 @@
     "inputs": [
       {
         "internalType": "uint128",
-        "name": "flashLoanPremiumTotal",
-        "type": "uint128"
-      },
-      {
-        "internalType": "uint128",
-        "name": "flashLoanPremiumToProtocol",
+        "name": "flashLoanPremium",
         "type": "uint128"
       }
     ],
-    "name": "updateFlashloanPremiums",
+    "name": "updateFlashloanPremium",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

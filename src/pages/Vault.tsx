@@ -7,12 +7,23 @@ import Actions from "@/components/vault/Actions";
 import VaultHeader from '@/components/vault/VaultHeader';
 import Info from '@/components/vault/Info';
 import LowLevelRebalance from '@/components/vault/LowLevelRebalance';
+import FlashLoanHelper from '@/components/vault/FlashLoanHelper';
 import Auction from '@/components/vault/Auction';
 import VaultNotFound from '@/components/vault/VaultNotFound';
+import WhitelistBanner from '@/components/vault/WhitelistBanner';
 
 function VaultContent() {
-  const { vaultExists } = useVaultContext();
-  const { unrecognizedNetworkParam } = useAppContext();
+  const { 
+    vaultExists, vaultConfig,
+    isWhitelistActivated, isWhitelisted,
+    flashLoanMintHelperAddress, flashLoanRedeemHelperAddress
+  } = useVaultContext();
+
+  const { unrecognizedNetworkParam, isTermsBlockingUI } = useAppContext();
+
+  const hasFlashLoanHelper =
+    (flashLoanMintHelperAddress && flashLoanMintHelperAddress !== '') ||
+    (flashLoanRedeemHelperAddress && flashLoanRedeemHelperAddress !== '');
 
   if (unrecognizedNetworkParam) {
     return <UnrecognizedNetwork />;
@@ -22,24 +33,45 @@ function VaultContent() {
     return <VaultNotFound />;
   }
 
+    // Only disable UI when we confirmed user is NOT whitelisted (don't disable while checking)
+  const isWhitelistDisabled = isWhitelistActivated === true && isWhitelisted === false;
+  
+  // Block UI when terms status is unknown, not signed, or fetch failed
+  const isUIDisabled = isWhitelistDisabled || isTermsBlockingUI;
+  const isPartiallyDisabled = vaultConfig?.partiallyDisabled === true;
+
+  const partiallyDisabledMode = isUIDisabled || isPartiallyDisabled;
+
   return (
     <>
       <VaultHeader />
+      <WhitelistBanner />
       <div className="flex flex-col [@media(min-width:768px)]:flex-row gap-4 mb-4">
         <div className="flex-1">
-          <Info />
+          <div className={isUIDisabled ? 'opacity-50 pointer-events-none' : ''}>
+            <Info />
+          </div>
         </div>
         <div className="flex-1">
-          <Actions />
+          <div className={partiallyDisabledMode ? 'opacity-50 pointer-events-none' : ''}>
+            <Actions isSafe={vaultConfig && (vaultConfig as any).useSafeActions} />
+          </div>
         </div>
       </div>
-      <div className="mb-4">
+      <div className={`mb-4 ${partiallyDisabledMode ? 'opacity-50 pointer-events-none' : ''}`}>
         <LowLevelRebalance />
       </div>
-      <div className="mb-4">
+      {hasFlashLoanHelper && (
+        <div className={`mb-4 ${isUIDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
+          <FlashLoanHelper />
+        </div>
+      )}
+      <div className={`mb-4 ${partiallyDisabledMode ? 'opacity-50 pointer-events-none' : ''}`}>
         <Auction />
       </div>
-      <MoreInfo />
+      <div className={isUIDisabled ? 'opacity-50 pointer-events-none' : ''}>
+        <MoreInfo />
+      </div>
     </>
   );
 }
@@ -58,6 +90,9 @@ export default function Vault() {
     lendingName: state.lendingName || null,
     apy: state.apy || null,
     pointsRate: state.pointsRate || null,
+    isWhitelistActivated: state.isWhitelistActivated ?? null,
+    isWhitelisted: state.isWhitelisted ?? null,
+    hasSignature: state.hasSignature,
   };
 
   return (

@@ -1,13 +1,14 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { formatUnits } from "ethers";
+import { formatUnits, ZeroAddress } from "ethers";
 import { useAppContext } from "@/contexts";
 import { ltvToLeverage, fetchApy, fetchPointsRate } from "@/utils";
 import { useAdaptiveInterval } from "@/hooks";
-import { Vault__factory, ERC20__factory } from "@/typechain-types";
+import { Vault__factory, ERC20__factory, WhitelistRegistry__factory } from "@/typechain-types";
 import { NumberDisplay } from "@/components/ui";
 import { renderWithTransition } from "@/helpers/renderWithTransition";
 import vaultsConfig from "../../../vaults.config.json";
+import signaturesConfig from "../../../signatures.config.json";
 
 interface VaultBlockProps {
   address: string;
@@ -18,10 +19,16 @@ interface StaticVaultData {
   collateralTokenSymbol: string | null;
   maxLeverage: string | null;
   lendingName: string | null;
+  isWhitelistActivated: boolean | null;
+}
+
+interface WhitelistData {
+  isWhitelisted: boolean | null;
+  hasSignature: boolean;
 }
 
 interface DynamicVaultData {
-  tvl: bigint | null;
+  deposits: bigint | null;
 }
 
 interface VaultDecimals {
@@ -47,10 +54,11 @@ export default function VaultBlock({ address }: VaultBlockProps) {
     collateralTokenSymbol: null,
     maxLeverage: null,
     lendingName: null,
+    isWhitelistActivated: null,
   });
 
   const [dynamicData, setDynamicData] = useState<DynamicVaultData>({
-    tvl: null,
+    deposits: null,
   });
 
   const [apyData, setApyData] = useState<{ apy: number | null; pointsRate: number | null }>({
@@ -78,7 +86,12 @@ export default function VaultBlock({ address }: VaultBlockProps) {
     hasLoadedDecimals: false,
   });
 
-  const { publicProvider, currentNetwork } = useAppContext();
+  const [whitelistData, setWhitelistData] = useState<WhitelistData>({
+    isWhitelisted: null,
+    hasSignature: false,
+  });
+
+  const { publicProvider, currentNetwork, address: userAddress, isConnected } = useAppContext();
 
   const loadApyAndPointsRate = useCallback(async () => {
     try {
@@ -87,8 +100,8 @@ export default function VaultBlock({ address }: VaultBlockProps) {
       setPointsRateLoadFailed(false);
       
       const [apyResult, pointsRateResult] = await Promise.all([
-        fetchApy(address),
-        fetchPointsRate(address)
+        fetchApy(address, currentNetwork),
+        fetchPointsRate(address, currentNetwork)
       ]);
       
       setApyData({
@@ -109,13 +122,13 @@ export default function VaultBlock({ address }: VaultBlockProps) {
     } finally {
       setIsLoadingApy(false);
     }
-  }, [address]);
+  }, [address, currentNetwork]);
 
   const memoizedApyData = useMemo(() => apyData, [apyData.apy, apyData.pointsRate]);
 
   const vaultConfig = useMemo(() => {
-    const chainId = currentNetwork || "11155111"; // Default to Sepolia if no network
-    const vaults = (vaultsConfig as any)[chainId]?.vaults || [];
+    if (!currentNetwork) return;
+    const vaults = (vaultsConfig as any)[currentNetwork]?.vaults || [];
     return vaults.find((v: any) => v.address.toLowerCase() === address.toLowerCase());
   }, [address, currentNetwork]);
 
@@ -139,12 +152,13 @@ export default function VaultBlock({ address }: VaultBlockProps) {
           hasLoadedLeverage: hasLeverageFromConfig,
         }));
 
-        setStaticData({
+        setStaticData(prev => ({
+          ...prev,
           collateralTokenSymbol: vaultConfig.collateralTokenSymbol || null,
           borrowTokenSymbol: vaultConfig.borrowTokenSymbol || null,
           maxLeverage: vaultConfig.leverage || null,
           lendingName: vaultConfig.lendingName || null,
-        });
+        }));
       }
     }
   }, [vaultConfig]);
@@ -225,6 +239,66 @@ export default function VaultBlock({ address }: VaultBlockProps) {
     }
   }, [vaultContract]);
 
+  const loadWhitelistActivation = useCallback(async () => {
+    if (!vaultContract) return;
+
+    try {
+      const isActivated = await vaultContract.isWhitelistActivated();
+      setStaticData(prev => ({ ...prev, isWhitelistActivated: isActivated }));
+    } catch (err) {
+      console.error('Error loading whitelist activation:', err);
+      setStaticData(prev => ({ ...prev, isWhitelistActivated: null }));
+    }
+  }, [vaultContract]);
+
+  const checkUserSignature = useCallback(() => {
+    if (!userAddress || !currentNetwork) {
+      setWhitelistData(prev => ({ ...prev, hasSignature: false }));
+      return;
+    }
+
+    const networkSignatures = (signaturesConfig as any)[currentNetwork];
+    const vaultSignatures = networkSignatures?.vaults?.[address.toLowerCase()];
+    const signaturesMap = vaultSignatures?.signatures;
+
+    if (!signaturesMap) {
+      setWhitelistData(prev => ({ ...prev, hasSignature: false }));
+      return;
+    }
+
+    const addressLower = userAddress.toLowerCase();
+    const hasSignature = !!signaturesMap[addressLower];
+    
+    setWhitelistData(prev => ({ ...prev, hasSignature }));
+  }, [userAddress, currentNetwork, address]);
+
+  const checkUserWhitelist = useCallback(async () => {
+    if (!vaultContract || !userAddress || !isConnected || staticData.isWhitelistActivated === null) {
+      return;
+    }
+
+    // If whitelist is not activated, everyone is whitelisted
+    if (!staticData.isWhitelistActivated) {
+      setWhitelistData(prev => ({ ...prev, isWhitelisted: true }));
+      return;
+    }
+
+    try {
+      const whitelistRegistryAddress = await vaultContract.whitelistRegistry();
+      if (whitelistRegistryAddress === ZeroAddress) {
+        setWhitelistData(prev => ({ ...prev, isWhitelisted: null }));
+        return;
+      }
+
+      const whitelistRegistry = WhitelistRegistry__factory.connect(whitelistRegistryAddress, publicProvider!);
+      const whitelisted = await whitelistRegistry.isAddressWhitelisted(userAddress);
+      setWhitelistData(prev => ({ ...prev, isWhitelisted: whitelisted }));
+    } catch (err) {
+      console.error('Error checking whitelist status:', err);
+      setWhitelistData(prev => ({ ...prev, isWhitelisted: null }));
+    }
+  }, [vaultContract, userAddress, isConnected, staticData.isWhitelistActivated, publicProvider]);
+
   useEffect(() => {
     if (vaultContract && publicProvider && !vaultConfig?.collateralTokenSymbol) {
       loadCollateralTokenSymbol();
@@ -255,26 +329,44 @@ export default function VaultBlock({ address }: VaultBlockProps) {
     }
   }, [vaultContract, loadDecimals]);
 
-  const loadTvl = useCallback(async () => {
+  useEffect(() => {
+    if (vaultContract) {
+      loadWhitelistActivation();
+    }
+  }, [vaultContract, loadWhitelistActivation]);
+
+  // Check user signature when address or network changes
+  useEffect(() => {
+    checkUserSignature();
+  }, [address, currentNetwork, checkUserSignature]);
+
+  // Check user whitelist status when whitelist activation status is known
+  useEffect(() => {
+    if (staticData.isWhitelistActivated !== null) {
+      checkUserWhitelist();
+    }
+  }, [staticData.isWhitelistActivated, address, currentNetwork, checkUserWhitelist]);
+
+  const loadDeposits = useCallback(async () => {
     if (!vaultContract) return;
 
     try {
-      const tvl = await vaultContract["totalAssets()"]();
-      setDynamicData({ tvl });
+      const deposits = await vaultContract["totalAssets()"]();
+      setDynamicData(prev => ({ ...prev, deposits }));
       setLoadingState(prev => ({ ...prev, hasLoadedAssets: true, isLoadingAssets: false }));
     } catch (err) {
-      console.error('Error loading TVL:', err);
+      console.error('Error loading Deposits:', err);
       setLoadingState(prev => ({ ...prev, isLoadingAssets: false }));
     }
   }, [vaultContract]);
 
   useEffect(() => {
     if (vaultContract) {
-      loadTvl();
+      loadDeposits();
     }
-  }, [vaultContract, loadTvl]);
+  }, [vaultContract, loadDeposits]);
 
-  useAdaptiveInterval(loadTvl, {
+  useAdaptiveInterval(loadDeposits, {
     initialDelay: 12000,
     enabled: !!vaultContract
   });
@@ -283,13 +375,13 @@ export default function VaultBlock({ address }: VaultBlockProps) {
     loadApyAndPointsRate();
   }, [loadApyAndPointsRate]);
 
-  const formattedTvl = useMemo(() => {
-    if (!dynamicData.tvl) return null;
-    return formatUnits(dynamicData.tvl, vaultDecimals.borrowTokenDecimals);
-  }, [dynamicData.tvl, vaultDecimals.borrowTokenDecimals]);
+  const formattedDeposits = useMemo(() => {
+    if (!dynamicData.deposits) return null;
+    return formatUnits(dynamicData.deposits, vaultDecimals.borrowTokenDecimals);
+  }, [dynamicData.deposits, vaultDecimals.borrowTokenDecimals]);
 
   useEffect(() => {
-    setDynamicData({ tvl: null });
+    setDynamicData({ deposits: null });
     setLoadingState(prev => ({ ...prev, isLoadingAssets: true, hasLoadedAssets: false }));
   }, [currentNetwork, address]);
 
@@ -309,7 +401,10 @@ export default function VaultBlock({ address }: VaultBlockProps) {
           maxLeverage: staticData.maxLeverage,
           lendingName: staticData.lendingName,
           apy: memoizedApyData.apy,
-          pointsRate: memoizedApyData.pointsRate
+          pointsRate: memoizedApyData.pointsRate,
+          isWhitelistActivated: staticData.isWhitelistActivated,
+          isWhitelisted: whitelistData.isWhitelisted,
+          hasSignature: whitelistData.hasSignature
         }}
         className="wrapper block w-full bg-gray-50 transition-colors border border-gray-50 rounded-lg mb-4 last:mb-0 p-3">
         <div className="w-full">
@@ -332,13 +427,13 @@ export default function VaultBlock({ address }: VaultBlockProps) {
           </div>
         </div>
         <div className="flex justify-between text-sm">
-          <div className="font-medium text-gray-700">TVL: </div>
+          <div className="font-medium text-gray-700">Deposited TVL: </div>
           <div className="font-normal text-gray-700 min-w-[100px] text-right">
             {renderWithTransition(
-              formattedTvl && staticData.borrowTokenSymbol ? (
+              formattedDeposits && staticData.borrowTokenSymbol ? (
                 <div className="flex justify-end">
                   <div className="font-normal text-gray-700 mr-2">
-                    <NumberDisplay value={formattedTvl} />
+                    <NumberDisplay value={formattedDeposits} />
                   </div>
                   <div className="font-medium text-gray-700">{staticData.borrowTokenSymbol}</div>
                 </div>

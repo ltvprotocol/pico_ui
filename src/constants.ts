@@ -52,7 +52,7 @@ export const MAINNET_NETWORK = {
     symbol: 'ETH',
     decimals: 18
   },
-  rpcUrls: ['https://ethereum-rpc.publicnode.com'],
+  rpcUrls: ['http://localhost:8545'],
   blockExplorerUrls: ['https://etherscan.io']
 };
 

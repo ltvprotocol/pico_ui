@@ -17,8 +17,11 @@ interface FlashLoanHelperHandlerProps {
 const REDEEM_SLIPPAGE_DIVIDEND = 999;
 const REDEEM_SLIPPAGE_DIVIDER = 1000;
 
-const MINT_SLIPPAGE_DIVIDEND = 999999;
-const MINT_SLIPPAGE_DIVIDER = 1000000;
+const MINT_MAX_SLIPPAGE_DIVIDEND = 999999;
+const MINT_MAX_SLIPPAGE_DIVIDER = 1000000;
+
+const MINT_SLIPPAGE_DIVIDEND = 1000001;
+const MINT_SLIPPAGE_DIVIDER =  1000000;
 
 export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHandlerProps) {
   const [inputValue, setInputValue] = useState('');
@@ -92,6 +95,10 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     return amount * BigInt(REDEEM_SLIPPAGE_DIVIDEND) / BigInt(REDEEM_SLIPPAGE_DIVIDER);
   }
 
+  const applyMaxMintSlippage = (amount: bigint) => {
+    return amount * BigInt(MINT_MAX_SLIPPAGE_DIVIDEND) / BigInt(MINT_MAX_SLIPPAGE_DIVIDER);
+  }
+
   const applyMintSlippage = (amount: bigint) => {
     return amount * BigInt(MINT_SLIPPAGE_DIVIDEND) / BigInt(MINT_SLIPPAGE_DIVIDER);
   }
@@ -100,7 +107,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
   useEffect(() => {
     if (helperType === 'mint') {
       const maxLowLevelRebalanceSharesUnits = parseUnits(maxLowLevelRebalanceShares, sharesDecimals);
-      const maxMint = applyMintSlippage(maxLowLevelRebalanceSharesUnits);
+      const maxMint = applyMaxMintSlippage(maxLowLevelRebalanceSharesUnits);
       setMaxAmount(formatUnits(maxMint, sharesDecimals));
     } else {
       setMaxAmount(sharesBalance);
@@ -135,7 +142,8 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
       });
 
       if (result.shouldWrap) {
-        setEthToWrapValue(result.ethToWrapValue);
+        const ethToWrap = applyMintSlippage(parseEther(result.ethToWrapValue));
+        setEthToWrapValue(formatUnits(ethToWrap, 18));
         setPreviewedWstEthAmount(result.previewedWstEthAmount);
 
         const currentBalance = parseUnits(collateralTokenBalance || '0', Number(collateralTokenDecimals));

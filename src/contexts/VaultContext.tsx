@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext, useEffect, useState, useCallback } from 'react'
+import { createContext, ReactNode, useContext, useEffect, useState, useCallback, useRef } from 'react'
 import { formatUnits, formatEther, parseUnits, ZeroAddress, parseEther } from 'ethers'
 import { useAppContext } from '@/contexts/AppContext';
 import {
@@ -9,7 +9,7 @@ import {
   FlashLoanRedeemHelper, FlashLoanRedeemHelper__factory,
   WhitelistRegistry__factory
 } from '@/typechain-types';
-import { ltvToLeverage, getLendingProtocolAddress, isVaultExists, isUserRejected, fetchApy, fetchPointsRate } from '@/utils';
+import { ltvToLeverage, getLendingProtocolAddress, isVaultExists, isUserRejected, fetchApy, fetchPointsRate, loadTVL } from '@/utils';
 import vaultsConfig from '../../vaults.config.json';
 import signaturesConfig from '../../signatures.config.json';
 import { isWETHAddress, GAS_RESERVE_WEI, SEPOLIA_CHAIN_ID_STRING, SEPOLIA_MORPHO_MARKET_ID, CONNECTOR_ADDRESSES} from '@/constants';
@@ -41,6 +41,7 @@ interface VaultConfig {
   flashLoanMintHelperAddress?: string;
   flashLoanRedeemHelperAddress?: string;
   useSafeActions?: boolean;
+  partiallyDisabled?: boolean;
 };
 
 interface VaultContextType {
@@ -87,6 +88,7 @@ interface VaultContextType {
   vaultMaxMintCollateral: string;
   vaultMaxWithdrawCollateral: string;
   totalAssets: string;
+  tvl: string | null;
   // User max values
   maxDeposit: string;
   maxRedeem: string;
@@ -175,6 +177,8 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   const [vaultMaxMintCollateral, setVaultMaxMintCollateral] = useState<string>('0');
   const [vaultMaxWithdrawCollateral, setVaultMaxWithdrawCollateral] = useState<string>('0');
   const [totalAssets, setTotalAssets] = useState<string>('0');
+  const [tvl, setTvl] = useState<string | null>(null);
+  const hasLoadedTvlOnce = useRef<boolean>(false);
   
   const [maxDeposit, setMaxDeposit] = useState<string>('0');
   const [maxRedeem, setMaxRedeem] = useState<string>('0');
@@ -434,6 +438,38 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
       console.error('Error loading vault limits:', err);
     }
   }, [publicProvider, address, vaultLens, sharesDecimals, borrowTokenDecimals, collateralTokenDecimals]);
+
+  const loadTVLData = useCallback(async () => {
+    if (!publicProvider || !vaultLens || !lendingAddress || !collateralTokenAddress) return;
+
+    try {
+      const lendingConnectorAddress = await vaultLens.lendingConnector();
+      const rawTvl = await loadTVL(
+        vaultAddress,
+        collateralTokenAddress,
+        lendingConnectorAddress,
+        lendingName,
+        publicProvider,
+        currentNetwork
+      );
+
+      if (rawTvl !== null) {
+        setTvl(formatUnits(rawTvl, collateralTokenDecimals));
+        hasLoadedTvlOnce.current = true;
+      } else {
+        // Only set to null if it hasn't been loaded before
+        if (!hasLoadedTvlOnce.current) {
+          setTvl(null);
+        }
+      }
+    } catch (err) {
+      console.error('Error loading TVL:', err);
+      // Only set to null if it hasn't been loaded before (preserve value on refetch errors)
+      if (!hasLoadedTvlOnce.current) {
+        setTvl(null);
+      }
+    }
+  }, [publicProvider, vaultLens, lendingAddress, collateralTokenAddress, vaultAddress, lendingName, currentNetwork, collateralTokenDecimals]);
 
   const calculateMaxValues = useCallback(async () => {
     if (
@@ -868,6 +904,22 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
     enabled: isConnected && !!vaultLens
   });
 
+  // Load TVL initially
+  useEffect(() => {
+    if (vaultLens && lendingAddress && collateralTokenAddress) {
+      hasLoadedTvlOnce.current = false;
+      loadTVLData();
+    }
+  }, [vaultLens, lendingAddress, collateralTokenAddress, loadTVLData]);
+
+  // Refetch TVL every 24 seconds
+  useAdaptiveInterval(loadTVLData, {
+    initialDelay: 24000,
+    maxDelay: 60000,
+    multiplier: 2,
+    enabled: !!vaultLens && !!lendingAddress && !!collateralTokenAddress
+  });
+
   return (
     <VaultContext.Provider
       value={{
@@ -910,6 +962,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         vaultMaxMintCollateral,
         vaultMaxWithdrawCollateral,
         totalAssets,
+        tvl,
         maxDeposit,
         maxRedeem,
         maxMint,

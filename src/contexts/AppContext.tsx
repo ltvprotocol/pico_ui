@@ -45,6 +45,8 @@ interface AppContextType {
   isCheckingTerms: boolean;
   isSigningTerms: boolean;
   termsError: string | null;
+  termsTextFetchFailed: boolean;
+  isTermsBlockingUI: boolean;
   checkTermsStatus: () => Promise<void>;
   signTermsOfUse: () => Promise<void>;
 }
@@ -83,6 +85,8 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
   const [isCheckingTerms, setIsCheckingTerms] = useState(false);
   const [isSigningTerms, setIsSigningTerms] = useState(false);
   const [termsError, setTermsError] = useState<string | null>(null);
+  const [termsTextFetchFailed, setTermsTextFetchFailed] = useState(false);
+  const [isTermsBlockingUI, setIsTermsBlockingUI] = useState(false);
 
   const getNetworkFromUrl = useCallback(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -472,9 +476,20 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
   // Load terms text on mount
   useEffect(() => {
     const loadTermsText = async () => {
-      const text = await fetchTermsOfUseText(currentNetwork);
-      if (text) {
-        setTermsText(text);
+      try {
+        const text = await fetchTermsOfUseText(currentNetwork);
+        if (text) {
+          setTermsText(text);
+          setTermsTextFetchFailed(false);
+        } else {
+          // If fetch returned null, it means the backend failed
+          setTermsTextFetchFailed(true);
+          setTermsText(null);
+        }
+      } catch (error) {
+        console.error('Error loading terms text:', error);
+        setTermsTextFetchFailed(true);
+        setTermsText(null);
       }
     };
     loadTermsText();
@@ -538,8 +553,9 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
   // Check terms when wallet connects or address changes
   useEffect(() => {
     if (isConnected && address) {
+      setIsTermsSigned(null);
+      setHasAttemptedAutoSign(false);
       checkTermsStatus();
-      setHasAttemptedAutoSign(false); // Reset when address changes
     } else {
       setIsTermsSigned(null);
       setHasAttemptedAutoSign(false);
@@ -581,8 +597,34 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
       setIsTermsSigned(null);
       setTermsError(null);
       setHasAttemptedAutoSign(false);
+      setTermsTextFetchFailed(false);
     }
   }, [isConnected]);
+
+  // Compute if UI should be blocked due to terms
+  useEffect(() => {
+    if (!isConnected) {
+      setIsTermsBlockingUI(false);
+      return;
+    }
+    if (isTermsSigned === true) {
+      setIsTermsBlockingUI(false);
+      return;
+    }
+    if (isTermsSigned === false) {
+      setIsTermsBlockingUI(true);
+      return;
+    }
+    if (isTermsSigned === null) {
+      setIsTermsBlockingUI(true);
+      return;
+    }
+    if (termsTextFetchFailed) {
+      setIsTermsBlockingUI(true);
+      return;
+    }
+    setIsTermsBlockingUI(true);
+  }, [isConnected, isTermsSigned, termsTextFetchFailed]);
 
   const contextValue: AppContextType = {
     wallets,
@@ -614,6 +656,8 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     isCheckingTerms,
     isSigningTerms,
     termsError,
+    termsTextFetchFailed,
+    isTermsBlockingUI,
     checkTermsStatus,
     signTermsOfUse,
   };

@@ -6,7 +6,7 @@ import UnrecognizedNetwork from "@/components/vault/UnrecognizedNetwork";
 import { isVaultExists } from "@/utils";
 
 export default function Home() {
-  const { currentNetwork, unrecognizedNetworkParam, publicProvider, isTermsSigned } = useAppContext();
+  const { currentNetwork, unrecognizedNetworkParam, publicProvider, isTermsBlockingUI } = useAppContext();
 
   if (unrecognizedNetworkParam || !currentNetwork) {
     return <UnrecognizedNetwork />;
@@ -43,8 +43,7 @@ export default function Home() {
     checkAll();
   }, [publicProvider, currentNetwork]);
 
-  const isTermsDisabled = isTermsSigned === false;
-  const disabledClassName = isTermsDisabled ? 'opacity-50 pointer-events-none' : '';
+  const disabledClassName = isTermsBlockingUI ? 'opacity-50 pointer-events-none' : '';
 
   return (
     <div className={`w-full flex flex-col ${disabledClassName}`}>

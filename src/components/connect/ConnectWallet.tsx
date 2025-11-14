@@ -10,7 +10,7 @@ import TermsOfUsePopup from './TermsOfUsePopup';
 export default function ConnectWallet() {
   const {
     isConnected, isAutoConnecting, isSepolia, isMainnet, currentNetwork,
-    address, connectingWalletId, disconnectWallet, isTermsSigned, termsError
+    address, connectingWalletId, disconnectWallet, isTermsSigned, isTermsBlockingUI
   } = useAppContext();
 
   const [showWalletsPopup, setShowWalletsPopup] = useState<boolean>(false);
@@ -42,7 +42,9 @@ export default function ConnectWallet() {
       if (popupRef.current && !popupRef.current.contains(event.target as Node)) {
         setShowWalletsPopup(false);
         setShowNetworkPopup(false);
-        setShowTermsPopup(false);
+        if (!isTermsBlockingUI) {
+          setShowTermsPopup(false);
+        }
       }
     };
 
@@ -50,16 +52,23 @@ export default function ConnectWallet() {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [showWalletsPopup, showNetworkPopup, showTermsPopup]);
+  }, [showWalletsPopup, showNetworkPopup, showTermsPopup, isTermsBlockingUI]);
 
-  // Show terms popup when there's an error and terms are not signed
   useEffect(() => {
-    if (isConnected && (isSepolia || isMainnet) && isTermsSigned === false && termsError) {
-      setShowTermsPopup(true);
-    } else if (isTermsSigned === true) {
+    if (isConnected && (isSepolia || isMainnet)) {
+      if (isTermsSigned === true) {
+        setShowTermsPopup(false);
+        return;
+      }
+      if (isTermsBlockingUI) {
+        setShowTermsPopup(true);
+      } else {
+        setShowTermsPopup(false);
+      }
+    } else {
       setShowTermsPopup(false);
     }
-  }, [isConnected, isSepolia, isMainnet, isTermsSigned, termsError]);
+  }, [isConnected, isSepolia, isMainnet, isTermsSigned, isTermsBlockingUI]);
 
   useEffect(() => {
     if (isConnected && (isSepolia || isMainnet)) {
@@ -121,7 +130,11 @@ export default function ConnectWallet() {
 
         <TermsOfUsePopup 
           isOpen={showTermsPopup} 
-          onClose={() => setShowTermsPopup(false)} 
+          onClose={() => {
+            if (!isTermsBlockingUI) {
+              setShowTermsPopup(false);
+            }
+          }} 
         />
       </div>
     );

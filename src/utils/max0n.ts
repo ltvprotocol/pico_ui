@@ -1,0 +1,1 @@
+export const max0n = (x: bigint) => (x > 0n ? x : 0n);

@@ -11,9 +11,10 @@ import FlashLoanHelper from '@/components/vault/FlashLoanHelper';
 import Auction from '@/components/vault/Auction';
 import VaultNotFound from '@/components/vault/VaultNotFound';
 import WhitelistBanner from '@/components/vault/WhitelistBanner';
+import FlashLoanDepositWithdraw from '@/components/vault/FlashLoanDepositWithdraw';
 
 function VaultContent() {
-  const { 
+  const {
     vaultExists, vaultConfig,
     isWhitelistActivated, isWhitelisted,
     flashLoanMintHelperAddress, flashLoanRedeemHelperAddress
@@ -33,9 +34,9 @@ function VaultContent() {
     return <VaultNotFound />;
   }
 
-    // Only disable UI when we confirmed user is NOT whitelisted (don't disable while checking)
+  // Only disable UI when we confirmed user is NOT whitelisted (don't disable while checking)
   const isWhitelistDisabled = isWhitelistActivated === true && isWhitelisted === false;
-  
+
   // Block UI when terms status is unknown, not signed, or fetch failed
   const isUIDisabled = isWhitelistDisabled || isTermsBlockingUI;
   const isPartiallyDisabled = vaultConfig?.partiallyDisabled === true;
@@ -62,9 +63,14 @@ function VaultContent() {
         <LowLevelRebalance />
       </div>
       {hasFlashLoanHelper && (
-        <div className={`mb-4 ${isUIDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
-          <FlashLoanHelper />
-        </div>
+        <>
+          <div className={`mb-4 ${isUIDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
+            <FlashLoanDepositWithdraw />
+          </div>
+          <div className={`mb-4 ${isUIDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
+            <FlashLoanHelper />
+          </div>
+        </>
       )}
       <div className={`mb-4 ${partiallyDisabledMode ? 'opacity-50 pointer-events-none' : ''}`}>
         <Auction />

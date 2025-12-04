@@ -3,7 +3,7 @@ import { useVaultContext } from '@/contexts';
 import { renderWithTransition } from '@/helpers/renderWithTransition';
 import { renderSymbolWithPlaceholder } from '@/helpers/renderSymbolWithPlaceholder';
 import { NumberDisplay } from '@/components/ui';
-import { formatLtv } from '@/utils';
+import { formatLtv, formatTokenSymbol } from '@/utils';
 
 interface LoadingState {
   isLoadingTargetLtv: boolean;
@@ -148,8 +148,8 @@ export default function MoreInfo() {
             <div className="flex flex-col items-end mr-2">
               <div className="font-medium text-gray-700 mb-2">Collateral: </div>
               {[
-                [vaultMaxDepositCollateral, collateralTokenSymbol],
-                [vaultMaxWithdrawCollateral, collateralTokenSymbol],
+                [vaultMaxDepositCollateral, formatTokenSymbol(collateralTokenSymbol)],
+                [vaultMaxWithdrawCollateral, formatTokenSymbol(collateralTokenSymbol)],
                 [vaultMaxMintCollateral, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'mint-collateral', isLoading: !sharesSymbol })],
                 [vaultMaxRedeemCollateral, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'redeem-collateral', isLoading: !sharesSymbol })]
               ].map((info, index) => (
@@ -172,8 +172,8 @@ export default function MoreInfo() {
             <div className="flex flex-col items-end">
               <div className="font-medium text-gray-700 mb-2">Borrow: </div>
               {[
-                [vaultMaxDeposit, borrowTokenSymbol],
-                [vaultMaxWithdraw, borrowTokenSymbol],
+                [vaultMaxDeposit, formatTokenSymbol(borrowTokenSymbol)],
+                [vaultMaxWithdraw, formatTokenSymbol(borrowTokenSymbol)],
                 [vaultMaxMint, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'mint-borrow', isLoading: !sharesSymbol })],
                 [vaultMaxRedeem, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'redeem-borrow', isLoading: !sharesSymbol })]
               ].map((info, index) => (
@@ -207,8 +207,8 @@ export default function MoreInfo() {
             <div className="flex flex-col items-end">
               <div className="font-medium text-gray-700">Max for Collateral</div>
               {[
-                [vaultMaxDepositCollateral, collateralTokenSymbol],
-                [vaultMaxWithdrawCollateral, collateralTokenSymbol],
+                [vaultMaxDepositCollateral, formatTokenSymbol(collateralTokenSymbol)],
+                [vaultMaxWithdrawCollateral, formatTokenSymbol(collateralTokenSymbol)],
                 [vaultMaxMintCollateral, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'mobile-mint-collateral', isLoading: !sharesSymbol })],
                 [vaultMaxRedeemCollateral, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'mobile-redeem-collateral', isLoading: !sharesSymbol })]
               ].map((info, index) => (
@@ -240,8 +240,8 @@ export default function MoreInfo() {
             <div className="flex flex-col items-end">
               <div className="font-medium text-gray-700">Max for Borrow</div>
               {[
-                [vaultMaxDeposit, borrowTokenSymbol],
-                [vaultMaxWithdraw, borrowTokenSymbol],
+                [vaultMaxDeposit, formatTokenSymbol(borrowTokenSymbol)],
+                [vaultMaxWithdraw, formatTokenSymbol(borrowTokenSymbol)],
                 [vaultMaxMint, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'mobile-mint-borrow', isLoading: !sharesSymbol })],
                 [vaultMaxRedeem, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'mobile-redeem-borrow', isLoading: !sharesSymbol })]
               ].map((info, index) => (

@@ -4,6 +4,7 @@ import { renderSymbolWithPlaceholder } from '@/helpers/renderSymbolWithPlacehold
 import { NumberDisplay } from '@/components/ui';
 import { useVaultContext } from '@/contexts';
 import { TokenType } from '@/types/actions';
+import { formatTokenSymbol } from '@/utils';
 
 export interface PreviewItem {
   amount: bigint;
@@ -36,13 +37,13 @@ export const PreviewBox: React.FC<PreviewBoxProps> = ({
     if (tokenType === 'borrow') {
       return {
         label: 'Borrow Assets',
-        symbol: borrowTokenSymbol,
+        symbol: formatTokenSymbol(borrowTokenSymbol),
         decimals: Number(borrowTokenDecimals)
       };
     } else if (tokenType === 'collateral') {
       return {
         label: 'Collateral Assets',
-        symbol: collateralTokenSymbol,
+        symbol: formatTokenSymbol(collateralTokenSymbol),
         decimals: Number(collateralTokenDecimals)
       };
     } else {

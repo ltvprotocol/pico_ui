@@ -5,7 +5,7 @@ import { useAppContext } from '@/contexts';
 import { renderWithTransition } from '@/helpers/renderWithTransition';
 import { renderSymbolWithPlaceholder } from '@/helpers/renderSymbolWithPlaceholder';
 import { NumberDisplay } from '@/components/ui';
-import { fetchTokenPrice } from '@/utils';
+import { fetchTokenPrice, formatTokenSymbol } from '@/utils';
 
 export default function Info() {
   const {
@@ -217,7 +217,7 @@ export default function Info() {
                 </div>
                 <div className="font-medium text-gray-700">
                   {renderWithTransition(
-                    collateralTokenSymbol,
+                    formatTokenSymbol(collateralTokenSymbol),
                     !collateralTokenSymbol
                   )}
                 </div>
@@ -259,7 +259,7 @@ export default function Info() {
               </div>
               <div className="font-medium text-gray-700">
                 {renderWithTransition(
-                  borrowTokenSymbol,
+                  formatTokenSymbol(borrowTokenSymbol),
                   !borrowTokenSymbol
                 )}
               </div>
@@ -303,7 +303,7 @@ export default function Info() {
                 </div>
                 <div className="font-medium text-gray-700">
                   {renderWithTransition(
-                    borrowTokenSymbol,
+                    formatTokenSymbol(borrowTokenSymbol),
                     !borrowTokenSymbol
                   )}
                 </div>

@@ -3,6 +3,7 @@ import { SelectToken } from '@/components/ui';
 import ActionHandler from './ActionHandler';
 import SafeActionHandler from './SafeActionHandler';
 import { useVaultContext } from '@/contexts';
+import { formatTokenSymbol } from '@/utils';
 import { ActionType, TokenType } from '@/types/actions';
 
 interface ActionConfig {
@@ -45,8 +46,8 @@ export default function ActionWrapper({ actionType, isSafe = false }: ActionWrap
       <h2 className="text-2xl font-bold mb-6 text-gray-900">{config.title}</h2>
       <SelectToken
         label={config.selectLabel}
-        borrow={borrowTokenSymbol ?? "Borrow"}
-        collateral={collateralTokenSymbol ?? "Collateral"}
+        borrow={formatTokenSymbol(borrowTokenSymbol ?? "Borrow")}
+        collateral={formatTokenSymbol(collateralTokenSymbol ?? "Collateral")}
         selected={selectedToken}
         onSelect={(selected) => setSelectedToken(selected as TokenType)}
       />

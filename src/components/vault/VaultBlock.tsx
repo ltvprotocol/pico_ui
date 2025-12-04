@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { formatUnits, ZeroAddress } from "ethers";
 import { useAppContext } from "@/contexts";
-import { ltvToLeverage, fetchApy, fetchPointsRate } from "@/utils";
+import { ltvToLeverage, fetchApy, fetchPointsRate, formatTokenSymbol } from "@/utils";
 import { useAdaptiveInterval } from "@/hooks";
 import { Vault__factory, ERC20__factory, WhitelistRegistry__factory } from "@/typechain-types";
 import { NumberDisplay } from "@/components/ui";
@@ -387,7 +387,7 @@ export default function VaultBlock({ address }: VaultBlockProps) {
 
   const tokenPairDisplay = useMemo(() => {
     if (staticData.collateralTokenSymbol && staticData.borrowTokenSymbol) {
-      return `${staticData.collateralTokenSymbol}/${staticData.borrowTokenSymbol}`;
+      return `${formatTokenSymbol(staticData.collateralTokenSymbol)}/${formatTokenSymbol(staticData.borrowTokenSymbol)}`;
     }
     return null;
   }, [staticData.collateralTokenSymbol, staticData.borrowTokenSymbol]);
@@ -435,7 +435,7 @@ export default function VaultBlock({ address }: VaultBlockProps) {
                   <div className="font-normal text-gray-700 mr-2">
                     <NumberDisplay value={formattedDeposits} />
                   </div>
-                  <div className="font-medium text-gray-700">{staticData.borrowTokenSymbol}</div>
+                  <div className="font-medium text-gray-700">{formatTokenSymbol(staticData.borrowTokenSymbol)}</div>
                 </div>
               ) : null,
               (loadingState.isLoadingAssets && !loadingState.hasLoadedAssets) ||

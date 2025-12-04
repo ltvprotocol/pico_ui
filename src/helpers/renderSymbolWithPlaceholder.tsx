@@ -16,7 +16,7 @@ const Tooltip = ({ children, content, isVisible }: { children: React.ReactNode, 
   );
 };
 
-interface RenderSymbolWithPlaceholderProps {
+interface SymbolWithPlaceholderProps {
   symbol: string | null;
   placeholder: string;
   elementId: string;
@@ -24,13 +24,14 @@ interface RenderSymbolWithPlaceholderProps {
   threshold?: number;
 }
 
-export const renderSymbolWithPlaceholder = ({ 
+// Convert to a proper React component to avoid hooks issues
+export const SymbolWithPlaceholder = ({ 
   symbol, 
   placeholder, 
   elementId, 
   isLoading = false,
-  threshold = 6
-}: RenderSymbolWithPlaceholderProps) => {
+  threshold = 22
+}: SymbolWithPlaceholderProps) => {
   const [hoveredElement, setHoveredElement] = useState<string | null>(null);
 
   if (!symbol) return null;
@@ -39,7 +40,7 @@ export const renderSymbolWithPlaceholder = ({
     return (
       <Tooltip content={symbol} isVisible={hoveredElement === elementId}>
         <span 
-          className="cursor-pointer" 
+          className="cursor-pointer underline decoration-dotted decoration-1 underline-offset-2" 
           onMouseEnter={() => setHoveredElement(elementId)}
           onMouseLeave={() => setHoveredElement(null)}
         >
@@ -49,5 +50,10 @@ export const renderSymbolWithPlaceholder = ({
     );
   }
   
-  return renderWithTransition(symbol, isLoading);
+  return <>{renderWithTransition(symbol, isLoading)}</>;
+};
+
+// Keep the old function name for backward compatibility, but make it return the component
+export const renderSymbolWithPlaceholder = (props: SymbolWithPlaceholderProps) => {
+  return <SymbolWithPlaceholder {...props} />;
 };

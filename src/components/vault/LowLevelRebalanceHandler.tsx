@@ -54,11 +54,11 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
   } = useVaultContext();
 
   useEffect(() => {
-    const newDecimals = 
-      rebalanceType === 'shares' ? Number(sharesDecimals) : 
-      rebalanceType === 'borrow' ? Number(borrowTokenDecimals) : 
-      Number(collateralTokenDecimals);
-    
+    const newDecimals =
+      rebalanceType === 'shares' ? Number(sharesDecimals) :
+        rebalanceType === 'borrow' ? Number(borrowTokenDecimals) :
+          Number(collateralTokenDecimals);
+
     setDecimals(newDecimals || 18);
     setInputValue('');
     setAmount(null);
@@ -77,7 +77,7 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
 
     try {
       let max: bigint;
-      
+
       if (rebalanceType === 'shares') {
         max = await vaultLens.maxLowLevelRebalanceShares();
       } else {
@@ -94,7 +94,7 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
 
         const isVaultProvideDirection = vaultMax < 0n;
         const isUserProvideAction = actionType === 'provide';
-        
+
         if (isVaultProvideDirection !== isUserProvideAction) {
           max = 0n;
         } else if (vaultMax < 0n) {
@@ -173,10 +173,10 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
       if (provide.length === 0) {
         return;
       }
-      
+
       let anyApproved = false;
       let allAlreadyApproved = true;
-      
+
       for (const item of provide) {
         if (item.tokenType === 'shares') {
           continue;
@@ -187,7 +187,7 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
 
         if (token) {
           const currentAllowance = await token.allowance(address, vaultAddress);
-          
+
           if (currentAllowance < item.amount) {
             const tx = await token.approve(vaultAddress, item.amount);
             await tx.wait();
@@ -197,7 +197,7 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
           }
         }
       }
-      
+
       if (allAlreadyApproved && !anyApproved) {
         setSuccess('All tokens already approved.');
       }
@@ -235,8 +235,8 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
         const deltaShares = preview?.[1] as bigint | undefined;
 
         if (!deltaShares) {
-          console.error("Failed to preview shares delta");
-          setError("Failed to preview shares delta");
+          console.error("Failed to preview leveraged tokens delta");
+          setError("Failed to preview leveraged tokens delta");
           return;
         }
 
@@ -245,10 +245,10 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
       } else {
         const preview = await vaultLens.previewLowLevelRebalanceCollateral(amount);
         const deltaShares = preview?.[1] as bigint | undefined;
-        
+
         if (!deltaShares) {
-          console.error("Failed to preview shares delta");
-          setError("Failed to preview shares delta");
+          console.error("Failed to preview leveraged tokens delta");
+          setError("Failed to preview leveraged tokens delta");
           return;
         }
 
@@ -290,7 +290,7 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
   };
 
   const getInputLabel = () => {
-    if (rebalanceType === 'shares') return 'Shares Amount';
+    if (rebalanceType === 'shares') return 'Leveraged Tokens Amount';
     if (rebalanceType === 'borrow') return 'Borrow Assets Amount';
     return 'Collateral Assets Amount';
   };
@@ -320,7 +320,7 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
       return {
         decimals: Number(sharesDecimals),
         symbol: sharesSymbol,
-        label: 'Shares',
+        label: 'Leveraged Tokens',
         token: null
       };
     }
@@ -349,10 +349,10 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
       invertSign: boolean = false
     ) => {
       if (!value || value === 0n) return;
-      
+
       const isPositive = invertSign ? value < 0n : value > 0n;
       const absValue = value < 0n ? -value : value;
-      
+
       if (isPositive) {
         provide.push({ amount: absValue, tokenType });
       } else {
@@ -361,22 +361,22 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
     };
 
     if (amount !== null && amount !== 0n) {
-      const isInputPositive = 
+      const isInputPositive =
         rebalanceType === 'shares' ? amount > 0n :
-        rebalanceType === 'borrow' ? amount < 0n :
-        amount > 0n;
-      
+          rebalanceType === 'borrow' ? amount < 0n :
+            amount > 0n;
+
       const absAmount = amount < 0n ? -amount : amount;
-      
+
       if (isInputPositive) {
-        (rebalanceType === 'shares' ? receive : provide).push({ 
-          amount: absAmount, 
-          tokenType: rebalanceType 
+        (rebalanceType === 'shares' ? receive : provide).push({
+          amount: absAmount,
+          tokenType: rebalanceType
         });
       } else {
-        (rebalanceType === 'shares' ? provide : receive).push({ 
-          amount: absAmount, 
-          tokenType: rebalanceType 
+        (rebalanceType === 'shares' ? provide : receive).push({
+          amount: absAmount,
+          tokenType: rebalanceType
         });
       }
     }
@@ -400,7 +400,7 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
   const handleInputChange = (value: string) => {
     const cleanedValue = allowOnlyNumbers(value); // Only allow positive numbers
     setInputValue(cleanedValue);
-    
+
     if (!cleanedValue || cleanedValue === '' || cleanedValue === '.') {
       setAmount(null);
       return;
@@ -513,14 +513,14 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
 
       {/* Help Text */}
       <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-        <h4 className="text-sm font-medium text-blue-900 mb-2">About {actionType === 'mint' ? 'Mint' : actionType === 'burn' ? 'Burn' : actionType === 'provide' ? 'Provide' : 'Receive'} {rebalanceType === 'shares' ? 'Shares' : rebalanceType === 'borrow' ? 'Borrow' : 'Collateral'}</h4>
+        <h4 className="text-sm font-medium text-blue-900 mb-2">About {actionType === 'mint' ? 'Mint' : actionType === 'burn' ? 'Burn' : actionType === 'provide' ? 'Provide' : 'Receive'} {rebalanceType === 'shares' ? 'Leveraged Tokens' : rebalanceType === 'borrow' ? 'Borrow' : 'Collateral'}</h4>
         <p className="text-xs text-blue-800 mb-2">
-          {actionType === 'mint' && 'Enter the amount of shares to mint. The vault will calculate the collateral and borrow changes needed.'}
-          {actionType === 'burn' && 'Enter the amount of shares to burn. The vault will calculate the collateral and borrow changes needed.'}
-          {actionType === 'provide' && rebalanceType === 'borrow' && 'Enter the amount of borrow assets to provide. The vault will calculate the collateral and shares changes needed.'}
-          {actionType === 'provide' && rebalanceType === 'collateral' && 'Enter the amount of collateral assets to provide. The vault will calculate the borrow and shares changes needed.'}
-          {actionType === 'receive' && rebalanceType === 'borrow' && 'Enter the amount of borrow assets to receive. The vault will calculate the collateral and shares changes needed.'}
-          {actionType === 'receive' && rebalanceType === 'collateral' && 'Enter the amount of collateral assets to receive. The vault will calculate the borrow and shares changes needed.'}
+          {actionType === 'mint' && 'Enter the amount of leveraged tokens to mint. The vault will calculate the collateral and borrow changes needed.'}
+          {actionType === 'burn' && 'Enter the amount of leveraged tokens to burn. The vault will calculate the collateral and borrow changes needed.'}
+          {actionType === 'provide' && rebalanceType === 'borrow' && 'Enter the amount of borrow assets to provide. The vault will calculate the collateral and leveraged tokens changes needed.'}
+          {actionType === 'provide' && rebalanceType === 'collateral' && 'Enter the amount of collateral assets to provide. The vault will calculate the borrow and leveraged tokens changes needed.'}
+          {actionType === 'receive' && rebalanceType === 'borrow' && 'Enter the amount of borrow assets to receive. The vault will calculate the collateral and leveraged tokens changes needed.'}
+          {actionType === 'receive' && rebalanceType === 'collateral' && 'Enter the amount of collateral assets to receive. The vault will calculate the borrow and leveraged tokens changes needed.'}
         </p>
         <p className="text-xs text-blue-700">
           💡 Tip: Enter only positive values. The action type determines the direction of the operation.

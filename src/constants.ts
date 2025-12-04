@@ -11,7 +11,7 @@ const MAINNET_WETH_ADDRESS = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
 export const isWETHAddress = (address: string, network: string): boolean => {
   const lowerAddress = address.toLowerCase().trim();
   const result = network === SEPOLIA_CHAIN_ID_STRING
-    ? SEPOLIA_WETH_ADDRESSES.includes(lowerAddress) 
+    ? SEPOLIA_WETH_ADDRESSES.includes(lowerAddress)
     : MAINNET_WETH_ADDRESS === lowerAddress;
   return result;
 };
@@ -52,7 +52,7 @@ export const MAINNET_NETWORK = {
     symbol: 'ETH',
     decimals: 18
   },
-  rpcUrls: ['https://ethereum-rpc.publicnode.com'],
+  rpcUrls: ['http://127.0.0.1:8545'],
   blockExplorerUrls: ['https://etherscan.io']
 };
 

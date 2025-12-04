@@ -47,7 +47,7 @@ export const PreviewBox: React.FC<PreviewBoxProps> = ({
       };
     } else {
       return {
-        label: 'Shares',
+        label: 'Leveraged Tokens',
         symbol: sharesSymbol,
         decimals: Number(sharesDecimals)
       };
@@ -60,7 +60,7 @@ export const PreviewBox: React.FC<PreviewBoxProps> = ({
         <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
         <h4 className="text-sm font-semibold text-gray-900">{title}</h4>
       </div>
-      
+
       {renderWithTransition(
         (() => {
           return (
@@ -86,13 +86,13 @@ export const PreviewBox: React.FC<PreviewBoxProps> = ({
                               <NumberDisplay value={formatUnits(item.amount, metadata.decimals)} />
                             </span>
                             <span className="font-medium text-gray-700">
-                              {item.tokenType === 'shares' 
+                              {item.tokenType === 'shares'
                                 ? renderSymbolWithPlaceholder({
-                                    symbol: metadata.symbol,
-                                    placeholder: 'Shares',
-                                    elementId: `preview-receive-shares-${idx}`,
-                                    threshold: 19
-                                  })
+                                  symbol: metadata.symbol,
+                                  placeholder: 'Leveraged Tokens',
+                                  elementId: `preview-receive-shares-${idx}`,
+                                  isLoading: !metadata.symbol
+                                })
                                 : metadata.symbol
                               }
                             </span>
@@ -125,13 +125,13 @@ export const PreviewBox: React.FC<PreviewBoxProps> = ({
                               <NumberDisplay value={formatUnits(item.amount, metadata.decimals)} />
                             </span>
                             <span className="font-medium text-gray-700">
-                              {item.tokenType === 'shares' 
+                              {item.tokenType === 'shares'
                                 ? renderSymbolWithPlaceholder({
-                                    symbol: metadata.symbol,
-                                    placeholder: 'Shares',
-                                    elementId: `preview-provide-shares-${idx}`,
-                                    threshold: 19
-                                  })
+                                  symbol: metadata.symbol,
+                                  placeholder: 'Leveraged Tokens',
+                                  elementId: `preview-provide-shares-${idx}`,
+                                  isLoading: !metadata.symbol
+                                })
                                 : metadata.symbol
                               }
                             </span>

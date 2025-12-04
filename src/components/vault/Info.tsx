@@ -28,12 +28,12 @@ export default function Info() {
   const [isLoadingPrice, setIsLoadingPrice] = useState<boolean>(false);
   const [priceLoadFailed, setPriceLoadFailed] = useState<boolean>(false);
   const hasLoadedPriceOnce = useRef<boolean>(false);
-  
+
   const [collateralTokenPrice, setCollateralTokenPrice] = useState<number | null>(null);
   const [isLoadingCollateralPrice, setIsLoadingCollateralPrice] = useState<boolean>(false);
   const [collateralPriceLoadFailed, setCollateralPriceLoadFailed] = useState<boolean>(false);
   const hasLoadedCollateralPriceOnce = useRef<boolean>(false);
-  
+
   const [positionInBorrowTokens, setPositionInBorrowTokens] = useState<string | null>(null);
   const [isLoadingPosition, setIsLoadingPosition] = useState<boolean>(false);
 
@@ -339,11 +339,11 @@ export default function Info() {
               </div>
               <div className="font-medium text-gray-700">
                 {renderWithTransition(
-                  renderSymbolWithPlaceholder({ 
-                    symbol: sharesSymbol, 
-                    placeholder: 'Shares', 
-                    elementId: 'info-shares', 
-                    isLoading: !sharesSymbol 
+                  renderSymbolWithPlaceholder({
+                    symbol: sharesSymbol,
+                    placeholder: 'Leveraged Tokens',
+                    elementId: 'info-shares-symbol',
+                    isLoading: !sharesSymbol
                   }),
                   !sharesSymbol
                 )}

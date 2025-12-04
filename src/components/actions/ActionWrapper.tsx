@@ -16,7 +16,7 @@ const ACTION_CONFIGS: Record<ActionType, ActionConfig> = {
     selectLabel: 'Select Asset You Provide',
   },
   mint: {
-    title: 'Mint Shares',
+    title: 'Mint Leveraged Tokens',
     selectLabel: 'Select Asset You Provide',
   },
   withdraw: {
@@ -24,7 +24,7 @@ const ACTION_CONFIGS: Record<ActionType, ActionConfig> = {
     selectLabel: 'Select Asset to Receive',
   },
   redeem: {
-    title: 'Redeem Shares',
+    title: 'Redeem Leveraged Tokens',
     selectLabel: 'Select Asset to Receive',
   },
 };

@@ -190,104 +190,7 @@ export default function Info() {
   return (
     <div className="relative rounded-lg bg-gray-50 p-3">
       <h3 className="text-lg font-medium text-gray-900 mb-3">Overview</h3>
-      <div className="w-full flex justify-between items-center text-sm mb-2">
-        <div className="font-medium text-gray-700">APY:</div>
-        <div className="min-w-[60px] min-h-[16px] text-right">
-          {renderWithTransition(
-            apyLoadFailed ? (
-              <span className="text-red-500 italic">Failed to load</span>
-            ) : (
-              formatApy(apy)
-            ),
-            !apy && !apyLoadFailed
-          )}
-        </div>
-      </div>
-      {tvl && (
-        <div className="w-full flex justify-between items-center text-sm mb-2">
-          <div className="font-medium text-gray-700">Leveraged TVL:</div>
-          <div className="min-w-[60px] text-right">
-            <div className="flex flex-col items-end">
-              <div className="flex">
-                <div className="mr-2 min-w-[60px] text-right">
-                  {renderWithTransition(
-                    <NumberDisplay value={tvl} />,
-                    !tvl || tvl === '0'
-                  )}
-                </div>
-                <div className="font-medium text-gray-700">
-                  {renderWithTransition(
-                    collateralTokenSymbol,
-                    !collateralTokenSymbol
-                  )}
-                </div>
-              </div>
-              {isMainnet && (
-                <div className="text-gray-700 text-xs mt-0.5">
-                  {isLoadingCollateralPrice && !hasLoadedCollateralPriceOnce.current ? (
-                    renderWithTransition(
-                      collateralPriceLoadFailed ? (
-                        <span className="text-red-500 italic">Failed to load</span>
-                      ) : (
-                        formatUsdValue(tvlUsdValue)
-                      ),
-                      true
-                    )
-                  ) : (
-                    collateralPriceLoadFailed ? (
-                      <span className="text-red-500 italic">Failed to load</span>
-                    ) : (
-                      formatUsdValue(tvlUsdValue)
-                    )
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-      <div className="w-full flex justify-between items-center text-sm mb-2">
-        <div className="font-medium text-gray-700">Deposited TVL:</div>
-        <div className="min-w-[60px] text-right">
-          <div className="flex flex-col items-end">
-            <div className="flex">
-              <div className="mr-2 min-w-[60px] text-right">
-                {renderWithTransition(
-                  <NumberDisplay value={totalAssets} />,
-                  !totalAssets || totalAssets === '0'
-                )}
-              </div>
-              <div className="font-medium text-gray-700">
-                {renderWithTransition(
-                  borrowTokenSymbol,
-                  !borrowTokenSymbol
-                )}
-              </div>
-            </div>
-            {isMainnet && (
-              <div className="text-gray-700 text-xs mt-0.5">
-                {isLoadingPrice && !hasLoadedPriceOnce.current ? (
-                  renderWithTransition(
-                    priceLoadFailed ? (
-                      <span className="text-red-500 italic">Failed to load</span>
-                    ) : (
-                      formatUsdValue(usdValue)
-                    ),
-                    true
-                  )
-                ) : (
-                  priceLoadFailed ? (
-                    <span className="text-red-500 italic">Failed to load</span>
-                  ) : (
-                    formatUsdValue(usdValue)
-                  )
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-      <div className="w-full flex justify-between items-center text-sm mb-3">
+      <div className="w-full flex justify-between items-start text-sm mb-2">
         <div className="font-medium text-gray-700">Your Position:</div>
         <div className="min-w-[60px] text-right">
           {isMainnet ? (
@@ -350,6 +253,103 @@ export default function Info() {
               </div>
             </div>
           )}
+        </div>
+      </div>
+      <div className="w-full flex justify-between items-start text-sm mb-2">
+        <div className="font-medium text-gray-700">APY:</div>
+        <div className="min-w-[60px] min-h-[16px] text-right">
+          {renderWithTransition(
+            apyLoadFailed ? (
+              <span className="text-red-500 italic">Failed to load</span>
+            ) : (
+              formatApy(apy)
+            ),
+            !apy && !apyLoadFailed
+          )}
+        </div>
+      </div>
+      {tvl && (
+        <div className="w-full flex justify-between items-start text-sm mb-2">
+          <div className="font-medium text-gray-700">Leveraged TVL:</div>
+          <div className="min-w-[60px] text-right">
+            <div className="flex flex-col items-end">
+              <div className="flex">
+                <div className="mr-2 min-w-[60px] text-right">
+                  {renderWithTransition(
+                    <NumberDisplay value={tvl} />,
+                    !tvl || tvl === '0'
+                  )}
+                </div>
+                <div className="font-medium text-gray-700">
+                  {renderWithTransition(
+                    collateralTokenSymbol,
+                    !collateralTokenSymbol
+                  )}
+                </div>
+              </div>
+              {isMainnet && (
+                <div className="text-gray-700 text-xs mt-0.5">
+                  {isLoadingCollateralPrice && !hasLoadedCollateralPriceOnce.current ? (
+                    renderWithTransition(
+                      collateralPriceLoadFailed ? (
+                        <span className="text-red-500 italic">Failed to load</span>
+                      ) : (
+                        formatUsdValue(tvlUsdValue)
+                      ),
+                      true
+                    )
+                  ) : (
+                    collateralPriceLoadFailed ? (
+                      <span className="text-red-500 italic">Failed to load</span>
+                    ) : (
+                      formatUsdValue(tvlUsdValue)
+                    )
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      <div className="w-full flex justify-between items-start text-sm mb-3">
+        <div className="font-medium text-gray-700">Deposited TVL:</div>
+        <div className="min-w-[60px] text-right">
+          <div className="flex flex-col items-end">
+            <div className="flex">
+              <div className="mr-2 min-w-[60px] text-right">
+                {renderWithTransition(
+                  <NumberDisplay value={totalAssets} />,
+                  !totalAssets || totalAssets === '0'
+                )}
+              </div>
+              <div className="font-medium text-gray-700">
+                {renderWithTransition(
+                  borrowTokenSymbol,
+                  !borrowTokenSymbol
+                )}
+              </div>
+            </div>
+            {isMainnet && (
+              <div className="text-gray-700 text-xs mt-0.5">
+                {isLoadingPrice && !hasLoadedPriceOnce.current ? (
+                  renderWithTransition(
+                    priceLoadFailed ? (
+                      <span className="text-red-500 italic">Failed to load</span>
+                    ) : (
+                      formatUsdValue(usdValue)
+                    ),
+                    true
+                  )
+                ) : (
+                  priceLoadFailed ? (
+                    <span className="text-red-500 italic">Failed to load</span>
+                  ) : (
+                    formatUsdValue(usdValue)
+                  )
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
       <div className="w-full text-sm mt-6">

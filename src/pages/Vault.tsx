@@ -1,4 +1,5 @@
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation, useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
 import { VaultContextProvider, useVaultContext } from "@/contexts";
 import { useAppContext } from "@/contexts";
 import UnrecognizedNetwork from "@/components/vault/UnrecognizedNetwork";
@@ -13,7 +14,7 @@ import VaultNotFound from '@/components/vault/VaultNotFound';
 import WhitelistBanner from '@/components/vault/WhitelistBanner';
 
 function VaultContent() {
-  const { 
+  const {
     vaultExists, vaultConfig,
     isWhitelistActivated, isWhitelisted,
     flashLoanMintHelperAddress, flashLoanRedeemHelperAddress
@@ -33,9 +34,9 @@ function VaultContent() {
     return <VaultNotFound />;
   }
 
-    // Only disable UI when we confirmed user is NOT whitelisted (don't disable while checking)
+  // Only disable UI when we confirmed user is NOT whitelisted (don't disable while checking)
   const isWhitelistDisabled = isWhitelistActivated === true && isWhitelisted === false;
-  
+
   // Block UI when terms status is unknown, not signed, or fetch failed
   const isUIDisabled = isWhitelistDisabled || isTermsBlockingUI;
   const isPartiallyDisabled = vaultConfig?.partiallyDisabled === true;
@@ -79,7 +80,28 @@ function VaultContent() {
 export default function Vault() {
   const { vaultAddress } = useParams<{ vaultAddress: string }>();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { currentNetwork } = useAppContext();
   const state = location.state || {};
+
+  // Track initial network to detect changes
+  const initialNetworkRef = useRef<string | null>(null);
+  const isFirstRenderRef = useRef(true);
+
+  // Redirect to home when network changes
+  useEffect(() => {
+    // On first render, store the current network
+    if (isFirstRenderRef.current) {
+      initialNetworkRef.current = currentNetwork;
+      isFirstRenderRef.current = false;
+      return;
+    }
+
+    // If network changed from initial network, redirect to home
+    if (currentNetwork && initialNetworkRef.current && currentNetwork !== initialNetworkRef.current) {
+      navigate('/');
+    }
+  }, [currentNetwork, navigate]);
 
   if (!vaultAddress) return null;
 

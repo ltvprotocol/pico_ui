@@ -41,9 +41,9 @@ export default function TermsOfUsePopup({ isOpen }: TermsOfUsePopupProps) {
   const handleAction = async () => {
     if (termsCheckingError) {
       await checkTermsStatus();
+    } else {
+      await signTermsOfUse();
     }
-    
-    await signTermsOfUse();
   };
 
   return (
@@ -75,8 +75,8 @@ export default function TermsOfUsePopup({ isOpen }: TermsOfUsePopupProps) {
               </p>
               <p className="text-xs text-gray-500 leading-relaxed">
                 {termsCheckingError && "Failed to check Terms Of Use signature status"}
+                {!termsCheckingError && termsTextFetchingError && "Failed to fetch Terms Of Use text, please, try again later"}
                 {termsSigningError && "Failed to sign Terms Of Use, please, try again"}
-                {termsTextFetchingError && "Failed to fetch Terms Of Use text"}
                 {!isTermsError && "Please, sign Terms Of Use to access the application"}
               </p>
             </div>
@@ -84,7 +84,7 @@ export default function TermsOfUsePopup({ isOpen }: TermsOfUsePopupProps) {
 
           <button
             onClick={handleAction}
-            disabled={isSigningTerms || isCheckingTerms || termsTextFetchingError}
+            disabled={isSigningTerms || isCheckingTerms}
             className={`
               w-full flex justify-center items-center space-x-2 py-2 px-4
               text-white font-medium rounded-lg

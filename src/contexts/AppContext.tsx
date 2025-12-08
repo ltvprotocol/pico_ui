@@ -504,7 +504,6 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     }
 
     setIsCheckingTerms(true);
-    setTermsCheckingError(undefined);
 
     try {
       const status = await checkTermsOfUseStatus(address, currentNetwork);
@@ -512,6 +511,7 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
         setIsTermsSigned(status.signed);
       } else {
         setIsTermsSigned(false);
+        setTermsCheckingError(true);
       }
     } catch (error) {
       console.error('Error checking terms status:', error);
@@ -529,7 +529,6 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     }
 
     setIsSigningTerms(true);
-    setTermsCheckingError(undefined);
 
     try {
       const signature = await signer.signMessage(termsText);

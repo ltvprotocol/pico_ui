@@ -99,7 +99,7 @@ export default function Vault() {
     if (currentNetwork && initialNetworkRef.current && currentNetwork !== initialNetworkRef.current) {
       navigate('/');
     }
-  }, [currentNetwork, navigate]);
+  }, [currentNetwork]);
 
   if (!vaultAddress) return null;
 

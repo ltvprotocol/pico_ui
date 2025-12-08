@@ -5,8 +5,7 @@ import { useAppContext } from "@/contexts";
 import { ltvToLeverage, fetchApy, fetchPointsRate } from "@/utils";
 import { useAdaptiveInterval } from "@/hooks";
 import { Vault__factory, ERC20__factory, WhitelistRegistry__factory } from "@/typechain-types";
-import { NumberDisplay } from "@/components/ui";
-import { renderWithTransition } from "@/helpers/renderWithTransition";
+import { NumberDisplay, TransitionLoader } from "@/components/ui";
 import vaultsConfig from "../../../vaults.config.json";
 import signaturesConfig from "../../../signatures.config.json";
 
@@ -411,16 +410,14 @@ export default function VaultBlock({ address }: VaultBlockProps) {
           <div className="w-full flex flex-row justify-between mb-2">
             <div className="flex items-center text-base font-medium text-gray-900">
               <div className="mr-2 min-w-[60px]">
-                {renderWithTransition(
-                  tokenPairDisplay,
-                  loadingState.isLoadingTokens && !loadingState.hasLoadedTokens
-                )}
+                <TransitionLoader isLoading={loadingState.isLoadingTokens && !loadingState.hasLoadedTokens}>
+                  {tokenPairDisplay}
+                </TransitionLoader>
               </div>
               <div className="mr-2 font-normal">
-                {renderWithTransition(
-                  staticData.maxLeverage ? `x${staticData.maxLeverage}` : null,
-                  loadingState.isLoadingLeverage && !loadingState.hasLoadedLeverage
-                )}
+                <TransitionLoader isLoading={loadingState.isLoadingLeverage && !loadingState.hasLoadedLeverage}>
+                  {staticData.maxLeverage ? `x${staticData.maxLeverage}` : null}
+                </TransitionLoader>
               </div>
               <div className="font-normal">{staticData.lendingName || "Lending"}</div>
             </div>
@@ -429,38 +426,36 @@ export default function VaultBlock({ address }: VaultBlockProps) {
         <div className="flex justify-between text-sm">
           <div className="font-medium text-gray-700">Deposited TVL: </div>
           <div className="font-normal text-gray-700 min-w-[100px] text-right">
-            {renderWithTransition(
-              formattedDeposits && staticData.borrowTokenSymbol ? (
+            <TransitionLoader 
+              isLoading={
+              (loadingState.isLoadingAssets && !loadingState.hasLoadedAssets) ||
+              (loadingState.isLoadingTokens && !loadingState.hasLoadedTokens)
+            }>
+              {formattedDeposits && staticData.borrowTokenSymbol ? (
                 <div className="flex justify-end">
                   <div className="font-normal text-gray-700 mr-2">
                     <NumberDisplay value={formattedDeposits} />
                   </div>
                   <div className="font-medium text-gray-700">{staticData.borrowTokenSymbol}</div>
                 </div>
-              ) : null,
-              (loadingState.isLoadingAssets && !loadingState.hasLoadedAssets) ||
-              (loadingState.isLoadingTokens && !loadingState.hasLoadedTokens)
-            )}
+              ) : null}
+            </TransitionLoader>
           </div>
         </div>
         <div className="flex justify-between text-sm">
           <div className="font-medium text-gray-700">APY: </div>
           <div className="font-normal text-gray-700 min-w-[60px] text-right">
-            {renderWithTransition(
-              memoizedApyData.apy !== null ? `${memoizedApyData.apy.toFixed(2)}%` : 
-              apyLoadFailed ? <span className="text-red-500 italic text-xs">Failed to load</span> : null,
-              isLoadingApy && !apyLoadFailed
-            )}
+            <TransitionLoader isLoading={isLoadingApy} isFailedToLoad={apyLoadFailed}>
+              {memoizedApyData.apy !== null ? `${memoizedApyData.apy.toFixed(2)}%` : ''}
+            </TransitionLoader>
           </div>
         </div>
         <div className="flex justify-between text-sm">
           <div className="font-medium text-gray-700">Points: </div>
           <div className="font-normal text-gray-700 min-w-[60px] text-right">
-            {renderWithTransition(
-              memoizedApyData.pointsRate !== null ? `${memoizedApyData.pointsRate}/day` : 
-              pointsRateLoadFailed ? <span className="text-red-500 italic text-xs">Failed to load</span> : null,
-              isLoadingApy && !pointsRateLoadFailed
-            )}
+            <TransitionLoader isLoading={isLoadingApy} isFailedToLoad={pointsRateLoadFailed}>
+              {memoizedApyData.pointsRate !== null ? `${memoizedApyData.pointsRate}/day` : ''}
+            </TransitionLoader>
           </div>
         </div>
       </Link>

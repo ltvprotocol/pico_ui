@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { formatUnits, parseUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
 import { isUserRejected, allowOnlyNumbers } from '@/utils';
-import { renderWithTransition } from '@/helpers/renderWithTransition';
-import { NumberDisplay, PreviewBox } from '@/components/ui';
+import { NumberDisplay, PreviewBox, TransitionLoader } from '@/components/ui';
 
 interface AuctionHandlerProps {
   futureBorrowAssets: bigint | null;
@@ -338,16 +337,16 @@ export default function AuctionHandler({ futureBorrowAssets, futureCollateralAss
             </div>
           </div>
           <div className="flex gap-1 mt-1 text-sm text-gray-500">
-            Max Available: {renderWithTransition(
-              maxValue !== null ? (
+            <span>Max Available:</span>
+            <TransitionLoader isLoading={isLoadingMax}>
+              {maxValue !== null ? (
                 <>
                   <NumberDisplay value={formatUnits(maxValue, decimals)} />
                   {' '}
                   {getSymbolForAuctionType()}
                 </>
-              ) : null,
-              isLoadingMax
-            )}
+              ) : null}
+            </TransitionLoader>
           </div>
         </div>
 

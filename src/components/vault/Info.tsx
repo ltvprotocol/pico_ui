@@ -19,6 +19,7 @@ export default function Info() {
     vaultLens,
     borrowTokenDecimals,
     sharesDecimals,
+    isRefreshingBalances,
   } = useVaultContext();
 
   const { isMainnet } = useAppContext();
@@ -195,12 +196,16 @@ export default function Info() {
             <div className="flex flex-col items-end">
               <div className="flex">
                 <div className="mr-2 min-w-[60px] text-right">
-                  <TransitionLoader isLoading={isLoadingPosition || !positionInBorrowTokens}>
-                    {positionInBorrowTokens ?
-                      <NumberDisplay value={positionInBorrowTokens} /> : 
-                      null
-                    }
-                  </TransitionLoader>
+                  {isRefreshingBalances ? (
+                    <span className="text-gray-500 italic">Loading...</span>
+                  ) : 
+                    <TransitionLoader isLoading={isLoadingPosition || !positionInBorrowTokens}>
+                      {positionInBorrowTokens ?
+                        <NumberDisplay value={positionInBorrowTokens} /> : 
+                        null
+                      }
+                    </TransitionLoader>
+                  }
                 </div>
                 <div className="font-medium text-gray-700">
                   <TransitionLoader isLoading={!borrowTokenSymbol}>
@@ -223,9 +228,13 @@ export default function Info() {
           ) : (
             <div className="flex">
               <div className="mr-2 min-w-[60px] text-right">
-                <TransitionLoader isLoading={!sharesBalance || sharesBalance === '0'}>
-                  <NumberDisplay value={sharesBalance} />
-                </TransitionLoader>
+                {isRefreshingBalances ? (
+                  <span className="text-gray-500 italic">Loading...</span>
+                ) : 
+                  <TransitionLoader isLoading={!sharesBalance || sharesBalance === '0'}>
+                    <NumberDisplay value={sharesBalance} />
+                  </TransitionLoader>
+                }
               </div>
               <div className="font-medium text-gray-700">
                 <SymbolWithTooltip

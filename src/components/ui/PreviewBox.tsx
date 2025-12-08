@@ -1,6 +1,5 @@
 import { formatUnits } from 'ethers';
-import { renderSymbolWithPlaceholder } from '@/helpers/renderSymbolWithPlaceholder';
-import { NumberDisplay, TransitionLoader } from '@/components/ui';
+import { NumberDisplay, TransitionLoader, SymbolWithTooltip } from '@/components/ui';
 import { useVaultContext } from '@/contexts';
 import { TokenType } from '@/types/actions';
 
@@ -83,13 +82,13 @@ export const PreviewBox: React.FC<PreviewBoxProps> = ({
                           <NumberDisplay value={formatUnits(item.amount, metadata.decimals)} />
                         </span>
                         <span className="font-medium text-gray-700">
-                          {item.tokenType === 'shares' 
-                            ? renderSymbolWithPlaceholder({
-                                symbol: metadata.symbol,
-                                placeholder: 'Shares',
-                                elementId: `preview-receive-shares-${idx}`,
-                                threshold: 19
-                              })
+                          {item.tokenType === 'shares'
+                            ? <SymbolWithTooltip
+                                symbol={metadata.symbol}
+                                placeholder='Shares'
+                                elementId={`preview-receive-shares-${idx}`}
+                                isLoading={!metadata.symbol}
+                              />
                             : metadata.symbol
                           }
                         </span>
@@ -122,13 +121,13 @@ export const PreviewBox: React.FC<PreviewBoxProps> = ({
                           <NumberDisplay value={formatUnits(item.amount, metadata.decimals)} />
                         </span>
                         <span className="font-medium text-gray-700">
-                          {item.tokenType === 'shares' 
-                            ? renderSymbolWithPlaceholder({
-                                symbol: metadata.symbol,
-                                placeholder: 'Shares',
-                                elementId: `preview-provide-shares-${idx}`,
-                                threshold: 19
-                              })
+                          {item.tokenType === 'shares'
+                            ? <SymbolWithTooltip
+                                symbol={metadata.symbol}
+                                placeholder='Shares'
+                                elementId={`preview-provide-shares-${idx}`}
+                                isLoading={!metadata.symbol}
+                              />
                             : metadata.symbol
                           }
                         </span>

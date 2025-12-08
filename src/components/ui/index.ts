@@ -4,3 +4,5 @@ export { Loader } from "./Loader";
 export { NumberDisplay } from "./NumberDisplay";
 export { PreviewBox } from "./PreviewBox";
 export { TransitionLoader } from "./TransitionLoader";
+export { Tooltip } from "./Tooltip";
+export { SymbolWithTooltip } from "./SymbolWithTooltip";

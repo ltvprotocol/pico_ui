@@ -86,14 +86,12 @@ export default function Vault() {
 
   // Track initial network to detect changes
   const initialNetworkRef = useRef<string | null>(null);
-  const isFirstRenderRef = useRef(true);
 
   // Redirect to home when network changes
   useEffect(() => {
     // On first render, store the current network
-    if (isFirstRenderRef.current) {
+    if (!initialNetworkRef.current) {
       initialNetworkRef.current = currentNetwork;
-      isFirstRenderRef.current = false;
       return;
     }
 

@@ -116,6 +116,7 @@ interface VaultContextType {
   // Refresh functions
   refreshBalances: () => Promise<void>;
   refreshVaultLimits: () => Promise<void>;
+  isRefreshingBalances: boolean;
 };
 
 interface Params {
@@ -207,6 +208,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   const [whitelistError, setWhitelistError] = useState<string | null>(null);
   const [lastCheckedAddressForSignature, setLastCheckedAddressForSignature] = useState<string | null>(null);
   const [hasUsedInitialWhitelistParams, setHasUsedInitialWhitelistParams] = useState<boolean>(false);
+  const [isRefreshingBalances, setIsRefreshingBalances] = useState<boolean>(false);
 
   const { publicProvider, signer, isConnected, address, currentNetwork } = useAppContext();
 
@@ -381,10 +383,15 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
     }
   }, [publicProvider, signer, vaultAddress, vaultConfig, params]);
 
-  const loadBalances = useCallback(async () => {
+  const loadBalances = useCallback(async (isManualRefresh: boolean = false) => {
     if (!publicProvider || !address || !vaultLens || !borrowTokenLens || !collateralTokenLens) return;
 
     try {
+      // Only show loading state for manual refreshes, not automatic interval refreshes
+      if (isManualRefresh) {
+        setIsRefreshingBalances(true);
+      }
+
       const ethBalanceRaw = await publicProvider.getBalance(address);
       setEthBalance(formatEther(ethBalanceRaw));
 
@@ -400,6 +407,11 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
 
     } catch (err) {
       console.error('Error loading balances:', err);
+    } finally {
+      // Only clear loading state if it was set
+      if (isManualRefresh) {
+        setIsRefreshingBalances(false);
+      }
     }
   }, [publicProvider, address, vaultLens, borrowTokenLens, collateralTokenLens, sharesDecimals, borrowTokenDecimals, collateralTokenDecimals]);
 
@@ -823,6 +835,11 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
     }
   }, [vaultLens, signer, address, signature, isWhitelistActivated, checkWhitelistStatus]);
 
+  // Wrapper for manual balance refresh (shows loading state)
+  const refreshBalances = useCallback(async () => {
+    await loadBalances(true);
+  }, [loadBalances]);
+
   useEffect(() => {
     if (vaultLens) {
       checkWhitelistActivation();
@@ -985,8 +1002,9 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         activateWhitelist,
         isActivatingWhitelist,
         whitelistError,
-        refreshBalances: loadBalances,
-        refreshVaultLimits: loadVaultLimits
+        refreshBalances,
+        refreshVaultLimits: loadVaultLimits,
+        isRefreshingBalances
       }}
     >
       {children}

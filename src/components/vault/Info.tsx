@@ -21,6 +21,7 @@ export default function Info() {
     vaultLens,
     borrowTokenDecimals,
     sharesDecimals,
+    isRefreshingBalances,
   } = useVaultContext();
 
   const { isMainnet } = useAppContext();
@@ -197,7 +198,9 @@ export default function Info() {
             <div className="flex flex-col items-end">
               <div className="flex">
                 <div className="mr-2 min-w-[60px] text-right">
-                  {renderWithTransition(
+                  {isRefreshingBalances ? (
+                    <span className="text-gray-500 italic">Loading...</span>
+                  ) : renderWithTransition(
                     positionInBorrowTokens ? (
                       <NumberDisplay value={positionInBorrowTokens} />
                     ) : null,
@@ -235,7 +238,9 @@ export default function Info() {
           ) : (
             <div className="flex">
               <div className="mr-2 min-w-[60px] text-right">
-                {renderWithTransition(
+                {isRefreshingBalances ? (
+                  <span className="text-gray-500 italic">Loading...</span>
+                ) : renderWithTransition(
                   <NumberDisplay value={sharesBalance} />,
                   !sharesBalance || sharesBalance === '0'
                 )}
@@ -361,4 +366,3 @@ export default function Info() {
     </div>
   );
 }
-

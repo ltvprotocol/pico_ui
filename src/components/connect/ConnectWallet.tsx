@@ -10,8 +10,7 @@ import TermsOfUsePopup from './TermsOfUsePopup';
 export default function ConnectWallet() {
   const {
     isConnected, isAutoConnecting, isSepolia, isMainnet, currentNetwork,
-    address, connectingWalletId, disconnectWallet, isTermsSigned, isTermsBlockingUI,
-    termsError, termsTextFetchFailed
+    address, connectingWalletId, disconnectWallet, isTermsSigned, isTermsBlockingUI
   } = useAppContext();
 
   const [showWalletsPopup, setShowWalletsPopup] = useState<boolean>(false);
@@ -63,7 +62,7 @@ export default function ConnectWallet() {
       }
       // Only show popup if we are blocking UI AND (we know it's not signed OR there is an error)
       // This prevents popup from showing while loading/checking
-      if (isTermsBlockingUI && (isTermsSigned === false || termsError || termsTextFetchFailed)) {
+      if (isTermsBlockingUI && isTermsSigned === false) {
         setShowTermsPopup(true);
       } else {
         setShowTermsPopup(false);
@@ -71,7 +70,7 @@ export default function ConnectWallet() {
     } else {
       setShowTermsPopup(false);
     }
-  }, [isConnected, isSepolia, isMainnet, isTermsSigned, isTermsBlockingUI, termsError, termsTextFetchFailed]);
+  }, [isConnected, isSepolia, isMainnet, isTermsSigned, isTermsBlockingUI]);
 
   useEffect(() => {
     if (isConnected && (isSepolia || isMainnet)) {

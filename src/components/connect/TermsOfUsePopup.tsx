@@ -1,4 +1,5 @@
 import { useAppContext } from '@/contexts';
+import { useEffect, useState } from 'react';
 
 interface TermsOfUsePopupProps {
   isOpen: boolean;
@@ -7,25 +8,42 @@ interface TermsOfUsePopupProps {
 
 export default function TermsOfUsePopup({ isOpen }: TermsOfUsePopupProps) {
   const {
-    signTermsOfUse,
+    isTermsSigned,
     isSigningTerms,
-    termsError,
-    termsTextFetchFailed,
-    termsText,
+    isCheckingTerms,
+    termsCheckingError,
+    termsTextFetchingError,
+    termsSigningError,
     checkTermsStatus,
-    isCheckingTerms
+    signTermsOfUse
   } = useAppContext();
 
-  if (!isOpen) return null;
+  const [isTermsError, setIsTermsError] = useState(
+    termsTextFetchingError ||
+    termsCheckingError ||
+    termsSigningError
+  );
 
-  const isErrorState = termsTextFetchFailed || (!termsText && termsError);
+  useEffect(() => {
+    setIsTermsError(
+      termsTextFetchingError ||
+      termsCheckingError ||
+      termsSigningError
+    )
+  }, [
+    termsTextFetchingError,
+    termsCheckingError,
+    termsSigningError
+  ]);
+
+  if (!isOpen || isTermsSigned) return null;
 
   const handleAction = async () => {
-    if (isErrorState) {
+    if (termsCheckingError) {
       await checkTermsStatus();
-    } else {
-      await signTermsOfUse();
     }
+    
+    await signTermsOfUse();
   };
 
   return (
@@ -37,7 +55,7 @@ export default function TermsOfUsePopup({ isOpen }: TermsOfUsePopupProps) {
         <div className="space-y-4">
           <div className="flex items-start space-x-3">
             <div className="flex-shrink-0">
-              {isErrorState ? (
+              {isTermsError ? (
                 <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
                   <svg className="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
@@ -53,34 +71,38 @@ export default function TermsOfUsePopup({ isOpen }: TermsOfUsePopupProps) {
             </div>
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-900 mb-1">
-                {isErrorState ? 'Connection Error' : 'Terms of Use Required'}
+                {isTermsError ? 'Some Error Occurred' : 'Terms of Use Required'}
               </p>
               <p className="text-xs text-gray-500 leading-relaxed">
-                {isErrorState
-                  ? 'Failed to check Terms Of Use status. Please try again.'
-                  : termsError || 'Please sign the terms of use to access the application.'}
+                {termsCheckingError && "Failed to check Terms Of Use signature status"}
+                {termsSigningError && "Failed to sign Terms Of Use, please, try again"}
+                {termsTextFetchingError && "Failed to fetch Terms Of Use text"}
+                {!isTermsError && "Please, sign Terms Of Use to access the application"}
               </p>
             </div>
           </div>
 
           <button
             onClick={handleAction}
-            disabled={isSigningTerms || isCheckingTerms || (!isErrorState && !termsText)}
+            disabled={isSigningTerms || isCheckingTerms || termsTextFetchingError}
             className={`
               w-full flex justify-center items-center space-x-2 py-2 px-4
-              ${isErrorState ? 'bg-orange-500 hover:bg-orange-600' : 'bg-indigo-600 hover:bg-indigo-700'}
               text-white font-medium rounded-lg
               transition-all duration-200 ease-in-out
               disabled:opacity-50 disabled:cursor-not-allowed
+              ${isTermsError ? 
+                'bg-orange-500 hover:bg-orange-600' : 
+                'bg-indigo-600 hover:bg-indigo-700'
+              }
             `}
           >
             {isSigningTerms || isCheckingTerms ? (
               <>
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>{isErrorState ? 'Retrying...' : 'Signing...'}</span>
+                <span>{termsCheckingError ? 'Retrying...' : 'Signing...'}</span>
               </>
             ) : (
-              <span>{isErrorState ? 'Retry' : 'Sign Terms of Use'}</span>
+              <span>{termsCheckingError ? 'Retry' : 'Sign Terms of Use'}</span>
             )}
           </button>
         </div>

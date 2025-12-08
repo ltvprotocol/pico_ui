@@ -3,7 +3,7 @@ import { formatUnits, parseUnits } from 'ethers';
 import { useVaultContext } from '@/contexts';
 import { useAppContext } from '@/contexts';
 import { renderWithTransition } from '@/helpers/renderWithTransition';
-import { renderSymbolWithPlaceholder } from '@/helpers/renderSymbolWithPlaceholder';
+import { SymbolWithPlaceholder } from '@/helpers/renderSymbolWithPlaceholder';
 import { NumberDisplay } from '@/components/ui';
 import { fetchTokenPrice, formatTokenSymbol } from '@/utils';
 
@@ -339,12 +339,12 @@ export default function Info() {
               </div>
               <div className="font-medium text-gray-700">
                 {renderWithTransition(
-                  renderSymbolWithPlaceholder({ 
-                    symbol: sharesSymbol, 
-                    placeholder: 'Shares', 
-                    elementId: 'info-shares', 
-                    isLoading: !sharesSymbol 
-                  }),
+                  <SymbolWithPlaceholder
+                    symbol={sharesSymbol}
+                    placeholder='Shares'
+                    elementId='info-shares'
+                    isLoading={!sharesSymbol}
+                  />,
                   !sharesSymbol
                 )}
               </div>

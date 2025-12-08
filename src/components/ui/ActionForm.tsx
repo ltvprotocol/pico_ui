@@ -1,6 +1,6 @@
 import React from 'react';
-import { allowOnlyNumbers, isButtonDisabled, formatForInput } from '@/utils';
-import { renderSymbolWithPlaceholder } from '@/helpers/renderSymbolWithPlaceholder';
+import { allowOnlyNumbers, isButtonDisabled, formatForInput, formatTokenSymbol } from '@/utils';
+import { SymbolWithPlaceholder } from '@/helpers/renderSymbolWithPlaceholder';
 import { NumberDisplay } from '@/components/ui';
 
 type ActionFormProps = {
@@ -96,24 +96,28 @@ export const ActionForm: React.FC<ActionFormProps> = ({
               MAX
             </button>
             <span className="text-gray-500 sm:text-sm">
-              {renderSymbolWithPlaceholder({
-                symbol: tokenSymbol,
-                placeholder: 'Shares',
-                elementId: 'action-form-symbol',
-                isLoading: !tokenSymbol
-              })}
+              {actionName === "Mint" || actionName === "Redeem"
+                ? <SymbolWithPlaceholder
+                  symbol={tokenSymbol}
+                  placeholder="Shares"
+                  elementId="action-form-symbol"
+                  isLoading={!tokenSymbol}
+                />
+                : formatTokenSymbol(tokenSymbol)
+              }
             </span>
           </div>
         </div>
         <div className="flex gap-1 mt-1 text-sm text-gray-500">
           Max Available: {!maxAmount ? 'Loading...' : (
             <>
-              <NumberDisplay value={maxAmount} /> {renderSymbolWithPlaceholder({
-                symbol: tokenSymbol,
-                placeholder: 'Shares',
-                elementId: 'action-form-max-available',
-                isLoading: !tokenSymbol
-              })}
+              <NumberDisplay value={maxAmount} />
+              <SymbolWithPlaceholder
+                symbol={tokenSymbol}
+                placeholder='Shares'
+                elementId='action-form-max-available'
+                isLoading={!tokenSymbol}
+              />
             </>
           )}
         </div>

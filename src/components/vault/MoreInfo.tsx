@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useVaultContext } from '@/contexts';
 import { renderWithTransition } from '@/helpers/renderWithTransition';
-import { renderSymbolWithPlaceholder } from '@/helpers/renderSymbolWithPlaceholder';
+import { SymbolWithPlaceholder } from '@/helpers/renderSymbolWithPlaceholder';
 import { NumberDisplay } from '@/components/ui';
 import { formatLtv, formatTokenSymbol } from '@/utils';
 
@@ -150,8 +150,8 @@ export default function MoreInfo() {
               {[
                 [vaultMaxDepositCollateral, formatTokenSymbol(collateralTokenSymbol)],
                 [vaultMaxWithdrawCollateral, formatTokenSymbol(collateralTokenSymbol)],
-                [vaultMaxMintCollateral, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'mint-collateral', isLoading: !sharesSymbol })],
-                [vaultMaxRedeemCollateral, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'redeem-collateral', isLoading: !sharesSymbol })]
+                [vaultMaxMintCollateral, <SymbolWithPlaceholder symbol={sharesSymbol} placeholder='Shares' elementId='mint-collateral' isLoading={!sharesSymbol} />],
+                [vaultMaxRedeemCollateral, <SymbolWithPlaceholder symbol={sharesSymbol} placeholder='Shares' elementId='redeem-collateral' isLoading={!sharesSymbol} />]
               ].map((info, index) => (
                 <div key={index} className='flex'>
                   <div className="mr-2 min-w-[60px] text-right">
@@ -174,8 +174,8 @@ export default function MoreInfo() {
               {[
                 [vaultMaxDeposit, formatTokenSymbol(borrowTokenSymbol)],
                 [vaultMaxWithdraw, formatTokenSymbol(borrowTokenSymbol)],
-                [vaultMaxMint, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'mint-borrow', isLoading: !sharesSymbol })],
-                [vaultMaxRedeem, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'redeem-borrow', isLoading: !sharesSymbol })]
+                [vaultMaxMint, <SymbolWithPlaceholder symbol={sharesSymbol} placeholder='Shares' elementId='mint-borrow' isLoading={!sharesSymbol} />],
+                [vaultMaxRedeem, <SymbolWithPlaceholder symbol={sharesSymbol} placeholder='Shares' elementId='redeem-borrow' isLoading={!sharesSymbol} />]
               ].map((info, index) => (
                 <div key={index} className="flex">
                   <div className="mr-2 min-w-[60px] text-right">
@@ -209,8 +209,8 @@ export default function MoreInfo() {
               {[
                 [vaultMaxDepositCollateral, formatTokenSymbol(collateralTokenSymbol)],
                 [vaultMaxWithdrawCollateral, formatTokenSymbol(collateralTokenSymbol)],
-                [vaultMaxMintCollateral, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'mobile-mint-collateral', isLoading: !sharesSymbol })],
-                [vaultMaxRedeemCollateral, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'mobile-redeem-collateral', isLoading: !sharesSymbol })]
+                [vaultMaxMintCollateral, <SymbolWithPlaceholder symbol={sharesSymbol} placeholder='Shares' elementId='mobile-mint-collateral' isLoading={!sharesSymbol} />],
+                [vaultMaxRedeemCollateral, <SymbolWithPlaceholder symbol={sharesSymbol} placeholder='Shares' elementId='mobile-redeem-collateral' isLoading={!sharesSymbol} />]
               ].map((info, index) => (
                 <div key={index} className='flex'>
                   <div className="mr-2 min-w-[60px] text-right">
@@ -242,8 +242,8 @@ export default function MoreInfo() {
               {[
                 [vaultMaxDeposit, formatTokenSymbol(borrowTokenSymbol)],
                 [vaultMaxWithdraw, formatTokenSymbol(borrowTokenSymbol)],
-                [vaultMaxMint, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'mobile-mint-borrow', isLoading: !sharesSymbol })],
-                [vaultMaxRedeem, renderSymbolWithPlaceholder({ symbol: sharesSymbol, placeholder: 'Shares', elementId: 'mobile-redeem-borrow', isLoading: !sharesSymbol })]
+                [vaultMaxMint, <SymbolWithPlaceholder symbol={sharesSymbol} placeholder='Shares' elementId='mobile-mint-borrow' isLoading={!sharesSymbol} />],
+                [vaultMaxRedeem, <SymbolWithPlaceholder symbol={sharesSymbol} placeholder='Shares' elementId='mobile-redeem-borrow' isLoading={!sharesSymbol} />]
               ].map((info, index) => (
                 <div key={index} className="flex">
                   <div className="mr-2 min-w-[60px] text-right">

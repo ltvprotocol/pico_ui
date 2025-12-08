@@ -24,7 +24,7 @@ interface RenderSymbolWithPlaceholderProps {
   threshold?: number;
 }
 
-export const renderSymbolWithPlaceholder = ({ 
+export const SymbolWithPlaceholder = ({
   symbol, 
   placeholder, 
   elementId, 

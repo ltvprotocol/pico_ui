@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { TransitionLoader, Tooltip} from '@/components/ui';
+import { TransitionLoader, Tooltip } from '@/components/ui';
 
 interface SymbolWithTooltipProps {
   symbol: string | null;
@@ -38,7 +38,7 @@ export function SymbolWithTooltip({
 
   return (
     <TransitionLoader isLoading={isLoading}>
-      {placeholder}
+      {symbol}
     </TransitionLoader>
   );
 };

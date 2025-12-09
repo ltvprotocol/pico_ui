@@ -12,6 +12,7 @@ import FlashLoanHelper from '@/components/vault/FlashLoanHelper';
 import Auction from '@/components/vault/Auction';
 import VaultNotFound from '@/components/vault/VaultNotFound';
 import WhitelistBanner from '@/components/vault/WhitelistBanner';
+import FlashLoanDepositWithdraw from '@/components/vault/FlashLoanDepositWithdraw';
 
 function VaultContent() {
   const {
@@ -63,9 +64,14 @@ function VaultContent() {
         <LowLevelRebalance />
       </div>
       {hasFlashLoanHelper && (
-        <div className={`mb-4 ${isUIDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
-          <FlashLoanHelper />
-        </div>
+        <>
+          <div className={`mb-4 ${isUIDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
+            <FlashLoanDepositWithdraw />
+          </div>
+          <div className={`mb-4 ${isUIDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
+            <FlashLoanHelper />
+          </div>
+        </>
       )}
       <div className={`mb-4 ${partiallyDisabledMode ? 'opacity-50 pointer-events-none' : ''}`}>
         <Auction />

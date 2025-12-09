@@ -44,8 +44,9 @@ interface AppContextType {
   termsText: string | null;
   isCheckingTerms: boolean;
   isSigningTerms: boolean;
-  termsError: string | null;
-  termsTextFetchFailed: boolean;
+  termsCheckingError: boolean | undefined;
+  termsTextFetchingError: boolean | undefined;
+  termsSigningError: boolean | undefined;
   isTermsBlockingUI: boolean;
   checkTermsStatus: () => Promise<void>;
   signTermsOfUse: () => Promise<void>;
@@ -84,8 +85,9 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
   const [termsText, setTermsText] = useState<string | null>(null);
   const [isCheckingTerms, setIsCheckingTerms] = useState(false);
   const [isSigningTerms, setIsSigningTerms] = useState(false);
-  const [termsError, setTermsError] = useState<string | null>(null);
-  const [termsTextFetchFailed, setTermsTextFetchFailed] = useState(false);
+  const [termsCheckingError, setTermsCheckingError] = useState<boolean | undefined>(undefined);
+  const [termsTextFetchingError, setTermsTextFetchingError] = useState<boolean | undefined>(undefined);
+  const [termsSigningError, setTermsSigningError] = useState<boolean | undefined>(undefined);
   const [isTermsBlockingUI, setIsTermsBlockingUI] = useState(false);
 
   const getNetworkFromUrl = useCallback(() => {
@@ -267,7 +269,7 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     setIsMainnet(false);
     setRawProvider(null);
     setIsTermsSigned(null);
-    setTermsError(null);
+    setTermsCheckingError(undefined);
     localStorage.removeItem('connectedWallet');
   }, []);
 
@@ -480,15 +482,15 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
         const text = await fetchTermsOfUseText(currentNetwork);
         if (text) {
           setTermsText(text);
-          setTermsTextFetchFailed(false);
+          setTermsTextFetchingError(false);
         } else {
           // If fetch returned null, it means the backend failed
-          setTermsTextFetchFailed(true);
+          setTermsTextFetchingError(true);
           setTermsText(null);
         }
       } catch (error) {
         console.error('Error loading terms text:', error);
-        setTermsTextFetchFailed(true);
+        setTermsTextFetchingError(true);
         setTermsText(null);
       }
     };
@@ -502,18 +504,19 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     }
 
     setIsCheckingTerms(true);
-    setTermsError(null);
+
     try {
       const status = await checkTermsOfUseStatus(address, currentNetwork);
       if (status) {
         setIsTermsSigned(status.signed);
       } else {
-        setIsTermsSigned(null);
+        setIsTermsSigned(false);
+        setTermsCheckingError(true);
       }
     } catch (error) {
       console.error('Error checking terms status:', error);
-      setTermsError('Failed to check terms of use status');
-      setIsTermsSigned(null);
+      setIsTermsSigned(false);
+      setTermsCheckingError(true);
     } finally {
       setIsCheckingTerms(false);
     }
@@ -521,12 +524,12 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
 
   const signTermsOfUse = useCallback(async () => {
     if (!signer || !address || !termsText || !currentNetwork) {
-      setTermsError('Missing required data to sign terms');
+      setTermsSigningError(true);
       return;
     }
 
     setIsSigningTerms(true);
-    setTermsError(null);
+
     try {
       const signature = await signer.signMessage(termsText);
       
@@ -534,14 +537,14 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
       if (result && result.success) {
         setIsTermsSigned(true);
       } else {
-        setTermsError('Failed to submit signature');
+        setTermsSigningError(true);
       }
     } catch (error: any) {
       if (isUserRejected(error)) {
-        setTermsError('Signature canceled by user');
+        setTermsSigningError(true);
       } else {
         console.error('Error signing terms:', error);
-        setTermsError('Failed to sign terms of use');
+        setTermsSigningError(true);
       }
     } finally {
       setIsSigningTerms(false);
@@ -595,9 +598,10 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!isConnected) {
       setIsTermsSigned(null);
-      setTermsError(null);
+      setTermsCheckingError(undefined);
+      setTermsSigningError(undefined);
       setHasAttemptedAutoSign(false);
-      setTermsTextFetchFailed(false);
+      setTermsTextFetchingError(false);
     }
   }, [isConnected]);
 
@@ -619,12 +623,12 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
       setIsTermsBlockingUI(true);
       return;
     }
-    if (termsTextFetchFailed) {
+    if (termsTextFetchingError || termsCheckingError || termsSigningError) {
       setIsTermsBlockingUI(true);
       return;
     }
     setIsTermsBlockingUI(true);
-  }, [isConnected, isTermsSigned, termsTextFetchFailed]);
+  }, [isConnected, isTermsSigned, termsTextFetchingError, termsCheckingError, termsSigningError]);
 
   const contextValue: AppContextType = {
     wallets,
@@ -655,8 +659,9 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     termsText,
     isCheckingTerms,
     isSigningTerms,
-    termsError,
-    termsTextFetchFailed,
+    termsCheckingError,
+    termsTextFetchingError,
+    termsSigningError,
     isTermsBlockingUI,
     checkTermsStatus,
     signTermsOfUse,

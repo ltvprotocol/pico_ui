@@ -21,6 +21,9 @@ interface FlashLoanHelperHandlerProps {
   helperType: HelperType;
 }
 
+const GAS_RESERVE_MULTIPLIER = 3n;
+const GAS_RESERVE = GAS_RESERVE_WEI * GAS_RESERVE_MULTIPLIER;
+
 // fixed slippage for redeem, 0.1%
 const REDEEM_SLIPPAGE_DIVIDEND = 999;
 const REDEEM_SLIPPAGE_DIVIDER = 1000;
@@ -131,7 +134,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
       const sharesFromCollateral = await vaultLens.convertToSharesCollateral(rawCollateralBalance);
       const sharesFromEth = await vaultLens.convertToShares(rawEthBalance);
 
-      const userMaxMint = clampToPositive(sharesFromCollateral + sharesFromEth - GAS_RESERVE_WEI * 3n);
+      const userMaxMint = clampToPositive(sharesFromCollateral + sharesFromEth - GAS_RESERVE);
       const vaultMaxMint = await vaultLens.maxLowLevelRebalanceShares();
 
       const maxMint = minBigInt(userMaxMint, vaultMaxMint);

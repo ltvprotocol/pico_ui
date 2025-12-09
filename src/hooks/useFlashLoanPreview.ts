@@ -30,6 +30,8 @@ interface UseFlashLoanPreviewReturn {
   previewData: PreviewData | null;
   receive: Array<{ amount: bigint; tokenType: TokenType }>;
   provide: Array<{ amount: bigint; tokenType: TokenType }>;
+  isErrorLoadingPreview: boolean;
+  invalidRebalanceMode: boolean;
 }
 
 export const useFlashLoanPreview = ({
@@ -39,6 +41,8 @@ export const useFlashLoanPreview = ({
   sharesBalance,
 }: UseFlashLoanPreviewParams): UseFlashLoanPreviewReturn => {
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  const [isErrorLoadingPreview, setIsErrorLoadingPreview] = useState(false);
+  const [invalidRebalanceMode, setInvalidRebalanceMode] = useState(false);
   const [previewData, setPreviewData] = useState<PreviewData | null>(null);
   // const [hasInsufficientBalance, setHasInsufficientBalance] = useState(false);
 
@@ -54,6 +58,7 @@ export const useFlashLoanPreview = ({
     try {
       let amount: bigint;
       if (helperType === 'mint') {
+        console.log(shares);
         // returns collateral required
         // @ts-expect-error - helper is FlashLoanMintHelper when helperType is 'mint'
         amount = await helper.previewMintSharesWithFlashLoanCollateral(shares);
@@ -65,8 +70,14 @@ export const useFlashLoanPreview = ({
       amount = reduceByPrecisionBuffer(amount);
       setPreviewData({ amount });
 
-    } catch (err) {
+    } catch (err: any) {
+      setIsErrorLoadingPreview(true);
       console.error('Error loading preview:', err);
+
+      if (err.message.includes('InvalidRebalanceMode')) {
+        setInvalidRebalanceMode(true);
+      }
+
       setPreviewData(null);
     } finally {
       setIsLoadingPreview(false);
@@ -114,5 +125,7 @@ export const useFlashLoanPreview = ({
     previewData,
     receive,
     provide,
+    isErrorLoadingPreview,
+    invalidRebalanceMode
   };
 };

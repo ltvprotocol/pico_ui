@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useVaultContext } from '@/contexts';
 import { formatTokenSymbol } from '@/utils';
-import Address from '@/components/ui/Address';
+import { Address } from '@/components/ui';
 
 export default function VaultHeader() {
   const { borrowTokenSymbol, collateralTokenSymbol, maxLeverage, lendingName, vaultAddress } = useVaultContext();

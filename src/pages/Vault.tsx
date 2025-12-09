@@ -13,6 +13,8 @@ import Auction from '@/components/vault/Auction';
 import VaultNotFound from '@/components/vault/VaultNotFound';
 import WhitelistBanner from '@/components/vault/WhitelistBanner';
 import FlashLoanDepositWithdraw from '@/components/vault/FlashLoanDepositWithdraw';
+import FlashLoanDepositWithdrawForm from '@/components/vault/FlashLoanDepositWithdrawForm';
+import ActionsDropdown from '@/components/vault/ActionsDropdown';
 
 function VaultContent() {
   const {
@@ -21,7 +23,7 @@ function VaultContent() {
     flashLoanMintHelperAddress, flashLoanRedeemHelperAddress
   } = useVaultContext();
 
-  const { unrecognizedNetworkParam, isTermsBlockingUI } = useAppContext();
+  const { unrecognizedNetworkParam, isTermsBlockingUI, isMainnet } = useAppContext();
 
   const hasFlashLoanHelper =
     (flashLoanMintHelperAddress && flashLoanMintHelperAddress !== '') ||
@@ -55,13 +57,16 @@ function VaultContent() {
           </div>
         </div>
         <div className="flex-1">
-          <div className={partiallyDisabledMode ? 'opacity-50 pointer-events-none' : ''}>
-            <Actions isSafe={vaultConfig && (vaultConfig as any).useSafeActions} />
-          </div>
+          {
+            isMainnet ? 
+            <div className={`${isUIDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
+              <FlashLoanDepositWithdrawForm />
+            </div> :
+            <div className={partiallyDisabledMode ? 'opacity-50 pointer-events-none' : ''}>
+              <Actions isSafe={vaultConfig && (vaultConfig as any).useSafeActions} />
+            </div>
+          }
         </div>
-      </div>
-      <div className={`mb-4 ${partiallyDisabledMode ? 'opacity-50 pointer-events-none' : ''}`}>
-        <LowLevelRebalance />
       </div>
       {hasFlashLoanHelper && (
         <>
@@ -73,12 +78,27 @@ function VaultContent() {
           </div>
         </>
       )}
+      {isMainnet &&
+        <>
+          <div className={`mb-4 ${isUIDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
+            <ActionsDropdown />
+          </div>
+          <div className={`mb-4 ${isUIDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
+            <MoreInfo />
+          </div>
+        </>
+      }
       <div className={`mb-4 ${partiallyDisabledMode ? 'opacity-50 pointer-events-none' : ''}`}>
+        <LowLevelRebalance />
+      </div>
+      <div className={`${partiallyDisabledMode ? 'opacity-50 pointer-events-none' : ''}`}>
         <Auction />
       </div>
-      <div className={isUIDisabled ? 'opacity-50 pointer-events-none' : ''}>
-        <MoreInfo />
-      </div>
+      {!isMainnet &&
+        <div className={`mt-4 ${isUIDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
+          <MoreInfo />
+        </div>
+      }
     </>
   );
 }

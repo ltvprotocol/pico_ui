@@ -2,8 +2,8 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import { formatUnits, parseUnits } from 'ethers';
 import { useVaultContext } from '@/contexts';
 import { useAppContext } from '@/contexts';
+import { fetchTokenPrice, formatTokenSymbol } from '@/utils';
 import { NumberDisplay, TransitionLoader, SymbolWithTooltip } from '@/components/ui';
-import { fetchTokenPrice } from '@/utils';
 
 export default function Info() {
   const {
@@ -209,7 +209,7 @@ export default function Info() {
                 </div>
                 <div className="font-medium text-gray-700">
                   <TransitionLoader isLoading={!borrowTokenSymbol}>
-                    {borrowTokenSymbol}
+                    {formatTokenSymbol(borrowTokenSymbol)}
                   </TransitionLoader>
                 </div>
               </div>
@@ -269,7 +269,7 @@ export default function Info() {
                 </div>
                 <div className="font-medium text-gray-700">
                   <TransitionLoader isLoading={!collateralTokenSymbol}>
-                    {collateralTokenSymbol}
+                    {formatTokenSymbol(collateralTokenSymbol)}
                   </TransitionLoader>
                 </div>
               </div>
@@ -300,7 +300,7 @@ export default function Info() {
               </div>
               <div className="font-medium text-gray-700">
                 <TransitionLoader isLoading={!borrowTokenSymbol}>
-                  {borrowTokenSymbol}
+                  {formatTokenSymbol(borrowTokenSymbol)}
                 </TransitionLoader>
               </div>
             </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { formatUnits, parseUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
-import { isUserRejected, allowOnlyNumbers } from '@/utils';
+import { isUserRejected, allowOnlyNumbers, formatTokenSymbol } from '@/utils';
 import { NumberDisplay, PreviewBox, TransitionLoader } from '@/components/ui';
 import { TokenType } from '@/types/actions';
 
@@ -192,7 +192,7 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
             await tx.wait();
             anyApproved = true;
             allAlreadyApproved = false;
-            setSuccess(`Successfully approved ${metadata.symbol}.`);
+            setSuccess(`Successfully approved ${formatTokenSymbol(metadata.symbol)}.`);
           }
         }
       }
@@ -296,22 +296,22 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
 
   const getInputSymbol = () => {
     if (rebalanceType === 'shares') return sharesSymbol;
-    if (rebalanceType === 'borrow') return borrowTokenSymbol;
-    return collateralTokenSymbol;
+    if (rebalanceType === 'borrow') return formatTokenSymbol(borrowTokenSymbol);
+    return formatTokenSymbol(collateralTokenSymbol);
   };
 
   const getTokenMetadata = (tokenType: TokenType) => {
     if (tokenType === 'collateral') {
       return {
         decimals: Number(collateralTokenDecimals),
-        symbol: collateralTokenSymbol,
+        symbol: formatTokenSymbol(collateralTokenSymbol),
         label: 'Collateral Assets',
         token: collateralToken
       };
     } else if (tokenType === 'borrow') {
       return {
         decimals: Number(borrowTokenDecimals),
-        symbol: borrowTokenSymbol,
+        symbol: formatTokenSymbol(borrowTokenSymbol),
         label: 'Borrow Assets',
         token: borrowToken
       };

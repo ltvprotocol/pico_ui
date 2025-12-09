@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { formatUnits, parseUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
-import { isUserRejected, allowOnlyNumbers } from '@/utils';
+import { isUserRejected, allowOnlyNumbers, formatTokenSymbol } from '@/utils';
 import { NumberDisplay, PreviewBox, TransitionLoader } from '@/components/ui';
 
 interface AuctionHandlerProps {
@@ -102,9 +102,9 @@ export default function AuctionHandler({ futureBorrowAssets, futureCollateralAss
 
   const getSymbolForAuctionType = () => {
     if (auctionType === 'provide_borrow') {
-      return borrowTokenSymbol;
+      return formatTokenSymbol(borrowTokenSymbol);
     } else {
-      return collateralTokenSymbol;
+      return formatTokenSymbol(collateralTokenSymbol);
     }
   };
 
@@ -200,9 +200,9 @@ export default function AuctionHandler({ futureBorrowAssets, futureCollateralAss
         if (currentAllowance < amount) {
           const tx = await token.approve(vaultAddress, amount);
           await tx.wait();
-          setSuccess(`Successfully approved ${tokenSymbol}.`);
+          setSuccess(`Successfully approved ${formatTokenSymbol(tokenSymbol)}.`);
         } else {
-          setSuccess(`Already approved ${tokenSymbol}.`);
+          setSuccess(`Already approved ${formatTokenSymbol(tokenSymbol)}.`);
         }
       }
     } catch (err) {

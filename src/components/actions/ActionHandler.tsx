@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { parseUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
-import { isUserRejected, wrapEth } from '@/utils';
+import { isUserRejected, wrapEth, formatTokenSymbol } from '@/utils';
 import { ActionForm, PreviewBox } from '@/components/ui';
 import { isWETHAddress } from '@/constants';
 import { WETH } from '@/typechain-types';
@@ -92,7 +92,7 @@ export default function ActionHandler({ actionType, tokenType }: ActionHandlerPr
 
   const maxAmount = getMaxAmount();
 
-  const displayTokenSymbol = config.usesShares ? sharesSymbol : tokenSymbol;
+  const displayTokenSymbol = config.usesShares ? sharesSymbol : formatTokenSymbol(tokenSymbol);
   const displayDecimals = config.usesShares ? sharesDecimals : tokenDecimals;
 
   const { isLoadingPreview, previewData, receive, provide } = useActionPreview({

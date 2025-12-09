@@ -2,6 +2,7 @@ import { formatUnits } from 'ethers';
 import { NumberDisplay, TransitionLoader, SymbolWithTooltip } from '@/components/ui';
 import { useVaultContext } from '@/contexts';
 import { TokenType } from '@/types/actions';
+import { formatTokenSymbol } from '@/utils';
 
 export interface PreviewItem {
   amount: bigint;
@@ -34,13 +35,13 @@ export const PreviewBox: React.FC<PreviewBoxProps> = ({
     if (tokenType === 'borrow') {
       return {
         label: 'Borrow Assets',
-        symbol: borrowTokenSymbol,
+        symbol: formatTokenSymbol(borrowTokenSymbol),
         decimals: Number(borrowTokenDecimals)
       };
     } else if (tokenType === 'collateral') {
       return {
         label: 'Collateral Assets',
-        symbol: collateralTokenSymbol,
+        symbol: formatTokenSymbol(collateralTokenSymbol),
         decimals: Number(collateralTokenDecimals)
       };
     } else {
@@ -58,7 +59,6 @@ export const PreviewBox: React.FC<PreviewBoxProps> = ({
         <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
         <h4 className="text-sm font-semibold text-gray-900">{title}</h4>
       </div>
-
       <TransitionLoader isLoading={isLoading}>
         <div className="space-y-4">
           {receive.length > 0 && (

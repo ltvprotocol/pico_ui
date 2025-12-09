@@ -1,5 +1,5 @@
 import React from 'react';
-import { allowOnlyNumbers, isButtonDisabled, formatForInput } from '@/utils';
+import { allowOnlyNumbers, isButtonDisabled, formatForInput, formatTokenSymbol } from '@/utils';
 import { NumberDisplay, SymbolWithTooltip } from '@/components/ui';
 
 type ActionFormProps = {
@@ -95,12 +95,15 @@ export const ActionForm: React.FC<ActionFormProps> = ({
               MAX
             </button>
             <span className="text-gray-500 sm:text-sm">
-              <SymbolWithTooltip
-                symbol={tokenSymbol}
-                placeholder='Shares'
-                elementId='action-form-symbol'
-                isLoading={!tokenSymbol}
-              />
+              {actionName === "Mint" || actionName === "Redeem"
+                ? <SymbolWithTooltip
+                  symbol={tokenSymbol}
+                  placeholder='Shares'
+                  elementId='action-form-symbol'
+                  isLoading={!tokenSymbol}
+                />
+                : formatTokenSymbol(tokenSymbol)
+              }
             </span>
           </div>
         </div>

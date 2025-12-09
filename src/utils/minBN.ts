@@ -1,1 +1,0 @@
-export const minBN = (a: bigint, b: bigint) => (a < b ? a : b);

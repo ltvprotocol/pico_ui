@@ -1,7 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { parseUnits, parseEther, formatUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
-import { isUserRejected, allowOnlyNumbers, isWstETHAddress, wrapEthToWstEth, calculateEthWrapForFlashLoan, minBN, formatTokenSymbol } from '@/utils';
+import {
+  isUserRejected,
+  allowOnlyNumbers,
+  isWstETHAddress,
+  wrapEthToWstEth,
+  calculateEthWrapForFlashLoan,
+  minBigInt,
+  formatTokenSymbol,
+  clampToPositive
+} from '@/utils';
 import { PreviewBox, NumberDisplay, TransitionLoader } from '@/components/ui';
 import { useFlashLoanPreview } from '@/hooks';
 import { GAS_RESERVE_WEI } from '@/constants';
@@ -56,8 +65,6 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     collateralTokenSymbol,
     collateralTokenDecimals,
     collateralTokenBalance,
-    // borrowTokenBalance,
-    // borrowTokenDecimals,
     ethBalance,
     refreshBalances,
     refreshVaultLimits,
@@ -120,16 +127,14 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     if (isWstETHVault) {
       const rawEthBalance = parseEther(ethBalance);
       const rawCollateralBalance = parseUnits(collateralTokenBalance, collateralTokenDecimals);
-      // const rawBorrowBalance = parseUnits(borrowTokenBalance, borrowTokenDecimals);)
 
       const sharesFromCollateral = await vaultLens.convertToSharesCollateral(rawCollateralBalance);
-      // const sharesFromBorrow = await vaultLens.convertToShares(rawBorrowBalance);
       const sharesFromEth = await vaultLens.convertToShares(rawEthBalance);
 
-      const userMaxMint = sharesFromCollateral + sharesFromEth - GAS_RESERVE_WEI * 3n; // + sharesFromBorrow
+      const userMaxMint = clampToPositive(sharesFromCollateral + sharesFromEth - GAS_RESERVE_WEI * 3n);
       const vaultMaxMint = await vaultLens.maxLowLevelRebalanceShares();
 
-      const maxMint = minBN(userMaxMint, vaultMaxMint);
+      const maxMint = minBigInt(userMaxMint, vaultMaxMint);
       const maxMintWithSlippage = applyMaxMintSlippage(maxMint);
       const formattedMaxMint = formatUnits(maxMintWithSlippage, sharesDecimals)
 
@@ -139,11 +144,16 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     // TODO: Write calculation logic for MAE/WETH Sepolia vault
   }
 
+  const setMaxRedeem = () => {
+    // For redeem no needed special calculations, max amount is shares balance
+    setMaxAmount(sharesBalance);
+  }
+
   useEffect(() => {
     if (helperType === 'mint') {
       setMaxMint();
     } else {
-      setMaxAmount(sharesBalance);
+      setMaxRedeem();
     }
   }, [
     helperType, vaultLens, ethBalance,
@@ -418,7 +428,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
               >
                 MAX
               </button>
-              <div className="text-gray-500 sm:text-smpr-3">
+              <div className="text-gray-500 sm:text-sm">
                 <TransitionLoader isLoading={!sharesSymbol}>
                   {sharesSymbol}
                 </TransitionLoader>

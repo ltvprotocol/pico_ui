@@ -2,8 +2,7 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import { formatUnits, parseUnits } from 'ethers';
 import { useVaultContext } from '@/contexts';
 import { useAppContext } from '@/contexts';
-import { renderSymbolWithPlaceholder } from '@/helpers/renderSymbolWithPlaceholder';
-import { NumberDisplay, TransitionLoader } from '@/components/ui';
+import { NumberDisplay, TransitionLoader, SymbolWithTooltip } from '@/components/ui';
 import { fetchTokenPrice } from '@/utils';
 
 export default function Info() {
@@ -238,14 +237,12 @@ export default function Info() {
                 }
               </div>
               <div className="font-medium text-gray-700">
-                <TransitionLoader isLoading={!sharesSymbol}>
-                  {renderSymbolWithPlaceholder({ 
-                    symbol: sharesSymbol, 
-                    placeholder: 'Shares', 
-                    elementId: 'info-shares', 
-                    isLoading: !sharesSymbol 
-                  })}
-                </TransitionLoader>
+                <SymbolWithTooltip
+                  symbol={sharesSymbol}
+                  placeholder='Shares'
+                  elementId='info-shares'
+                  isLoading={!sharesSymbol}
+                />
               </div>
             </div>
           )}

@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { parseUnits, parseEther, formatUnits, formatEther } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
-import { isUserRejected, allowOnlyNumbers, isWstETHAddress, wrapEthToWstEth, calculateEthWrapForFlashLoan, minBN } from '@/utils';
-import { PreviewBox, NumberDisplay } from '@/components/ui';
+import { isUserRejected, allowOnlyNumbers, isWstETHAddress, wrapEthToWstEth, calculateEthWrapForFlashLoan, minBigInt, formatTokenSymbol, clampToPositive } from '@/utils';
+import { PreviewBox, NumberDisplay, TransitionLoader } from '@/components/ui';
 import { useFlashLoanPreview } from '@/hooks';
 import { GAS_RESERVE_WEI } from '@/constants';
-import { renderWithTransition } from '@/helpers/renderWithTransition';
 import { findSharesForEthDeposit, findSharesForEthWithdraw } from '@/utils/findSharesForAmount';
 
 type ActionType = 'deposit' | 'withdraw';
@@ -13,6 +12,9 @@ type ActionType = 'deposit' | 'withdraw';
 interface FlashLoanDepositWithdrawHandlerProps {
   actionType: ActionType;
 }
+
+const GAS_RESERVE_MULTIPLIER = 3n;
+const GAS_RESERVE = GAS_RESERVE_WEI * GAS_RESERVE_MULTIPLIER;
 
 // fixed slippage for redeem, 0.1%
 const REDEEM_SLIPPAGE_DIVIDEND = 999;
@@ -166,10 +168,10 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
 
     const rawEthBalance = parseEther(ethBalance);
     const sharesFromEth = await vaultLens.convertToShares(rawEthBalance);
-    const userMaxMint = sharesFromEth - GAS_RESERVE_WEI * 3n;
+    const userMaxMint = clampToPositive(sharesFromEth - GAS_RESERVE);
     const vaultMaxMint = await vaultLens.maxLowLevelRebalanceShares();
 
-    const maxMint = minBN(userMaxMint, vaultMaxMint);
+    const maxMint = minBigInt(userMaxMint, vaultMaxMint);
     const maxDeposit = await vaultLens.convertToAssets(maxMint);
     const formattedMaxDeposit = formatEther(maxDeposit);
 
@@ -201,13 +203,18 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     }
   }, [actionType, ethBalance, collateralTokenBalance, sharesBalance, isWstETHVault, helper, sharesDecimals]);
 
-
   useEffect(() => {
     // Reset state if input is empty or invalid
     if (!estimatedShares || estimatedShares <= 0n) {
       setPreviewedWstEthAmount(null);
       setEthToWrapValue('');
       setHasInsufficientBalance(false);
+      return;
+    }
+  }, [estimatedShares]);
+
+  useEffect(() => {
+    if (!estimatedShares || estimatedShares <= 0n) {
       return;
     }
 
@@ -368,9 +375,6 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
         // @ts-expect-error - helper is FlashLoanMintHelper
         tx = await helper.mintSharesWithFlashLoanCollateral(estimatedShares);
       } else {
-        console.log("sharesBalance", sharesBalance);
-        console.log("estimatedShares", estimatedShares);
-        console.log("previewData: ", previewData!.amount);
         // @ts-expect-error - helper is FlashLoanRedeemHelper
         tx = await helper.redeemSharesWithCurveAndFlashLoanBorrow(estimatedShares, applyRedeemSlippage(previewData!.amount));
       }
@@ -422,20 +426,21 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     }
   };
 
-  const inputSymbol = actionType === 'deposit' ? (isWstETHVault ? 'ETH' : collateralTokenSymbol) : borrowTokenSymbol;
+  const rawInputSymbol =actionType === 'deposit' ? (isWstETHVault ? 'ETH' : collateralTokenSymbol) : borrowTokenSymbol;
+  const inputSymbol = formatTokenSymbol(rawInputSymbol);
 
   return (
     <div>
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>
-          <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="flash-loan-action-amount" className="block text-sm font-medium text-gray-700 mb-2">
             Amount to {actionType === 'deposit' ? 'Deposit' : 'Withdraw'}
           </label>
           <div className="relative rounded-md shadow-sm">
             <input
               type="text"
-              name="amount"
-              id="amount"
+              name="flash-loan-action-amount"
+              id="flash-loan-action-amount"
               value={inputValue}
               onChange={(e) => handleInputChange(e.target.value)}
               autoComplete="off"
@@ -458,14 +463,14 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
         </div>
 
         <div className="flex gap-1 mt-1 text-sm text-gray-500">
-          Max Available: {renderWithTransition(
-            <>
+          <span>Max Available:</span>
+          <TransitionLoader isLoading={!maxAmount}>
+            <span>
               <NumberDisplay value={maxAmount} />
               {' '}
               {inputSymbol}
-            </>,
-            !maxAmount
-          )}
+            </span>
+          </TransitionLoader>
         </div>
 
         {isWstETHVault && actionType === 'deposit' && (

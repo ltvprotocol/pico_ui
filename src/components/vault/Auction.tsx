@@ -4,6 +4,7 @@ import { NumberDisplay } from '@/components/ui';
 import AuctionHandler from './AuctionHandler';
 import { useVaultContext, useAppContext } from '@/contexts';
 import { useAdaptiveInterval } from '@/hooks';
+import { formatTokenSymbol } from '@/utils';
 
 export default function Auction() {
   const [isOpen, setIsOpen] = useState(false);
@@ -124,7 +125,7 @@ export default function Auction() {
     return (
       <span className="flex">
         <NumberDisplay className="mr-2" value={value} />
-        <span className="font-medium text-gray-700">{symbol || ''}</span>
+        <span className="font-medium text-gray-700">{formatTokenSymbol(symbol || '')}</span>
       </span>
     );
   };

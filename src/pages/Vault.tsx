@@ -1,4 +1,5 @@
-import { useLocation, useParams } from 'react-router-dom';
+import { useLocation, useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
 import { VaultContextProvider, useVaultContext } from "@/contexts";
 import { useAppContext } from "@/contexts";
 import UnrecognizedNetwork from "@/components/vault/UnrecognizedNetwork";
@@ -85,7 +86,26 @@ function VaultContent() {
 export default function Vault() {
   const { vaultAddress } = useParams<{ vaultAddress: string }>();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { currentNetwork } = useAppContext();
   const state = location.state || {};
+
+  // Track initial network to detect changes
+  const initialNetworkRef = useRef<string | null>(null);
+
+  // Redirect to home when network changes
+  useEffect(() => {
+    // On first render, store the current network
+    if (!initialNetworkRef.current) {
+      initialNetworkRef.current = currentNetwork;
+      return;
+    }
+
+    // If network changed from initial network, redirect to home
+    if (currentNetwork && initialNetworkRef.current && currentNetwork !== initialNetworkRef.current) {
+      navigate('/');
+    }
+  }, [currentNetwork]);
 
   if (!vaultAddress) return null;
 

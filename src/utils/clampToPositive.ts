@@ -1,0 +1,1 @@
+export const clampToPositive = (x: bigint) => (x > 0n ? x : 0n);

@@ -3,7 +3,6 @@ import { useVaultContext } from '@/contexts';
 import { formatLtv, formatTokenSymbol } from '@/utils';
 import { NumberDisplay, SymbolWithTooltip, TransitionLoader } from '@/components/ui';
 
-
 interface LoadingState {
   isLoadingTargetLtv: boolean;
   isLoadingMaxSafeLtv: boolean;
@@ -121,15 +120,15 @@ export default function MoreInfo() {
 
   return (
     <div className="relative rounded-lg bg-gray-50">
-      <button 
+      <button
         onClick={() => setIsOpen(!isOpen)}
         className="w-full bg-gray-100 flex items-center justify-between p-3 text-left hover:bg-gray-100 transition-colors rounded-lg focus:outline-none focus:ring-0"
       >
         <span className="text-lg font-medium text-gray-900">More Info</span>
-        <svg 
+        <svg
           className={`w-5 h-5 text-gray-600 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-          fill="none" 
-          stroke="currentColor" 
+          fill="none"
+          stroke="currentColor"
           viewBox="0 0 24 24"
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -149,8 +148,8 @@ export default function MoreInfo() {
               {[
                 [vaultMaxDepositCollateral, formatTokenSymbol(collateralTokenSymbol)],
                 [vaultMaxWithdrawCollateral, formatTokenSymbol(collateralTokenSymbol)],
-                [vaultMaxMintCollateral, <SymbolWithTooltip symbol={sharesSymbol} placeholder={'Shares'} elementId={'mint-collateral'} isLoading={!sharesSymbol} /> ],
-                [vaultMaxRedeemCollateral, <SymbolWithTooltip symbol={sharesSymbol} placeholder={'Shares'} elementId={'redeem-collateral'} isLoading={!sharesSymbol} />]
+                [vaultMaxMintCollateral, <SymbolWithTooltip symbol={sharesSymbol} placeholder={'Levereged Tokens'} elementId={'mint-collateral'} isLoading={!sharesSymbol} /> ],
+                [vaultMaxRedeemCollateral, <SymbolWithTooltip symbol={sharesSymbol} placeholder={'Levereged Tokens'} elementId={'redeem-collateral'} isLoading={!sharesSymbol} />]
               ].map((info, index) => (
                 <div key={index} className='flex'>
                   <div className="mr-2 min-w-[60px] text-right">
@@ -171,8 +170,8 @@ export default function MoreInfo() {
               {[
                 [vaultMaxDeposit, formatTokenSymbol(borrowTokenSymbol)],
                 [vaultMaxWithdraw, formatTokenSymbol(borrowTokenSymbol)],
-                [vaultMaxMint, <SymbolWithTooltip symbol={sharesSymbol} placeholder={'Shares'} elementId={'mint-borrow'} isLoading={!sharesSymbol} />],
-                [vaultMaxRedeem, <SymbolWithTooltip symbol={sharesSymbol} placeholder={'Shares'} elementId={'redeem-borrow'} isLoading={!sharesSymbol} />]
+                [vaultMaxMint, <SymbolWithTooltip symbol={sharesSymbol} placeholder={'Levereged Tokens'} elementId={'mint-borrow'} isLoading={!sharesSymbol} />],
+                [vaultMaxRedeem, <SymbolWithTooltip symbol={sharesSymbol} placeholder={'Levereged Tokens'} elementId={'redeem-borrow'} isLoading={!sharesSymbol} />]
               ].map((info, index) => (
                 <div key={index} className='flex'>
                   <div className="mr-2 min-w-[60px] text-right">
@@ -204,8 +203,8 @@ export default function MoreInfo() {
               {[
                 [vaultMaxDepositCollateral, formatTokenSymbol(collateralTokenSymbol)],
                 [vaultMaxWithdrawCollateral, formatTokenSymbol(collateralTokenSymbol)],
-                [vaultMaxMintCollateral, <SymbolWithTooltip symbol={sharesSymbol} placeholder={'Shares'} elementId={'mobile-mint-collateral'} isLoading={!sharesSymbol} />],
-                [vaultMaxRedeemCollateral, <SymbolWithTooltip symbol={sharesSymbol} placeholder={'Shares'} elementId={'mobile-redeem-collateral'} isLoading={!sharesSymbol} />]
+                [vaultMaxMintCollateral, <SymbolWithTooltip symbol={sharesSymbol} placeholder={'Levereged Tokens'} elementId={'mobile-mint-collateral'} isLoading={!sharesSymbol} />],
+                [vaultMaxRedeemCollateral, <SymbolWithTooltip symbol={sharesSymbol} placeholder={'Levereged Tokens'} elementId={'mobile-redeem-collateral'} isLoading={!sharesSymbol} />]
               ].map((info, index) => (
                 <div key={index} className='flex'>
                   <div className="mr-2 min-w-[60px] text-right">
@@ -235,8 +234,8 @@ export default function MoreInfo() {
               {[
                 [vaultMaxDeposit, formatTokenSymbol(borrowTokenSymbol)],
                 [vaultMaxWithdraw, formatTokenSymbol(borrowTokenSymbol)],
-                [vaultMaxMint, <SymbolWithTooltip symbol={sharesSymbol} placeholder={'Shares'} elementId={'mobile-mint-borrow'} isLoading={!sharesSymbol} />],
-                [vaultMaxRedeem, <SymbolWithTooltip symbol={sharesSymbol} placeholder={'Shares'} elementId={'mobile-redeem-borrow'} isLoading={!sharesSymbol} />]
+                [vaultMaxMint, <SymbolWithTooltip symbol={sharesSymbol} placeholder={'Levereged Tokens'} elementId={'mobile-mint-borrow'} isLoading={!sharesSymbol} />],
+                [vaultMaxRedeem, <SymbolWithTooltip symbol={sharesSymbol} placeholder={'Levereged Tokens'} elementId={'mobile-redeem-borrow'} isLoading={!sharesSymbol} />]
               ].map((info, index) => (
                 <div key={index} className='flex'>
                   <div className="mr-2 min-w-[60px] text-right">

@@ -21,6 +21,7 @@ type ActionFormProps = {
   setSlippageTolerance?: React.Dispatch<React.SetStateAction<string>>;
   setUseDefaultSlippage?: React.Dispatch<React.SetStateAction<boolean>>;
   preview?: React.ReactNode;
+  actionType?: string;
 }
 
 export const ActionForm: React.FC<ActionFormProps> = ({
@@ -41,7 +42,8 @@ export const ActionForm: React.FC<ActionFormProps> = ({
   defaultSlippage = '0.5',
   setSlippageTolerance,
   setUseDefaultSlippage,
-  preview
+  preview,
+  actionType
 }) => {
   const setMaxAmount = () => {
     setAmount(formatForInput(maxAmount, decimals));
@@ -69,7 +71,7 @@ export const ActionForm: React.FC<ActionFormProps> = ({
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-2">
-          Amount to {actionName}
+          {(actionType === 'mint' || actionType === 'redeem') ? 'Leveraged Tokens' : 'Amount'} to {actionName}
         </label>
         <div className="relative rounded-md shadow-sm">
           <input
@@ -79,14 +81,14 @@ export const ActionForm: React.FC<ActionFormProps> = ({
             value={amount}
             onChange={handleChange}
             autoComplete="off"
-            className="block w-full pr-24 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+            className="block w-full pr-20 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             placeholder="0.0"
             step="any"
             required
             disabled={isLoading}
             max={maxAmount}
           />
-          <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+          <div className="absolute inset-y-0 right-0 flex items-center pr-3">
             <button
               type="button"
               onClick={setMaxAmount}
@@ -95,13 +97,13 @@ export const ActionForm: React.FC<ActionFormProps> = ({
               MAX
             </button>
             <span className="text-gray-500 sm:text-sm">
-              {actionName === "Mint" || actionName === "Redeem"
+              {actionType === "mint" || actionType === "redeem"
                 ? <SymbolWithTooltip
-                  symbol={tokenSymbol}
-                  placeholder='Shares'
-                  elementId='action-form-symbol'
-                  isLoading={!tokenSymbol}
-                />
+                    symbol={tokenSymbol}
+                    placeholder='Levereged Tokens'
+                    elementId='action-form-symbol'
+                    isLoading={!tokenSymbol}
+                  />
                 : formatTokenSymbol(tokenSymbol)
               }
             </span>
@@ -113,7 +115,7 @@ export const ActionForm: React.FC<ActionFormProps> = ({
               <NumberDisplay value={maxAmount} />
               <SymbolWithTooltip
                 symbol={tokenSymbol}
-                placeholder='Shares'
+                placeholder='Levereged Tokens'
                 elementId='action-form-max-available'
                 isLoading={!tokenSymbol}
               />

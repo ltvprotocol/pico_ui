@@ -239,7 +239,7 @@ export default function Info() {
               <div className="font-medium text-gray-700">
                 <SymbolWithTooltip
                   symbol={sharesSymbol}
-                  placeholder='Shares'
+                  placeholder='Levereged Tokens'
                   elementId='info-shares'
                   isLoading={!sharesSymbol}
                 />

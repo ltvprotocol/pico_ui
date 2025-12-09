@@ -46,7 +46,7 @@ export const PreviewBox: React.FC<PreviewBoxProps> = ({
       };
     } else {
       return {
-        label: 'Shares',
+        label: 'Leveraged Tokens',
         symbol: sharesSymbol,
         decimals: Number(sharesDecimals)
       };
@@ -85,7 +85,7 @@ export const PreviewBox: React.FC<PreviewBoxProps> = ({
                           {item.tokenType === 'shares'
                             ? <SymbolWithTooltip
                                 symbol={metadata.symbol}
-                                placeholder='Shares'
+                                placeholder='Levereged Tokens'
                                 elementId={`preview-receive-shares-${idx}`}
                                 isLoading={!metadata.symbol}
                               />
@@ -124,7 +124,7 @@ export const PreviewBox: React.FC<PreviewBoxProps> = ({
                           {item.tokenType === 'shares'
                             ? <SymbolWithTooltip
                                 symbol={metadata.symbol}
-                                placeholder='Shares'
+                                placeholder='Levereged Tokens'
                                 elementId={`preview-provide-shares-${idx}`}
                                 isLoading={!metadata.symbol}
                               />

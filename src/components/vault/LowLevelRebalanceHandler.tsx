@@ -444,7 +444,7 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
                 <button
                   type="button"
                   onClick={handleMaxClick}
-                  className="text-sm text-indigo-600 hover:text-indigo-500 mr-2"
+                  className="bg-transparent text-sm text-indigo-600 hover:text-indigo-500 mr-2"
                   disabled={loading}
                 >
                   MAX

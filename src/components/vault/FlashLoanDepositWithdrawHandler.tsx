@@ -524,7 +524,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
               <button
                 type="button"
                 onClick={handleSetMax}
-                className="text-sm text-indigo-600 hover:text-indigo-500 mr-2"
+                className="bg-transparent text-sm text-indigo-600 hover:text-indigo-500 mr-2"
                 disabled={loading || !maxAmount}
               >
                 MAX

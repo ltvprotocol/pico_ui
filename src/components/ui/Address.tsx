@@ -8,7 +8,7 @@ interface AddressProps {
   full?: boolean;
 }
 
-export default function Address({ address, className = '', full = false }: AddressProps) {
+export function Address({ address, className = '', full = false }: AddressProps) {
   const { currentNetwork } = useAppContext();
 
   const baseUrl = currentNetwork === SEPOLIA_CHAIN_ID_STRING

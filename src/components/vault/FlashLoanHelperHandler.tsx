@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { parseUnits, parseEther, formatUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
-import { isUserRejected, allowOnlyNumbers, isWstETHAddress, wrapEthToWstEth, calculateEthWrapForFlashLoan, minBN } from '@/utils';
-import { PreviewBox, NumberDisplay } from '@/components/ui';
+import { isUserRejected, allowOnlyNumbers, isWstETHAddress, wrapEthToWstEth, calculateEthWrapForFlashLoan, minBN, formatTokenSymbol } from '@/utils';
+import { PreviewBox, NumberDisplay, TransitionLoader } from '@/components/ui';
 import { useFlashLoanPreview } from '@/hooks';
 import { GAS_RESERVE_WEI } from '@/constants';
-import { renderWithTransition } from '@/helpers/renderWithTransition';
 
 type HelperType = 'mint' | 'redeem';
 
@@ -250,9 +249,9 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
         if (currentAllowance < previewData.amount) {
           const tx = await collateralToken.approve(helperAddress, previewData.amount);
           await tx.wait();
-          setSuccess(`Successfully approved ${collateralTokenSymbol}.`);
+          setSuccess(`Successfully approved ${formatTokenSymbol(collateralTokenSymbol)}.`);
         } else {
-          setSuccess(`Already approved ${collateralTokenSymbol}.`);
+          setSuccess(`Already approved ${formatTokenSymbol(collateralTokenSymbol)}.`);
         }
       } else {
         if (!vault) return;
@@ -270,7 +269,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
       if (isUserRejected(err)) {
         setApprovalError('Approval canceled by user.');
       } else {
-        const tokenName = helperType === 'mint' ? 'collateral token' : 'shares';
+        const tokenName = helperType === 'mint' ? 'collateral token' : 'leveraged tokens';
         setApprovalError(`Failed to approve ${tokenName}.`);
         console.error(`Failed to approve ${tokenName}:`, err);
       }
@@ -333,7 +332,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
       setInputValue('');
       setSharesToProcess(null);
       setEthToWrapValue('');
-      setSuccess(`Successfully ${helperType === 'mint' ? 'minted' : 'redeemed'} shares with flash loan!`);
+      setSuccess(`Successfully ${helperType === 'mint' ? 'minted' : 'redeemed'} leveraged tokens with flash loan!`);
     } catch (err: unknown) {
       if (isUserRejected(err)) {
         setError('Transaction canceled by user.');
@@ -346,9 +345,9 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
             `Contract execution failed. This may be due to: insufficient liquidity in Curve pool, flash loan provider lacks funds, or other contract conditions. Please try a smaller amount or contact support.`
           );
         } else {
-          setError(`Failed to ${helperType} shares with flash loan`);
+          setError(`Failed to ${helperType} leveraged tokens with flash loan`);
         }
-        console.error(`Failed to ${helperType} shares with flash loan:`, err);
+        console.error(`Failed to ${helperType} leveraged tokens with flash loan:`, err);
       }
     } finally {
       setLoading(false);
@@ -389,14 +388,14 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
   };
 
   const userBalance = helperType === 'mint' ? effectiveCollateralBalance : sharesBalance;
-  const userBalanceToken = helperType === 'mint' ? collateralTokenSymbol : sharesSymbol;
+  const userBalanceToken = helperType === 'mint' ? formatTokenSymbol(collateralTokenSymbol) : sharesSymbol;
 
   return (
     <div>
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>
           <label htmlFor="shares" className="block text-sm font-medium text-gray-700 mb-2">
-            Shares to {helperType === 'mint' ? 'Mint' : 'Redeem'}
+            Leveraged Tokens to {helperType === 'mint' ? 'Mint' : 'Redeem'}
           </label>
           <div className="relative rounded-md shadow-sm">
             <input
@@ -419,20 +418,20 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
               >
                 MAX
               </button>
-              <span className="text-gray-500 sm:text-sm">{sharesSymbol}</span>
+              <div className="text-gray-500 sm:text-smpr-3">
+                <TransitionLoader isLoading={!sharesSymbol}>
+                  {sharesSymbol}
+                </TransitionLoader>
+              </div>
             </div>
           </div>
         </div>
 
         <div className="flex gap-1 mt-1 text-sm text-gray-500">
-          Max Available: {renderWithTransition(
-            <>
-              <NumberDisplay value={maxAmount} />
-              {' '}
-              {sharesSymbol}
-            </>,
-            !maxAmount
-          )}
+          <span>Max Available:</span>
+          <TransitionLoader isLoading={!maxAmount}>
+            <NumberDisplay value={maxAmount} />{' '}{sharesSymbol}
+          </TransitionLoader>
         </div>
 
         {isWstETHVault && helperType === 'mint' && (
@@ -531,7 +530,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
           {isWrapping
             ? 'Wrapping ETH to wstETH...'
             : isApproving
-              ? `Approving ${helperType === 'mint' ? 'Collateral' : 'Shares'}...`
+              ? `Approving ${helperType === 'mint' ? 'Collateral' : 'Leveraged Tokens'}...`
               : loading
                 ? 'Processing...'
                 : hasInsufficientBalance
@@ -565,11 +564,11 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
         </h4>
         <p className="text-xs text-blue-800 mb-2">
           {helperType === 'mint'
-            ? `Use a flash loan to mint vault shares. You only need to provide the net collateral required. The flash loan covers the borrow amount temporarily during the transaction.${isWstETHVault ? ' For wstETH vaults, you can also use ETH which will be automatically wrapped to wstETH.' : ''}`
-            : 'Use a flash loan to redeem vault shares and swap them for borrow tokens via Curve. You only need to provide the net borrow tokens required. The flash loan helps unwind your leveraged position efficiently.'}
+            ? `Use a flash loan to mint leveraged tokens. You only need to provide the net collateral required. The flash loan covers the borrow amount temporarily during the transaction.${isWstETHVault ? ' For wstETH vaults, you can also use ETH which will be automatically wrapped to wstETH.' : ''}`
+            : 'Use a flash loan to redeem leveraged tokens and swap them for borrow tokens via Curve. You only need to provide the net borrow tokens required. The flash loan helps unwind your leveraged position efficiently.'}
         </p>
         <p className="text-xs text-blue-700">
-          💡 Tip: This is a more capital-efficient way to {helperType} shares compared to the
+          💡 Tip: This is a more capital-efficient way to {helperType} leveraged tokens compared to the
           standard method.
         </p>
       </div>

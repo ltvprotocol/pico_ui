@@ -16,4 +16,5 @@ export { fetchTokenPrice } from './fetchTokenPrice';
 export { loadTVL } from './loadTVL';
 export { max0n } from './max0n';
 export { minBN } from './minBN';
+export { formatTokenSymbol } from './formatTokenSymbol';
 export * from './api';

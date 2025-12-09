@@ -12,8 +12,10 @@ import {
   clampToPositive
 } from '@/utils';
 import { PreviewBox, NumberDisplay, TransitionLoader } from '@/components/ui';
-import { useFlashLoanPreview } from '@/hooks';
+import { useAdaptiveInterval, useFlashLoanPreview } from '@/hooks';
 import { GAS_RESERVE_WEI } from '@/constants';
+import { maxBigInt } from '@/utils';
+import { ERC20__factory } from '@/typechain-types';
 
 type HelperType = 'mint' | 'redeem';
 
@@ -50,12 +52,16 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
   const [previewedWstEthAmount, setPreviewedWstEthAmount] = useState<bigint | null>(null);
   const [effectiveCollateralBalance, setEffectiveCollateralBalance] = useState('');
   const [maxAmount, setMaxAmount] = useState('');
+  const [minMint, setMinMint] = useState('');
+  const [minRedeem, setMinRedeem] = useState('');
+  const [minTooBig, setMinDisablesAction] = useState(false);
 
-  const { address, provider, signer } = useAppContext();
+  const { address, provider, signer, publicProvider } = useAppContext();
 
   const {
     vault,
     vaultLens,
+    vaultAddress,
     flashLoanMintHelper,
     flashLoanRedeemHelper,
     flashLoanMintHelperAddress,
@@ -151,6 +157,66 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     // For redeem no needed special calculations, max amount is shares balance
     setMaxAmount(sharesBalance);
   }
+
+  const loadMinAvailable = async () => {
+    if (!vaultLens || !publicProvider || !vaultAddress || !sharesDecimals) return;
+
+    const [, deltaShares] = await vaultLens.previewLowLevelRebalanceBorrow(0);
+
+    if (deltaShares > 0n) {
+      setMinRedeem('0');
+
+      const variableDebtEthWETH = "0xeA51d7853EEFb32b6ee06b1C12E6dcCA88Be0fFE";
+      const variableDebtToken = ERC20__factory.connect(variableDebtEthWETH, publicProvider);
+      const variableDebtTokenAmount = await variableDebtToken.balanceOf(vaultAddress);
+      const variableDebtTokenShares = await vaultLens.convertToShares(variableDebtTokenAmount);
+      const amountWithPrecision = variableDebtTokenShares * 2n / 10_000_000n;
+
+      const rawMinMint = maxBigInt(
+        deltaShares * 101n / 100n,
+        deltaShares + 5n * amountWithPrecision
+      )
+
+      const formattedMinMint = formatUnits(rawMinMint, sharesDecimals);
+      setMinMint(formattedMinMint);
+    } else if (deltaShares < 0n) {
+      setMinMint('0');
+
+      const absDelta = deltaShares < 0n ? -deltaShares : deltaShares;
+      const rawMinRedeem = absDelta * 10001n / 10000n;
+
+      const formattedMinRedeem = formatUnits(rawMinRedeem, sharesDecimals);
+      setMinRedeem(formattedMinRedeem);
+    } else {
+      setMinMint('0');
+      setMinRedeem('0');
+    }
+  };
+
+  useAdaptiveInterval(loadMinAvailable, {
+    initialDelay: 12000,
+    maxDelay: 60000,
+    multiplier: 2,
+    enabled: !!vaultLens && !!publicProvider
+  });
+
+  useEffect(() => {
+    if (!maxAmount || !minMint || !minRedeem) return;
+
+    const rawMaxAmount = parseUnits(maxAmount, sharesDecimals);
+    const rawMinMint = parseUnits(minMint, sharesDecimals);
+    const rawMinRedeem = parseUnits(minRedeem, sharesDecimals);
+
+    if (helperType === 'mint') {
+      if (rawMinMint > rawMaxAmount) {
+        setMinDisablesAction(true);
+      }
+    } else {
+      if (rawMinRedeem > rawMaxAmount) {
+        setMinDisablesAction(true);
+      }
+    }
+  }, [helperType, sharesDecimals, minMint, minRedeem]);
 
   useEffect(() => {
     if (helperType === 'mint') {
@@ -447,6 +513,17 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
           </TransitionLoader>
         </div>
 
+        <div className="flex gap-1 mt-1 text-sm text-gray-500">
+          <span>Min Available:</span>
+          <TransitionLoader isLoading={!minMint || !minRedeem}>
+            {helperType === "mint" ?
+              <NumberDisplay value={minMint} /> :
+              <NumberDisplay value={minRedeem} />
+            }
+            {' '}{sharesSymbol}
+          </TransitionLoader>
+        </div>
+
         {isWstETHVault && helperType === 'mint' && (
           <>
             {useEthWrapToWSTETH && (
@@ -536,7 +613,8 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
             isWrapping ||
             hasInsufficientBalance ||
             isErrorLoadingPreview ||
-            invalidRebalanceMode
+            invalidRebalanceMode ||
+            minTooBig
           }
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >

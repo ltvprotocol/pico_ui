@@ -81,10 +81,10 @@ function VaultContent() {
       {isMainnet &&
         <>
           <div className={`mb-4 ${isUIDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
-            <ActionsDropdown />
-          </div>
-          <div className={`mb-4 ${isUIDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
             <MoreInfo />
+          </div>
+          <div className={`mb-4 ${partiallyDisabledMode ? 'opacity-50 pointer-events-none' : ''}`}>
+            <ActionsDropdown />
           </div>
         </>
       }

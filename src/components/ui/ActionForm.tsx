@@ -1,7 +1,6 @@
 import React from 'react';
-import { allowOnlyNumbers, isButtonDisabled, formatForInput } from '@/utils';
-import { renderSymbolWithPlaceholder } from '@/helpers/renderSymbolWithPlaceholder';
-import { NumberDisplay } from '@/components/ui';
+import { allowOnlyNumbers, isButtonDisabled, formatForInput, formatTokenSymbol } from '@/utils';
+import { NumberDisplay, SymbolWithTooltip } from '@/components/ui';
 
 type ActionFormProps = {
   actionName: string;
@@ -100,31 +99,33 @@ export const ActionForm: React.FC<ActionFormProps> = ({
             <button
               type="button"
               onClick={setMaxAmount}
-              className="text-sm text-indigo-600 hover:text-indigo-500"
+              className="bg-transparent text-sm text-indigo-600 hover:text-indigo-500 mr-2"
             >
               MAX
             </button>
-            {!(actionType === 'mint' || actionType === 'redeem') && (
-              <span className="text-gray-500 sm:text-sm px-3">
-                {renderSymbolWithPlaceholder({
-                  symbol: tokenSymbol,
-                  placeholder: 'Leveraged Tokens',
-                  elementId: 'action-form-symbol',
-                  isLoading: !tokenSymbol
-                })}
-              </span>
-            )}
+            <span className="text-gray-500 sm:text-sm">
+              {actionName === "Mint" || actionName === "Redeem"
+                ? <SymbolWithTooltip
+                  symbol={tokenSymbol}
+                  placeholder='Levereged Tokens'
+                  elementId='action-form-symbol'
+                  isLoading={!tokenSymbol}
+                />
+                : formatTokenSymbol(tokenSymbol)
+              }
+            </span>
           </div>
         </div>
         <div className="flex gap-1 mt-1 text-sm text-gray-500">
           Max Available: {!maxAmount ? 'Loading...' : (
             <>
-              <NumberDisplay value={maxAmount} /> {renderSymbolWithPlaceholder({
-                symbol: tokenSymbol,
-                placeholder: 'Leveraged Tokens',
-                elementId: 'action-form-max-available',
-                isLoading: !tokenSymbol
-              })}
+              <NumberDisplay value={maxAmount} />
+              <SymbolWithTooltip
+                symbol={tokenSymbol}
+                placeholder='Levereged Tokens'
+                elementId='action-form-max-available'
+                isLoading={!tokenSymbol}
+              />
             </>
           )}
         </div>

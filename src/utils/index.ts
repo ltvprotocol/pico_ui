@@ -14,4 +14,5 @@ export { shortAddress } from './shortAddress';
 export { isVaultExists } from './isVaultExists';
 export { fetchTokenPrice } from './fetchTokenPrice';
 export { loadTVL } from './loadTVL';
+export { formatTokenSymbol } from './formatTokenSymbol';
 export * from './api';

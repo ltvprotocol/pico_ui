@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { parseUnits, parseEther, formatUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
-import { isUserRejected, allowOnlyNumbers, isWstETHAddress, wrapEthToWstEth, calculateEthWrapForFlashLoan } from '@/utils';
-import { PreviewBox, NumberDisplay } from '@/components/ui';
+import { isUserRejected, allowOnlyNumbers, isWstETHAddress, wrapEthToWstEth, calculateEthWrapForFlashLoan, formatTokenSymbol } from '@/utils';
+import { PreviewBox, NumberDisplay, TransitionLoader } from '@/components/ui';
 import { useFlashLoanPreview } from '@/hooks';
 import { GAS_RESERVE_WEI } from '@/constants';
-import { renderWithTransition } from '@/helpers/renderWithTransition';
 
 type HelperType = 'mint' | 'redeem';
 
@@ -188,9 +187,9 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
         if (currentAllowance < previewData.amount) {
           const tx = await collateralToken.approve(helperAddress, previewData.amount);
           await tx.wait();
-          setSuccess(`Successfully approved ${collateralTokenSymbol}.`);
+          setSuccess(`Successfully approved ${formatTokenSymbol(collateralTokenSymbol)}.`);
         } else {
-          setSuccess(`Already approved ${collateralTokenSymbol}.`);
+          setSuccess(`Already approved ${formatTokenSymbol(collateralTokenSymbol)}.`);
         }
       } else {
         if (!vault) return;
@@ -318,7 +317,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
   };
 
   const userBalance = helperType === 'mint' ? effectiveCollateralBalance : sharesBalance;
-  const userBalanceToken = helperType === 'mint' ? collateralTokenSymbol : sharesSymbol;
+  const userBalanceToken = helperType === 'mint' ? formatTokenSymbol(collateralTokenSymbol) : sharesSymbol;
 
   return (
     <div>
@@ -350,16 +349,11 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
           </div>
         </div>
 
-
         <div className="flex gap-1 mt-1 text-sm text-gray-500">
-          Max Available: {renderWithTransition(
-            <>
-              <NumberDisplay value={maxAmount} />
-              {' '}
-              {sharesSymbol}
-            </>,
-            !maxAmount
-          )}
+          <span>Max Available:</span>
+          <TransitionLoader isLoading={!maxAmount}>
+            <NumberDisplay value={maxAmount} />{' '}{sharesSymbol}
+          </TransitionLoader>
         </div>
 
         {isWstETHVault && helperType === 'mint' && (

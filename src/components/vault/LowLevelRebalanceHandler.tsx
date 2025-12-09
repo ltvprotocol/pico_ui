@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { formatUnits, parseUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
-import { isUserRejected, allowOnlyNumbers } from '@/utils';
-import { renderWithTransition } from '@/helpers/renderWithTransition';
-import { NumberDisplay, PreviewBox } from '@/components/ui';
+import { isUserRejected, allowOnlyNumbers, formatTokenSymbol } from '@/utils';
+import { NumberDisplay, PreviewBox, TransitionLoader } from '@/components/ui';
 import { TokenType } from '@/types/actions';
 
 type ActionType = 'mint' | 'burn' | 'provide' | 'receive';
@@ -193,7 +192,7 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
             await tx.wait();
             anyApproved = true;
             allAlreadyApproved = false;
-            setSuccess(`Successfully approved ${metadata.symbol}.`);
+            setSuccess(`Successfully approved ${formatTokenSymbol(metadata.symbol)}.`);
           }
         }
       }
@@ -297,22 +296,22 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
 
   const getInputSymbol = () => {
     if (rebalanceType === 'shares') return sharesSymbol;
-    if (rebalanceType === 'borrow') return borrowTokenSymbol;
-    return collateralTokenSymbol;
+    if (rebalanceType === 'borrow') return formatTokenSymbol(borrowTokenSymbol);
+    return formatTokenSymbol(collateralTokenSymbol);
   };
 
   const getTokenMetadata = (tokenType: TokenType) => {
     if (tokenType === 'collateral') {
       return {
         decimals: Number(collateralTokenDecimals),
-        symbol: collateralTokenSymbol,
+        symbol: formatTokenSymbol(collateralTokenSymbol),
         label: 'Collateral Assets',
         token: collateralToken
       };
     } else if (tokenType === 'borrow') {
       return {
         decimals: Number(borrowTokenDecimals),
-        symbol: borrowTokenSymbol,
+        symbol: formatTokenSymbol(borrowTokenSymbol),
         label: 'Borrow Assets',
         token: borrowToken
       };
@@ -458,15 +457,13 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
           </div>
           {rebalanceType !== 'shares' && maxValue !== null && maxValue !== 0n && (
             <div className="flex gap-1 mt-1 text-sm text-gray-500">
-              Max Available: {renderWithTransition(
-                <>
-                  {maxValue < 0n && <span className="mr-0.5">-</span>}
-                  <NumberDisplay value={formatUnits(maxValue < 0n ? -maxValue : maxValue, decimals)} />
-                  {' '}
-                  {getInputSymbol()}
-                </>,
-                isLoadingMax
-              )}
+              <span>Max Available:</span>
+              <TransitionLoader isLoading={isLoadingMax}>
+                {maxValue < 0n && <span className="mr-0.5">-</span>}
+                <NumberDisplay value={formatUnits(maxValue < 0n ? -maxValue : maxValue, decimals)} />
+                {' '}
+                {getInputSymbol()}
+              </TransitionLoader>
             </div>
           )}
         </div>

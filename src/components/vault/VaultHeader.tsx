@@ -4,7 +4,6 @@ import { shortAddress, formatTokenSymbol } from '@/utils';
 
 export default function VaultHeader() {
   const { borrowTokenSymbol, collateralTokenSymbol, maxLeverage, lendingName, vaultAddress } = useVaultContext();
-  const shortVaultAddress = vaultAddress ? shortAddress(vaultAddress) : '';
 
   return (
     <div className="w-full flex flex-col justify-between w-full mb-4">
@@ -14,8 +13,7 @@ export default function VaultHeader() {
         {maxLeverage && <div className="text-xl font-normal mr-2">{`x${maxLeverage}`}</div>}
         <div className="text-xl font-light">{lendingName || "Lending"}</div>
       </div>
-      <div className="text-sm text-gray-500 [@media(max-width:450px)]:hidden">{vaultAddress}</div>
-      <div className="hidden text-sm text-gray-500 [@media(max-width:450px)]:block">{shortVaultAddress}</div>
+      <Address address={vaultAddress} className="text-sm text-gray-500 hover:text-gray-700 max-w-fit" full />
     </div>
   );
 }

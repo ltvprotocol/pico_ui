@@ -24,10 +24,26 @@ export interface TermsOfUseSignResponse {
   signed_at: string;
 }
 
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout = 5000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    clearTimeout(id);
+    return response;
+  } catch (error) {
+    clearTimeout(id);
+    throw error;
+  }
+}
+
 export async function fetchApy(vaultAddress: string, chainId: string | null): Promise<number | null> {
   try {
     const apiUrl = API_URLS[chainId || SEPOLIA_CHAIN_ID_STRING];
-    const response = await fetch(`${apiUrl}/apy/${vaultAddress}`);
+    const response = await fetchWithTimeout(`${apiUrl}/apy/${vaultAddress}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch APY: ${response.status}`);
     }
@@ -42,7 +58,7 @@ export async function fetchApy(vaultAddress: string, chainId: string | null): Pr
 export async function fetchPointsRate(vaultAddress: string, chainId: string | null): Promise<number | null> {
   try {
     const apiUrl = API_URLS[chainId || SEPOLIA_CHAIN_ID_STRING] || API_URLS[SEPOLIA_CHAIN_ID_STRING];
-    const response = await fetch(`${apiUrl}/points-rate/${vaultAddress}`);
+    const response = await fetchWithTimeout(`${apiUrl}/points-rate/${vaultAddress}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch points rate: ${response.status}`);
     }
@@ -57,7 +73,7 @@ export async function fetchPointsRate(vaultAddress: string, chainId: string | nu
 export async function fetchTermsOfUseText(chainId: string | null): Promise<string | null> {
   try {
     const apiUrl = TERMS_API_URLS[chainId || SEPOLIA_CHAIN_ID_STRING] || TERMS_API_URLS[SEPOLIA_CHAIN_ID_STRING];
-    const response = await fetch(`${apiUrl}/terms-of-use-text`);
+    const response = await fetchWithTimeout(`${apiUrl}/terms-of-use-text`);
     if (!response.ok) {
       throw new Error(`Failed to fetch terms of use text: ${response.status}`);
     }
@@ -72,7 +88,7 @@ export async function fetchTermsOfUseText(chainId: string | null): Promise<strin
 export async function checkTermsOfUseStatus(address: string, chainId: string | null): Promise<TermsOfUseStatusResponse | null> {
   try {
     const apiUrl = TERMS_API_URLS[chainId || SEPOLIA_CHAIN_ID_STRING] || TERMS_API_URLS[SEPOLIA_CHAIN_ID_STRING];
-    const response = await fetch(`${apiUrl}/terms-of-use/${address}`);
+    const response = await fetchWithTimeout(`${apiUrl}/terms-of-use/${address}`);
     if (!response.ok) {
       throw new Error(`Failed to check terms of use status: ${response.status}`);
     }
@@ -91,7 +107,7 @@ export async function submitTermsOfUseSignature(
 ): Promise<TermsOfUseSignResponse | null> {
   try {
     const apiUrl = TERMS_API_URLS[chainId || SEPOLIA_CHAIN_ID_STRING] || TERMS_API_URLS[SEPOLIA_CHAIN_ID_STRING];
-    const response = await fetch(`${apiUrl}/terms-of-use/${address}`, {
+    const response = await fetchWithTimeout(`${apiUrl}/terms-of-use/${address}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

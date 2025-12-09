@@ -22,7 +22,6 @@ type ActionFormProps = {
   setUseDefaultSlippage?: React.Dispatch<React.SetStateAction<boolean>>;
   preview?: React.ReactNode;
   actionType?: string;
-  sharesSymbol?: string | null;
 }
 
 export const ActionForm: React.FC<ActionFormProps> = ({
@@ -44,8 +43,7 @@ export const ActionForm: React.FC<ActionFormProps> = ({
   setSlippageTolerance,
   setUseDefaultSlippage,
   preview,
-  actionType,
-  sharesSymbol
+  actionType
 }) => {
   const setMaxAmount = () => {
     setAmount(formatForInput(maxAmount, decimals));
@@ -74,11 +72,6 @@ export const ActionForm: React.FC<ActionFormProps> = ({
       <div>
         <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-2">
           {(actionType === 'mint' || actionType === 'redeem') ? 'Leveraged Tokens' : 'Amount'} to {actionName}
-          {(actionType === 'mint' || actionType === 'redeem') && sharesSymbol && (
-            <span className="ml-2 text-xs font-normal text-gray-600 bg-gray-100 px-2 py-1 rounded">
-              {sharesSymbol}
-            </span>
-          )}
         </label>
         <div className="relative rounded-md shadow-sm">
           <input
@@ -95,7 +88,7 @@ export const ActionForm: React.FC<ActionFormProps> = ({
             disabled={isLoading}
             max={maxAmount}
           />
-          <div className="absolute inset-y-0 right-0 flex items-center">
+          <div className="absolute inset-y-0 right-0 flex items-center pr-3">
             <button
               type="button"
               onClick={setMaxAmount}
@@ -104,13 +97,13 @@ export const ActionForm: React.FC<ActionFormProps> = ({
               MAX
             </button>
             <span className="text-gray-500 sm:text-sm">
-              {actionName === "Mint" || actionName === "Redeem"
+              {actionType === "mint" || actionType === "redeem"
                 ? <SymbolWithTooltip
-                  symbol={tokenSymbol}
-                  placeholder='Levereged Tokens'
-                  elementId='action-form-symbol'
-                  isLoading={!tokenSymbol}
-                />
+                    symbol={tokenSymbol}
+                    placeholder='Levereged Tokens'
+                    elementId='action-form-symbol'
+                    isLoading={!tokenSymbol}
+                  />
                 : formatTokenSymbol(tokenSymbol)
               }
             </span>

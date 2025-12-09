@@ -443,7 +443,6 @@ export default function SafeActionHandler({ actionType, tokenType }: SafeActionH
       setSlippageTolerance={setSlippageTolerance}
       setUseDefaultSlippage={setUseDefaultSlippage}
       actionType={actionType}
-      sharesSymbol={sharesSymbol}
       preview={
         amount && previewData ? (
           <PreviewBox

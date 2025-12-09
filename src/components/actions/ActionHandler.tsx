@@ -291,7 +291,6 @@ export default function ActionHandler({ actionType, tokenType }: ActionHandlerPr
       handleSubmit={handleSubmit}
       setIsMaxSelected={setIsMaxSelected}
       actionType={actionType}
-      sharesSymbol={sharesSymbol}
       preview={
         amount && previewData ? (
           <PreviewBox

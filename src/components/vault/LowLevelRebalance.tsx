@@ -6,7 +6,7 @@ type LowLevelRebalanceType = 'shares' | 'borrow' | 'collateral';
 type ActionType = 'mint' | 'burn' | 'provide' | 'receive';
 
 const LOW_LEVEL_TABS: { value: LowLevelRebalanceType; label: string }[] = [
-  { value: 'shares', label: 'Shares' },
+  { value: 'shares', label: 'Leveraged Tokens' },
   { value: 'borrow', label: 'Borrow' },
   { value: 'collateral', label: 'Collateral' },
 ];
@@ -40,15 +40,15 @@ export default function LowLevelRebalance() {
 
   return (
     <div className="relative rounded-lg bg-gray-50">
-      <button 
+      <button
         onClick={() => setIsOpen(!isOpen)}
         className="w-full bg-gray-100 flex items-center justify-between p-3 text-left hover:bg-gray-100 transition-colors rounded-lg focus:outline-none focus:ring-0"
       >
         <span className="text-lg font-medium text-gray-900">Low Level Rebalance</span>
-        <svg 
+        <svg
           className={`w-5 h-5 text-gray-600 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-          fill="none" 
-          stroke="currentColor" 
+          fill="none"
+          stroke="currentColor"
           viewBox="0 0 24 24"
         >
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -56,21 +56,21 @@ export default function LowLevelRebalance() {
       </button>
       <div className={`transition-all duration-200 ${isOpen ? 'max-h-[2000px] opacity-100 p-3 overflow-visible' : 'max-h-0 opacity-0 pb-0 overflow-hidden'}`}>
         <div className="mb-3">
-          <Tabs 
-            activeTab={activeTab} 
+          <Tabs
+            activeTab={activeTab}
             setActiveTab={handleMainTabChange}
             tabs={LOW_LEVEL_TABS}
           />
         </div>
         <div className="mb-3">
-          <Tabs 
-            activeTab={activeAction} 
+          <Tabs
+            activeTab={activeAction}
             setActiveTab={setActiveAction}
             tabs={getActionTabs(activeTab)}
           />
         </div>
-        <LowLevelRebalanceHandler 
-          rebalanceType={activeTab} 
+        <LowLevelRebalanceHandler
+          rebalanceType={activeTab}
           actionType={activeAction}
         />
       </div>

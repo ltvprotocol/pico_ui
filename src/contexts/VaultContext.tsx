@@ -9,7 +9,7 @@ import {
   FlashLoanRedeemHelper, FlashLoanRedeemHelper__factory,
   WhitelistRegistry__factory
 } from '@/typechain-types';
-import { ltvToLeverage, getLendingProtocolAddress, isVaultExists, isUserRejected, fetchApy, fetchPointsRate, loadTVL } from '@/utils';
+import { ltvToLeverage, getLendingProtocolAddress, isVaultExists, isUserRejected, fetchApy, fetchPointsRate, loadTVL, minBigInt, clampToPositive } from '@/utils';
 import vaultsConfig from '../../vaults.config.json';
 import signaturesConfig from '../../signatures.config.json';
 import { isWETHAddress, GAS_RESERVE_WEI, SEPOLIA_CHAIN_ID_STRING, SEPOLIA_MORPHO_MARKET_ID, CONNECTOR_ADDRESSES} from '@/constants';
@@ -116,6 +116,7 @@ interface VaultContextType {
   // Refresh functions
   refreshBalances: () => Promise<void>;
   refreshVaultLimits: () => Promise<void>;
+  isRefreshingBalances: boolean;
 };
 
 interface Params {
@@ -207,6 +208,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   const [whitelistError, setWhitelistError] = useState<string | null>(null);
   const [lastCheckedAddressForSignature, setLastCheckedAddressForSignature] = useState<string | null>(null);
   const [hasUsedInitialWhitelistParams, setHasUsedInitialWhitelistParams] = useState<boolean>(false);
+  const [isRefreshingBalances, setIsRefreshingBalances] = useState<boolean>(false);
 
   const { publicProvider, signer, isConnected, address, currentNetwork } = useAppContext();
 
@@ -381,10 +383,15 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
     }
   }, [publicProvider, signer, vaultAddress, vaultConfig, params]);
 
-  const loadBalances = useCallback(async () => {
+  const loadBalances = useCallback(async (isManualRefresh: boolean = false) => {
     if (!publicProvider || !address || !vaultLens || !borrowTokenLens || !collateralTokenLens) return;
 
     try {
+      // Only show loading state for manual refreshes, not automatic interval refreshes
+      if (isManualRefresh) {
+        setIsRefreshingBalances(true);
+      }
+
       const ethBalanceRaw = await publicProvider.getBalance(address);
       setEthBalance(formatEther(ethBalanceRaw));
 
@@ -400,6 +407,11 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
 
     } catch (err) {
       console.error('Error loading balances:', err);
+    } finally {
+      // Only clear loading state if it was set
+      if (isManualRefresh) {
+        setIsRefreshingBalances(false);
+      }
     }
   }, [publicProvider, address, vaultLens, borrowTokenLens, collateralTokenLens, sharesDecimals, borrowTokenDecimals, collateralTokenDecimals]);
 
@@ -503,24 +515,21 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
       const vaultMaxMintCollateralWei = parseUnits(vaultMaxMintCollateral, dShares);
       const vaultMaxWithdrawCollateralWei = parseUnits(vaultMaxWithdrawCollateral, dColl);
 
-      const max0n = (x: bigint) => (x > 0n ? x : 0n);
-      const minBN = (a: bigint, b: bigint) => (a < b ? a : b);
-
       const availableEthForBorrowWei =
-        isBorrowTokenWeth ? max0n(ethBalanceWei - GAS_RESERVE_WEI) : 0n;
+        isBorrowTokenWeth ? clampToPositive(ethBalanceWei - GAS_RESERVE_WEI) : 0n;
       const availableEthForCollateralWei =
-        isCollateralTokenWeth ? max0n(ethBalanceWei - GAS_RESERVE_WEI) : 0n;
+        isCollateralTokenWeth ? clampToPositive(ethBalanceWei - GAS_RESERVE_WEI) : 0n;
 
       // ---- DEPOSIT (borrow side) ----
       const depositBudgetWei = isBorrowTokenWeth
         ? borrowTokenBalanceWei + availableEthForBorrowWei
         : borrowTokenBalanceWei;
 
-      const maxAvailableDepositWei = minBN(depositBudgetWei, vaultMaxDepositWei);
+      const maxAvailableDepositWei = minBigInt(depositBudgetWei, vaultMaxDepositWei);
       const maxAvailableDeposit = formatUnits(maxAvailableDepositWei, dBorrow);
 
       // ---- REDEEM (shares) ----
-      const maxAvailableRedeemWei = minBN(sharesBalanceWei, vaultMaxRedeemWei);
+      const maxAvailableRedeemWei = minBigInt(sharesBalanceWei, vaultMaxRedeemWei);
       const maxAvailableRedeem = formatUnits(maxAvailableRedeemWei, dShares);
 
       // ---- MINT ----
@@ -530,7 +539,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         : 0n;
 
       const mintBudgetSharesWei = rawSharesForBorrowToken + rawSharesForEth;
-      const maxAvailableMintWei = minBN(mintBudgetSharesWei, vaultMaxMintWei);
+      const maxAvailableMintWei = minBigInt(mintBudgetSharesWei, vaultMaxMintWei);
       const maxAvailableMint = formatUnits(maxAvailableMintWei, dShares);
 
       // ---- DEPOSIT COLLATERAL ----
@@ -538,14 +547,14 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         ? collateralTokenBalanceWei + availableEthForCollateralWei
         : collateralTokenBalanceWei;
 
-      const maxAvailableDepositCollateralWei = minBN(
+      const maxAvailableDepositCollateralWei = minBigInt(
         depositCollateralBudgetWei,
         vaultMaxDepositCollateralWei
       );
       const maxAvailableDepositCollateral = formatUnits(maxAvailableDepositCollateralWei, dColl);
 
       // ---- REDEEM (shares) ----
-      const maxAvailableRedeemCollateralWei = minBN(
+      const maxAvailableRedeemCollateralWei = minBigInt(
         sharesBalanceWei,
         vaultMaxRedeemCollateralWei
       );
@@ -558,7 +567,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         : 0n;
 
       const mintCollateralBudgetSharesWei = rawSharesForCollateral + rawSharesForEthCollateral;
-      const maxAvailableMintCollateralWei = minBN(
+      const maxAvailableMintCollateralWei = minBigInt(
         mintCollateralBudgetSharesWei,
         vaultMaxMintCollateralWei
       );
@@ -823,6 +832,11 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
     }
   }, [vaultLens, signer, address, signature, isWhitelistActivated, checkWhitelistStatus]);
 
+  // Wrapper for manual balance refresh (shows loading state)
+  const refreshBalances = useCallback(async () => {
+    await loadBalances(true);
+  }, [loadBalances]);
+
   useEffect(() => {
     if (vaultLens) {
       checkWhitelistActivation();
@@ -985,8 +999,9 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         activateWhitelist,
         isActivatingWhitelist,
         whitelistError,
-        refreshBalances: loadBalances,
-        refreshVaultLimits: loadVaultLimits
+        refreshBalances,
+        refreshVaultLimits: loadVaultLimits,
+        isRefreshingBalances
       }}
     >
       {children}

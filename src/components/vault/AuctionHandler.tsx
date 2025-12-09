@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { formatUnits, parseUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
-import { isUserRejected, allowOnlyNumbers } from '@/utils';
-import { renderWithTransition } from '@/helpers/renderWithTransition';
-import { NumberDisplay, PreviewBox } from '@/components/ui';
+import { isUserRejected, allowOnlyNumbers, formatTokenSymbol } from '@/utils';
+import { NumberDisplay, PreviewBox, TransitionLoader } from '@/components/ui';
 
 interface AuctionHandlerProps {
   futureBorrowAssets: bigint | null;
@@ -103,9 +102,9 @@ export default function AuctionHandler({ futureBorrowAssets, futureCollateralAss
 
   const getSymbolForAuctionType = () => {
     if (auctionType === 'provide_borrow') {
-      return borrowTokenSymbol;
+      return formatTokenSymbol(borrowTokenSymbol);
     } else {
-      return collateralTokenSymbol;
+      return formatTokenSymbol(collateralTokenSymbol);
     }
   };
 
@@ -201,9 +200,9 @@ export default function AuctionHandler({ futureBorrowAssets, futureCollateralAss
         if (currentAllowance < amount) {
           const tx = await token.approve(vaultAddress, amount);
           await tx.wait();
-          setSuccess(`Successfully approved ${tokenSymbol}.`);
+          setSuccess(`Successfully approved ${formatTokenSymbol(tokenSymbol)}.`);
         } else {
-          setSuccess(`Already approved ${tokenSymbol}.`);
+          setSuccess(`Already approved ${formatTokenSymbol(tokenSymbol)}.`);
         }
       }
     } catch (err) {
@@ -327,7 +326,7 @@ export default function AuctionHandler({ futureBorrowAssets, futureCollateralAss
               <button
                 type="button"
                 onClick={handleMaxClick}
-                className="text-sm text-indigo-600 hover:text-indigo-500 mr-2"
+                className="bg-transparent text-sm text-indigo-600 hover:text-indigo-500 mr-2"
                 disabled={loading || !maxValue}
               >
                 MAX
@@ -338,16 +337,16 @@ export default function AuctionHandler({ futureBorrowAssets, futureCollateralAss
             </div>
           </div>
           <div className="flex gap-1 mt-1 text-sm text-gray-500">
-            Max Available: {renderWithTransition(
-              maxValue !== null ? (
+            <span>Max Available:</span>
+            <TransitionLoader isLoading={isLoadingMax}>
+              {maxValue !== null ? (
                 <>
                   <NumberDisplay value={formatUnits(maxValue, decimals)} />
                   {' '}
                   {getSymbolForAuctionType()}
                 </>
-              ) : null,
-              isLoadingMax
-            )}
+              ) : null}
+            </TransitionLoader>
           </div>
         </div>
 

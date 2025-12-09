@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { parseUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
-import { isUserRejected, wrapEth } from '@/utils';
+import { isUserRejected, wrapEth, formatTokenSymbol } from '@/utils';
 import { ActionForm, PreviewBox } from '@/components/ui';
 import { isWETHAddress } from '@/constants';
 import { WETH } from '@/typechain-types';
@@ -101,7 +101,7 @@ export default function SafeActionHandler({ actionType, tokenType }: SafeActionH
 
   const maxAmount = getMaxAmount();
 
-  const displayTokenSymbol = config.usesShares ? sharesSymbol : tokenSymbol;
+  const displayTokenSymbol = config.usesShares ? sharesSymbol : formatTokenSymbol(tokenSymbol);
   const displayDecimals = config.usesShares ? sharesDecimals : tokenDecimals;
 
   const { isLoadingPreview, previewData, receive, provide } = useActionPreview({
@@ -150,9 +150,9 @@ export default function SafeActionHandler({ actionType, tokenType }: SafeActionH
 
     if (approveShares) {
       if (!vault || !vaultLens) return false;
-      
+
       const currentAllowance = await vaultLens.allowance(address, helperAddress);
-      
+
       if (currentAllowance < needed) {
         const approveTx = await vault.approve(helperAddress, needed);
         await approveTx.wait();
@@ -162,7 +162,7 @@ export default function SafeActionHandler({ actionType, tokenType }: SafeActionH
       }
     } else {
       if (!token || !tokenLens) return false;
-      
+
       const currentAllowance = await tokenLens.allowance(address, helperAddress);
 
       if (currentAllowance < needed) {
@@ -225,7 +225,7 @@ export default function SafeActionHandler({ actionType, tokenType }: SafeActionH
         console.error('Safe helper for borrow not initialized. Please ensure you are connected to a supported network.');
         return;
       }
-      
+
       let tx;
 
       if (actionType === 'deposit') {
@@ -244,7 +244,7 @@ export default function SafeActionHandler({ actionType, tokenType }: SafeActionH
         console.error('Safe helper for collateral not initialized. Please ensure you are connected to a supported network.');
         return;
       }
-      
+
       let tx;
 
       if (actionType === 'deposit') {
@@ -333,7 +333,7 @@ export default function SafeActionHandler({ actionType, tokenType }: SafeActionH
 
         if (actionType === 'withdraw' || actionType === 'redeem') {
           let sharesNeeded: bigint;
-          
+
           if (actionType === 'withdraw') {
             sharesNeeded = slippageBound;
           } else { // redeem
@@ -347,7 +347,7 @@ export default function SafeActionHandler({ actionType, tokenType }: SafeActionH
           }
         } else {
           if (!tokenLens || !token) return;
-          
+
           let tokensNeeded: bigint;
 
           if (actionType === 'mint') {
@@ -374,7 +374,7 @@ export default function SafeActionHandler({ actionType, tokenType }: SafeActionH
 
       let finalAmount = parsedAmount;
       let finalSlippageBound = slippageBound;
-      
+
       if (isMaxSelected && (actionType === 'redeem' || actionType === 'withdraw')) {
         const maxBeforeTx = await refetchMaxBeforeTx();
 
@@ -391,7 +391,7 @@ export default function SafeActionHandler({ actionType, tokenType }: SafeActionH
         }
 
         finalAmount = maxBeforeTx;
-        
+
         // Recalculate slippage bound for the adjusted amount
         const adjustedSlippageBound = await calculateSlippageBound(finalAmount);
         if (adjustedSlippageBound === null) {
@@ -442,6 +442,7 @@ export default function SafeActionHandler({ actionType, tokenType }: SafeActionH
       defaultSlippage={DEFAULT_SLIPPAGE}
       setSlippageTolerance={setSlippageTolerance}
       setUseDefaultSlippage={setUseDefaultSlippage}
+      actionType={actionType}
       preview={
         amount && previewData ? (
           <PreviewBox

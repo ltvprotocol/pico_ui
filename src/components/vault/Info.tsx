@@ -2,9 +2,8 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import { formatUnits, parseUnits } from 'ethers';
 import { useVaultContext } from '@/contexts';
 import { useAppContext } from '@/contexts';
-import { renderWithTransition } from '@/helpers/renderWithTransition';
 import { renderSymbolWithPlaceholder } from '@/helpers/renderSymbolWithPlaceholder';
-import { NumberDisplay } from '@/components/ui';
+import { NumberDisplay, TransitionLoader } from '@/components/ui';
 import { fetchTokenPrice } from '@/utils';
 
 export default function Info() {
@@ -191,7 +190,7 @@ export default function Info() {
   return (
     <div className="relative rounded-lg bg-gray-50 p-3">
       <h3 className="text-lg font-medium text-gray-900 mb-3">Overview</h3>
-      <div className="w-full flex justify-between items-start text-sm mb-2">
+      <div className="w-full flex justify-between items-center text-sm mb-3">
         <div className="font-medium text-gray-700">Your Position:</div>
         <div className="min-w-[60px] text-right">
           {isMainnet ? (
@@ -200,38 +199,30 @@ export default function Info() {
                 <div className="mr-2 min-w-[60px] text-right">
                   {isRefreshingBalances ? (
                     <span className="text-gray-500 italic">Loading...</span>
-                  ) : renderWithTransition(
-                    positionInBorrowTokens ? (
-                      <NumberDisplay value={positionInBorrowTokens} />
-                    ) : null,
-                    isLoadingPosition || !positionInBorrowTokens
-                  )}
+                  ) : 
+                    <TransitionLoader isLoading={isLoadingPosition || !positionInBorrowTokens}>
+                      {positionInBorrowTokens ?
+                        <NumberDisplay value={positionInBorrowTokens} /> : 
+                        null
+                      }
+                    </TransitionLoader>
+                  }
                 </div>
                 <div className="font-medium text-gray-700">
-                  {renderWithTransition(
-                    borrowTokenSymbol,
-                    !borrowTokenSymbol
-                  )}
+                  <TransitionLoader isLoading={!borrowTokenSymbol}>
+                    {borrowTokenSymbol}
+                  </TransitionLoader>
                 </div>
               </div>
               {positionInBorrowTokens && (
                 <div className="text-gray-700 text-xs mt-0.5">
-                  {isLoadingPrice && !hasLoadedPriceOnce.current ? (
-                    renderWithTransition(
-                      priceLoadFailed ? (
-                        <span className="text-red-500 italic">Failed to load</span>
-                      ) : (
-                        formatUsdValue(positionUsdValue)
-                      ),
-                      true
-                    )
-                  ) : (
-                    priceLoadFailed ? (
-                      <span className="text-red-500 italic">Failed to load</span>
-                    ) : (
-                      formatUsdValue(positionUsdValue)
-                    )
-                  )}
+                  {!hasLoadedPriceOnce.current ? (
+                    <TransitionLoader isLoading={isLoadingPrice} isFailedToLoad={priceLoadFailed}>
+                      {formatUsdValue(positionUsdValue)}
+                    </TransitionLoader>
+                  ) : 
+                    formatUsdValue(positionUsdValue)
+                  }
                 </div>
               )}
             </div>
@@ -240,118 +231,91 @@ export default function Info() {
               <div className="mr-2 min-w-[60px] text-right">
                 {isRefreshingBalances ? (
                   <span className="text-gray-500 italic">Loading...</span>
-                ) : renderWithTransition(
-                  <NumberDisplay value={sharesBalance} />,
-                  !sharesBalance || sharesBalance === '0'
-                )}
+                ) : 
+                  <TransitionLoader isLoading={!sharesBalance || sharesBalance === '0'}>
+                    <NumberDisplay value={sharesBalance} />
+                  </TransitionLoader>
+                }
               </div>
               <div className="font-medium text-gray-700">
-                {renderWithTransition(
-                  renderSymbolWithPlaceholder({ 
+                <TransitionLoader isLoading={!sharesSymbol}>
+                  {renderSymbolWithPlaceholder({ 
                     symbol: sharesSymbol, 
                     placeholder: 'Shares', 
                     elementId: 'info-shares', 
                     isLoading: !sharesSymbol 
-                  }),
-                  !sharesSymbol
-                )}
+                  })}
+                </TransitionLoader>
               </div>
             </div>
           )}
         </div>
       </div>
-      <div className="w-full flex justify-between items-start text-sm mb-2">
+      <div className="w-full flex justify-between items-center text-sm mb-2">
         <div className="font-medium text-gray-700">APY:</div>
         <div className="min-w-[60px] min-h-[16px] text-right">
-          {renderWithTransition(
-            apyLoadFailed ? (
-              <span className="text-red-500 italic">Failed to load</span>
-            ) : (
-              formatApy(apy)
-            ),
-            !apy && !apyLoadFailed
-          )}
+          <TransitionLoader isLoading={!apy} isFailedToLoad={apyLoadFailed}>
+            {formatApy(apy)}
+          </TransitionLoader>
         </div>
       </div>
       {tvl && (
-        <div className="w-full flex justify-between items-start text-sm mb-2">
+        <div className="w-full flex justify-between items-center text-sm mb-2">
           <div className="font-medium text-gray-700">Leveraged TVL:</div>
           <div className="min-w-[60px] text-right">
             <div className="flex flex-col items-end">
               <div className="flex">
                 <div className="mr-2 min-w-[60px] text-right">
-                  {renderWithTransition(
-                    <NumberDisplay value={tvl} />,
-                    !tvl || tvl === '0'
-                  )}
+                  <TransitionLoader isLoading={!tvl || tvl === '0'}>
+                    <NumberDisplay value={tvl} />
+                  </TransitionLoader>
                 </div>
                 <div className="font-medium text-gray-700">
-                  {renderWithTransition(
-                    collateralTokenSymbol,
-                    !collateralTokenSymbol
-                  )}
+                  <TransitionLoader isLoading={!collateralTokenSymbol}>
+                    {collateralTokenSymbol}
+                  </TransitionLoader>
                 </div>
               </div>
               {isMainnet && (
                 <div className="text-gray-700 text-xs mt-0.5">
-                  {isLoadingCollateralPrice && !hasLoadedCollateralPriceOnce.current ? (
-                    renderWithTransition(
-                      collateralPriceLoadFailed ? (
-                        <span className="text-red-500 italic">Failed to load</span>
-                      ) : (
-                        formatUsdValue(tvlUsdValue)
-                      ),
-                      true
-                    )
-                  ) : (
-                    collateralPriceLoadFailed ? (
-                      <span className="text-red-500 italic">Failed to load</span>
-                    ) : (
-                      formatUsdValue(tvlUsdValue)
-                    )
-                  )}
+                  {!hasLoadedCollateralPriceOnce.current ? (
+                    <TransitionLoader isLoading={isLoadingCollateralPrice} isFailedToLoad={collateralPriceLoadFailed}>
+                      {formatUsdValue(tvlUsdValue)}
+                    </TransitionLoader>
+                  ) : 
+                    formatUsdValue(tvlUsdValue)
+                  }
                 </div>
               )}
             </div>
           </div>
         </div>
       )}
-      <div className="w-full flex justify-between items-start text-sm mb-3">
+      <div className="w-full flex justify-between items-center text-sm mb-2">
         <div className="font-medium text-gray-700">Deposited TVL:</div>
         <div className="min-w-[60px] text-right">
           <div className="flex flex-col items-end">
             <div className="flex">
               <div className="mr-2 min-w-[60px] text-right">
-                {renderWithTransition(
-                  <NumberDisplay value={totalAssets} />,
-                  !totalAssets || totalAssets === '0'
-                )}
+                <TransitionLoader isLoading={!totalAssets || totalAssets === '0'}>
+                  <NumberDisplay value={totalAssets} />
+                </TransitionLoader>
               </div>
               <div className="font-medium text-gray-700">
-                {renderWithTransition(
-                  borrowTokenSymbol,
-                  !borrowTokenSymbol
-                )}
+                <TransitionLoader isLoading={!borrowTokenSymbol}>
+                  {borrowTokenSymbol}
+                </TransitionLoader>
               </div>
             </div>
             {isMainnet && (
               <div className="text-gray-700 text-xs mt-0.5">
-                {isLoadingPrice && !hasLoadedPriceOnce.current ? (
-                  renderWithTransition(
-                    priceLoadFailed ? (
-                      <span className="text-red-500 italic">Failed to load</span>
-                    ) : (
-                      formatUsdValue(usdValue)
-                    ),
-                    true
-                  )
-                ) : (
-                  priceLoadFailed ? (
-                    <span className="text-red-500 italic">Failed to load</span>
-                  ) : (
-                    formatUsdValue(usdValue)
-                  )
-                )}
+                {!hasLoadedPriceOnce.current ? (
+                  <TransitionLoader isLoading={isLoadingPrice} isFailedToLoad={priceLoadFailed}>
+                    {formatUsdValue(usdValue)}
+                  </TransitionLoader>
+                ) :
+                  formatUsdValue(usdValue)
+                }
               </div>
             )}
           </div>

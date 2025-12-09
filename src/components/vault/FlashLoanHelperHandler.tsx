@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { parseUnits, parseEther, formatUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
 import { isUserRejected, allowOnlyNumbers, isWstETHAddress, wrapEthToWstEth, calculateEthWrapForFlashLoan } from '@/utils';
-import { PreviewBox, NumberDisplay } from '@/components/ui';
+import { PreviewBox, NumberDisplay, TransitionLoader } from '@/components/ui';
 import { useFlashLoanPreview } from '@/hooks';
 import { GAS_RESERVE_WEI } from '@/constants';
-import { renderWithTransition } from '@/helpers/renderWithTransition';
 
 type HelperType = 'mint' | 'redeem';
 
@@ -345,16 +344,11 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
           </div>
         </div>
 
-
         <div className="flex gap-1 mt-1 text-sm text-gray-500">
-          Max Available: {renderWithTransition(
-            <>
-              <NumberDisplay value={maxAmount} />
-              {' '}
-              {sharesSymbol}
-            </>,
-            !maxAmount
-          )}
+          <span>Max Available:</span>
+          <TransitionLoader isLoading={!maxAmount}>
+            <NumberDisplay value={maxAmount} />{' '}{sharesSymbol}
+          </TransitionLoader>
         </div>
 
         {isWstETHVault && helperType === 'mint' && (

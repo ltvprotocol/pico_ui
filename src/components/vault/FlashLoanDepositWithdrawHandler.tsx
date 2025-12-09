@@ -3,9 +3,11 @@ import { parseUnits, parseEther, formatUnits, formatEther } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
 import { isUserRejected, allowOnlyNumbers, isWstETHAddress, wrapEthToWstEth, calculateEthWrapForFlashLoan, minBigInt, formatTokenSymbol, clampToPositive } from '@/utils';
 import { PreviewBox, NumberDisplay, TransitionLoader } from '@/components/ui';
-import { useFlashLoanPreview } from '@/hooks';
+import { useAdaptiveInterval, useFlashLoanPreview } from '@/hooks';
 import { GAS_RESERVE_WEI } from '@/constants';
 import { findSharesForEthDeposit, findSharesForEthWithdraw } from '@/utils/findSharesForAmount';
+import { maxBigInt } from '@/utils';
+import { ERC20__factory } from '@/typechain-types';
 
 type ActionType = 'deposit' | 'withdraw';
 
@@ -39,12 +41,16 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   const [previewedWstEthAmount, setPreviewedWstEthAmount] = useState<bigint | null>(null);
   const [maxAmount, setMaxAmount] = useState('');
   const [isMaxWithdraw, setIsMaxWithdraw] = useState(false);
+  const [minDeposit, setMinDeposit] = useState('');
+  const [minWithdraw, setMinWithdraw] = useState('');
+  const [minTooBig, setMinDisablesAction] = useState(false);
 
-  const { address, provider, publicProvider, signer } = useAppContext();
+  const { address, provider, signer, publicProvider } = useAppContext();
 
   const {
     vault,
     vaultLens,
+    vaultAddress,
     flashLoanMintHelper,
     flashLoanRedeemHelper,
     flashLoanMintHelperAddress,
@@ -103,6 +109,72 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   const applyMintSlippage = (amount: bigint) => {
     return amount * BigInt(MINT_SLIPPAGE_DIVIDEND) / BigInt(MINT_SLIPPAGE_DIVIDER);
   }
+
+  const loadMinAvailable = async () => {
+    if (!vaultLens || !publicProvider || !vaultAddress || !sharesDecimals) return;
+
+    const [, deltaShares] = await vaultLens.previewLowLevelRebalanceBorrow(0);
+
+    if (deltaShares > 0n) {
+      setMinWithdraw('0');
+
+      const variableDebtEthWETH = "0xeA51d7853EEFb32b6ee06b1C12E6dcCA88Be0fFE";
+      const variableDebtToken = ERC20__factory.connect(variableDebtEthWETH, publicProvider);
+      const variableDebtTokenAmount = await variableDebtToken.balanceOf(vaultAddress);
+      const variableDebtTokenShares = await vaultLens.convertToShares(variableDebtTokenAmount);
+      const amountWithPrecision = variableDebtTokenShares * 2n / 10_000_000n;
+
+      const rawMinMint = maxBigInt(
+        deltaShares * 101n / 100n,
+        deltaShares + 5n * amountWithPrecision
+      )
+
+      const rawMinDeposit = await vaultLens.convertToAssets(rawMinMint);
+      const rawMinDepositWithPrecision = rawMinDeposit * 10001n / 10000n
+
+      const formattedMinDeposit = formatEther(rawMinDepositWithPrecision);
+      setMinDeposit(formattedMinDeposit);
+    } else if (deltaShares < 0n) {
+      setMinDeposit('0');
+
+      const absDelta = deltaShares < 0n ? -deltaShares : deltaShares;
+      const rawMinRedeem = absDelta * 10001n / 10000n;
+
+      const rawMinWithdraw = await vaultLens.convertToAssets(rawMinRedeem);
+      const rawMinWithdrawWithPrecision = rawMinWithdraw * 10001n / 10000n
+
+      const formattedMinWithdraw = formatEther(rawMinWithdrawWithPrecision);
+      setMinWithdraw(formattedMinWithdraw);
+    } else {
+      setMinDeposit('0');
+      setMinWithdraw('0');
+    }
+  };
+
+  useAdaptiveInterval(loadMinAvailable, {
+    initialDelay: 12000,
+    maxDelay: 60000,
+    multiplier: 2,
+    enabled: !!vaultLens && !!publicProvider
+  });
+
+  useEffect(() => {
+    if (!maxAmount || !minDeposit || !minWithdraw) return;
+
+    const rawMaxAmount = parseUnits(maxAmount, sharesDecimals);
+    const rawMinDeposit = parseUnits(minDeposit, sharesDecimals);
+    const rawMinWithdraw = parseUnits(minWithdraw, sharesDecimals);
+
+    if (actionType === 'deposit') {
+      if (rawMinDeposit > rawMaxAmount) {
+        setMinDisablesAction(true);
+      }
+    } else {
+      if (rawMinWithdraw > rawMaxAmount) {
+        setMinDisablesAction(true);
+      }
+    }
+  }, [actionType, sharesDecimals, minDeposit, minWithdraw]);
 
   const calculateShares = async () => {
     if (!inputValue || !vaultLens) {
@@ -473,6 +545,22 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
           </TransitionLoader>
         </div>
 
+        <div className="flex gap-1 mt-1 text-sm text-gray-500">
+          <span>Min Available:</span>
+          <TransitionLoader isLoading={!minDeposit || !minWithdraw}>
+            {actionType === "deposit" ?
+              <>
+                <NumberDisplay value={minDeposit} />
+                {' '}ETH
+              </> :
+              <>
+                <NumberDisplay value={minWithdraw} />
+                {' '}{formatTokenSymbol(borrowTokenSymbol)}
+              </>
+            }
+          </TransitionLoader>
+        </div>
+
         {isWstETHVault && actionType === 'deposit' && (
           <>
             {useEthWrapToWSTETH && (
@@ -530,7 +618,8 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
             isWrapping ||
             hasInsufficientBalance ||
             isErrorLoadingPreview ||
-            invalidRebalanceMode
+            invalidRebalanceMode ||
+            minTooBig
           }
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >

@@ -325,11 +325,6 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
         <div>
           <label htmlFor="shares" className="block text-sm font-medium text-gray-700 mb-2">
             Leveraged Tokens to {helperType === 'mint' ? 'Mint' : 'Redeem'}
-            {sharesSymbol && (
-              <span className="ml-2 text-xs font-normal text-gray-600 bg-gray-100 px-2 py-1 rounded">
-                {sharesSymbol}
-              </span>
-            )}
           </label>
           <div className="relative rounded-md shadow-sm">
             <input
@@ -343,8 +338,10 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
               placeholder="0.0"
               disabled={loading}
             />
-            <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
-              {/* Ticker already shown in label badge, no need to repeat here */}
+            <div className="text-gray-500 sm:text-sm absolute inset-y-0 right-0 pr-3 flex items-center">
+              <TransitionLoader isLoading={!sharesSymbol}>
+                {sharesSymbol}
+              </TransitionLoader>
             </div>
           </div>
         </div>

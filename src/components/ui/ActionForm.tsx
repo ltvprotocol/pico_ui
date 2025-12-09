@@ -1,7 +1,6 @@
 import React from 'react';
 import { allowOnlyNumbers, isButtonDisabled, formatForInput, formatTokenSymbol } from '@/utils';
-import { SymbolWithPlaceholder } from '@/helpers/renderSymbolWithPlaceholder';
-import { NumberDisplay } from '@/components/ui';
+import { NumberDisplay, SymbolWithTooltip } from '@/components/ui';
 
 type ActionFormProps = {
   actionName: string;
@@ -91,16 +90,16 @@ export const ActionForm: React.FC<ActionFormProps> = ({
             <button
               type="button"
               onClick={setMaxAmount}
-              className="text-sm text-indigo-600 hover:text-indigo-500 mr-2"
+              className="bg-transparent text-sm text-indigo-600 hover:text-indigo-500 mr-2"
             >
               MAX
             </button>
             <span className="text-gray-500 sm:text-sm">
               {actionName === "Mint" || actionName === "Redeem"
-                ? <SymbolWithPlaceholder
+                ? <SymbolWithTooltip
                   symbol={tokenSymbol}
-                  placeholder="Shares"
-                  elementId="action-form-symbol"
+                  placeholder='Shares'
+                  elementId='action-form-symbol'
                   isLoading={!tokenSymbol}
                 />
                 : formatTokenSymbol(tokenSymbol)
@@ -112,7 +111,7 @@ export const ActionForm: React.FC<ActionFormProps> = ({
           Max Available: {!maxAmount ? 'Loading...' : (
             <>
               <NumberDisplay value={maxAmount} />
-              <SymbolWithPlaceholder
+              <SymbolWithTooltip
                 symbol={tokenSymbol}
                 placeholder='Shares'
                 elementId='action-form-max-available'
@@ -204,9 +203,9 @@ export const ActionForm: React.FC<ActionFormProps> = ({
           </div>
         )}
       </div>
-      
+
       {preview}
-      
+
       <button
         type="submit"
         disabled={isButtonDisabled(isLoading, amount, maxAmount) || (isSafe && (!slippageTolerance || parseFloat(slippageTolerance) <= 0))}

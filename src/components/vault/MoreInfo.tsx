@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useVaultContext } from '@/contexts';
-import { renderWithTransition } from '@/helpers/renderWithTransition';
-import { SymbolWithPlaceholder } from '@/helpers/renderSymbolWithPlaceholder';
-import { NumberDisplay } from '@/components/ui';
 import { formatLtv, formatTokenSymbol } from '@/utils';
+import { NumberDisplay, SymbolWithTooltip, TransitionLoader } from '@/components/ui';
+
 
 interface LoadingState {
   isLoadingTargetLtv: boolean;
@@ -150,21 +149,19 @@ export default function MoreInfo() {
               {[
                 [vaultMaxDepositCollateral, formatTokenSymbol(collateralTokenSymbol)],
                 [vaultMaxWithdrawCollateral, formatTokenSymbol(collateralTokenSymbol)],
-                [vaultMaxMintCollateral, <SymbolWithPlaceholder symbol={sharesSymbol} placeholder='Shares' elementId='mint-collateral' isLoading={!sharesSymbol} />],
-                [vaultMaxRedeemCollateral, <SymbolWithPlaceholder symbol={sharesSymbol} placeholder='Shares' elementId='redeem-collateral' isLoading={!sharesSymbol} />]
+                [vaultMaxMintCollateral, <SymbolWithTooltip symbol={sharesSymbol} placeholder={'Shares'} elementId={'mint-collateral'} isLoading={!sharesSymbol} /> ],
+                [vaultMaxRedeemCollateral, <SymbolWithTooltip symbol={sharesSymbol} placeholder={'Shares'} elementId={'redeem-collateral'} isLoading={!sharesSymbol} />]
               ].map((info, index) => (
                 <div key={index} className='flex'>
                   <div className="mr-2 min-w-[60px] text-right">
-                    {renderWithTransition(
-                      <NumberDisplay value={info[0] as string} />,
-                      !info[0] || info[0] === '0'
-                    )}
+                    <TransitionLoader isLoading={!info[0] || info[0] === '0'}>
+                      <NumberDisplay value={info[0] as string} />
+                    </TransitionLoader>
                   </div>
                   <div className="font-medium text-gray-700">
-                    {renderWithTransition(
-                      info[1],
-                      !info[1]
-                    )}
+                    <TransitionLoader isLoading={!info[1]}>
+                      {info[1]}
+                    </TransitionLoader>
                   </div>
                 </div>
               ))}
@@ -174,21 +171,19 @@ export default function MoreInfo() {
               {[
                 [vaultMaxDeposit, formatTokenSymbol(borrowTokenSymbol)],
                 [vaultMaxWithdraw, formatTokenSymbol(borrowTokenSymbol)],
-                [vaultMaxMint, <SymbolWithPlaceholder symbol={sharesSymbol} placeholder='Shares' elementId='mint-borrow' isLoading={!sharesSymbol} />],
-                [vaultMaxRedeem, <SymbolWithPlaceholder symbol={sharesSymbol} placeholder='Shares' elementId='redeem-borrow' isLoading={!sharesSymbol} />]
+                [vaultMaxMint, <SymbolWithTooltip symbol={sharesSymbol} placeholder={'Shares'} elementId={'mint-borrow'} isLoading={!sharesSymbol} />],
+                [vaultMaxRedeem, <SymbolWithTooltip symbol={sharesSymbol} placeholder={'Shares'} elementId={'redeem-borrow'} isLoading={!sharesSymbol} />]
               ].map((info, index) => (
-                <div key={index} className="flex">
+                <div key={index} className='flex'>
                   <div className="mr-2 min-w-[60px] text-right">
-                    {renderWithTransition(
-                      <NumberDisplay value={info[0] as string} />,
-                      !info[0] || info[0] === '0'
-                    )}
+                    <TransitionLoader isLoading={!info[0] || info[0] === '0'}>
+                      <NumberDisplay value={info[0] as string} />
+                    </TransitionLoader>
                   </div>
                   <div className="font-medium text-gray-700">
-                    {renderWithTransition(
-                      info[1],
-                      !info[1]
-                    )}
+                    <TransitionLoader isLoading={!info[1]}>
+                      {info[1]}
+                    </TransitionLoader>
                   </div>
                 </div>
               ))}
@@ -209,21 +204,19 @@ export default function MoreInfo() {
               {[
                 [vaultMaxDepositCollateral, formatTokenSymbol(collateralTokenSymbol)],
                 [vaultMaxWithdrawCollateral, formatTokenSymbol(collateralTokenSymbol)],
-                [vaultMaxMintCollateral, <SymbolWithPlaceholder symbol={sharesSymbol} placeholder='Shares' elementId='mobile-mint-collateral' isLoading={!sharesSymbol} />],
-                [vaultMaxRedeemCollateral, <SymbolWithPlaceholder symbol={sharesSymbol} placeholder='Shares' elementId='mobile-redeem-collateral' isLoading={!sharesSymbol} />]
+                [vaultMaxMintCollateral, <SymbolWithTooltip symbol={sharesSymbol} placeholder={'Shares'} elementId={'mobile-mint-collateral'} isLoading={!sharesSymbol} />],
+                [vaultMaxRedeemCollateral, <SymbolWithTooltip symbol={sharesSymbol} placeholder={'Shares'} elementId={'mobile-redeem-collateral'} isLoading={!sharesSymbol} />]
               ].map((info, index) => (
                 <div key={index} className='flex'>
                   <div className="mr-2 min-w-[60px] text-right">
-                    {renderWithTransition(
-                      <NumberDisplay value={info[0] as string} />,
-                      !info[0] || info[0] === '0'
-                    )}
+                    <TransitionLoader isLoading={!info[0] || info[0] === '0'}>
+                      <NumberDisplay value={info[0] as string} />
+                    </TransitionLoader>
                   </div>
                   <div className="font-medium text-gray-700">
-                    {renderWithTransition(
-                      info[1],
-                      !info[1]
-                    )}
+                    <TransitionLoader isLoading={!info[1]}>
+                      {info[1]}
+                    </TransitionLoader>
                   </div>
                 </div>
               ))}
@@ -242,21 +235,19 @@ export default function MoreInfo() {
               {[
                 [vaultMaxDeposit, formatTokenSymbol(borrowTokenSymbol)],
                 [vaultMaxWithdraw, formatTokenSymbol(borrowTokenSymbol)],
-                [vaultMaxMint, <SymbolWithPlaceholder symbol={sharesSymbol} placeholder='Shares' elementId='mobile-mint-borrow' isLoading={!sharesSymbol} />],
-                [vaultMaxRedeem, <SymbolWithPlaceholder symbol={sharesSymbol} placeholder='Shares' elementId='mobile-redeem-borrow' isLoading={!sharesSymbol} />]
+                [vaultMaxMint, <SymbolWithTooltip symbol={sharesSymbol} placeholder={'Shares'} elementId={'mobile-mint-borrow'} isLoading={!sharesSymbol} />],
+                [vaultMaxRedeem, <SymbolWithTooltip symbol={sharesSymbol} placeholder={'Shares'} elementId={'mobile-redeem-borrow'} isLoading={!sharesSymbol} />]
               ].map((info, index) => (
-                <div key={index} className="flex">
+                <div key={index} className='flex'>
                   <div className="mr-2 min-w-[60px] text-right">
-                    {renderWithTransition(
-                      <NumberDisplay value={info[0] as string} />,
-                      !info[0] || info[0] === '0'
-                    )}
+                    <TransitionLoader isLoading={!info[0] || info[0] === '0'}>
+                      <NumberDisplay value={info[0] as string} />
+                    </TransitionLoader>
                   </div>
                   <div className="font-medium text-gray-700">
-                    {renderWithTransition(
-                      info[1],
-                      !info[1]
-                    )}
+                    <TransitionLoader isLoading={!info[1]}>
+                      {info[1]}
+                    </TransitionLoader>
                   </div>
                 </div>
               ))}
@@ -266,8 +257,8 @@ export default function MoreInfo() {
         <div className="w-full flex justify-between items-center text-sm mb-2">
           <div className="font-medium text-gray-700">Current LTV:</div>
           <div className="min-w-[60px] text-right">
-            {renderWithTransition(
-              currentLtv ? (
+            <TransitionLoader isLoading={!currentLtv}>
+              {currentLtv ? (
                 currentLtv === 'UNKNOWN_CONNECTOR' ? (
                   <span className="text-gray-500 italic">Unable to fetch LTV</span>
                 ) : currentLtv === 'LOAD_FAILED' ? (
@@ -275,36 +266,32 @@ export default function MoreInfo() {
                 ) : (
                   formatLtv(currentLtv)
                 )
-              ) : null,
-              !currentLtv
-            )}
+              ) : null}
+            </TransitionLoader>
           </div>
         </div>
         <div className="w-full flex justify-between items-center text-sm">
           <div className="font-medium text-gray-700">Target LTV:</div>
           <div className="min-w-[60px] text-right">
-            {renderWithTransition(
-              targetLtv ? formatLtv(targetLtv) : null,
-              loadingState.isLoadingTargetLtv
-            )}
+            <TransitionLoader isLoading={loadingState.isLoadingTargetLtv}>
+              {targetLtv ? formatLtv(targetLtv) : null}
+            </TransitionLoader>
           </div>
         </div>
         <div className="w-full flex justify-between items-center text-sm">
           <div className="font-medium text-gray-700">Max Safe LTV:</div>
           <div className="min-w-[60px] text-right">
-            {renderWithTransition(
-              maxSafeLtv ? formatLtv(maxSafeLtv) : null,
-              loadingState.isLoadingMaxSafeLtv
-            )}
+            <TransitionLoader isLoading={loadingState.isLoadingMaxSafeLtv}>
+              {maxSafeLtv ? formatLtv(maxSafeLtv) : null}
+            </TransitionLoader>
           </div>
         </div>
         <div className="w-full flex justify-between items-center text-sm">
           <div className="font-medium text-gray-700">Min Profit LTV:</div>
           <div className="min-w-[60px] text-right">
-            {renderWithTransition(
-              minProfitLtv ? formatLtv(minProfitLtv) : null,
-              loadingState.isLoadingMinProfitLtv
-            )}
+            <TransitionLoader isLoading={loadingState.isLoadingMinProfitLtv}>
+              {minProfitLtv ? formatLtv(minProfitLtv) : null}
+            </TransitionLoader>
           </div>
         </div>
       </div>

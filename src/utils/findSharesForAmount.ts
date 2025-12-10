@@ -1,69 +1,25 @@
-import { Vault, FlashLoanMintHelper, FlashLoanRedeemHelper } from '@/typechain-types';
-import { previewWrapEthToWstEth } from '@/utils/wrapWstEth'
-import { ContractRunner } from 'ethers';
+import { Vault, FlashLoanRedeemHelper } from '@/typechain-types';
+import { abs } from '@/utils/abs';
+
 
 const MAX_ITERATIONS = 6;
-const TOLERANCE_BPS = 1n; // 0.01% tolerance
-const BPS_DIVIDER = 10000n;
 
+const TOLERANCE_BPS = 1n; // 1e-6% = 0.000001% tolerance
+const BPS_DIVIDER = 10_000_000n;
 interface FindSharesForEthParams {
   amount: bigint;
   vaultLens: Vault;
-}
-
-interface FindSharesForEthDepositParams extends FindSharesForEthParams {
-  helper: FlashLoanMintHelper;
-  provider: ContractRunner;
 }
 
 interface FindSharesForEthWithdrawParams extends FindSharesForEthParams {
   helper: FlashLoanRedeemHelper;
 }
 
-export async function findSharesForEthDeposit({
-  amount, helper, vaultLens, provider
-} : FindSharesForEthDepositParams) : Promise<bigint | undefined> {
-  const wstETHForETH = await previewWrapEthToWstEth(provider, amount);
-
-  if (!wstETHForETH) {
-    console.error("Failed to get wstETH for ETH");
-    return;
-  }
-
-  let currentShares = await vaultLens.convertToSharesCollateral(wstETHForETH);
-
-  for (let i = 0; i < MAX_ITERATIONS; i++) {
-    try {
-      const requiredCollateral = await helper.previewMintSharesWithFlashLoanCollateral(currentShares);
-
-      if (requiredCollateral === 0n) {
-        break;
-      }
-
-      const diff = requiredCollateral > wstETHForETH
-        ? requiredCollateral - wstETHForETH
-        : wstETHForETH - requiredCollateral;
-
-      // Check tolerance
-      if ((diff * BPS_DIVIDER) / wstETHForETH <= TOLERANCE_BPS) {
-        return currentShares;
-      }
-
-      currentShares = (currentShares * wstETHForETH) / requiredCollateral;
-
-    } catch (err) {
-      console.warn(`Iteration ${i} failed in findSharesForEthDeposit`, err);
-      currentShares = currentShares / 2n;
-    }
-  }
-
-  return;
-}
-
 export async function findSharesForEthWithdraw({
   amount, helper, vaultLens
-} : FindSharesForEthWithdrawParams) : Promise<bigint | undefined> {
-  let currentShares = await vaultLens.convertToShares(amount);
+}: FindSharesForEthWithdrawParams): Promise<bigint | undefined> {
+  let currentEth = amount;
+  let currentShares = await vaultLens.convertToShares(currentEth);
 
   for (let i = 0; i < MAX_ITERATIONS; i++) {
     try {
@@ -73,22 +29,21 @@ export async function findSharesForEthWithdraw({
         break;
       }
 
-      const diff = receivedEth > amount
-        ? receivedEth - amount
-        : amount - receivedEth;
+      const diff = amount - receivedEth;
 
-      // Check tolerance
-      if ((diff * BPS_DIVIDER) / amount <= TOLERANCE_BPS) {
+      if (abs(diff) * BPS_DIVIDER / amount <= TOLERANCE_BPS) {
         return currentShares;
       }
 
-      currentShares = (currentShares * amount) / receivedEth;
-
+      // Stupid and simple approximation solution. It doesn't account for the dex slippage for the
+      // additional amount of eth, but it converges quickly enough for our purposes. This level of simplicity
+      // lets us to not depend from the dex price direction, dynamic changes of the dex price, slippage etc.
+      currentEth += diff;
+      currentShares = await vaultLens.convertToShares(currentEth);
     } catch (err) {
-      console.warn(`Iteration ${i} failed in findSharesForEthDeposit`, err);
-      currentShares = currentShares / 2n;
+      console.warn(`Iteration ${i} failed in findSharesForEthWithdraw`, err);
     }
   }
 
-  return;
+  return undefined;
 }

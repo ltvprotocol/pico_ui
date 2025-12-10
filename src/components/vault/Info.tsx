@@ -1,8 +1,8 @@
 import { useEffect, useState, useMemo, useRef } from 'react';
-import { formatUnits, parseUnits } from 'ethers';
+import { formatUnits, parseUnits, Contract } from 'ethers';
 import { useVaultContext } from '@/contexts';
 import { useAppContext } from '@/contexts';
-import { fetchTokenPrice, formatTokenSymbol } from '@/utils';
+import { fetchTokenPrice, formatTokenSymbol, fetchIsLiquidityProvider, fetchUserPoints } from '@/utils';
 import { NumberDisplay, TransitionLoader, SymbolWithTooltip } from '@/components/ui';
 
 export default function Info() {
@@ -19,20 +19,98 @@ export default function Info() {
     vaultLens,
     borrowTokenDecimals,
     sharesDecimals,
+    pointsRate,
     isRefreshingBalances,
   } = useVaultContext();
 
-  const { isMainnet } = useAppContext();
+  const { isMainnet, address, publicProvider } = useAppContext();
   const [tokenPrice, setTokenPrice] = useState<number | null>(null);
+
+  // Points Logic
+  const [userPoints, setUserPoints] = useState<number | null>(null);
+  const [isLp, setIsLp] = useState<boolean>(false);
+  const [hasNft, setHasNft] = useState<boolean>(false);
+  const [isLoadingPointsData, setIsLoadingPointsData] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!isMainnet || !address) {
+      setUserPoints(null);
+      setIsLp(false);
+      setHasNft(false);
+      return;
+    }
+
+    const loadPointsData = async () => {
+      setIsLoadingPointsData(true);
+      try {
+        const [lpStatus, points] = await Promise.all([
+          fetchIsLiquidityProvider(address, null),
+          fetchUserPoints(address, null)
+        ]);
+
+        setIsLp(lpStatus || false);
+
+        // As per requirements: if LP, don't show points (handled in render), otherwise fetch/show points
+        if (!lpStatus) {
+          setUserPoints(points);
+        }
+
+        // NFT Check
+        if (publicProvider) {
+          const contract = new Contract("0xF478F017cfe92AaF83b2963A073FaBf5A5cD0244", ["function balanceOf(address) view returns (uint256)"], publicProvider);
+          const balance = await contract.balanceOf(address);
+          setHasNft(balance > 0n);
+        }
+      } catch (error) {
+        console.error('Error loading points data:', error);
+      } finally {
+        setIsLoadingPointsData(false);
+      }
+    };
+
+    loadPointsData();
+  }, [isMainnet, address, publicProvider]);
+
+  const pointsRateDisplay = useMemo(() => {
+    if (!pointsRate) return null;
+    // Base rate is what comes from API
+    // If NFT holder: Boosted rate (~42% boost)
+    if (hasNft) {
+      const boosted = pointsRate * 1.42;
+      return (
+        <span className="text-gray-900">
+          ~{boosted.toFixed(2)} per 1 token / day <span className="text-[#888888]">(with NFT)</span>
+        </span>
+      );
+    } else {
+      return (
+        <span className="text-gray-900">
+          <div>~{pointsRate.toFixed(2)} per 1 token / day</div>
+          <div>
+            <a
+              href="https://42.ltv.finance"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#3B82F6] hover:text-[#2563EB] ml-1"
+            >
+              mint 42 NFT
+            </a>
+            {" "}to get 42% boost!
+          </div>
+        </span>
+      );
+    }
+  }, [pointsRate, hasNft]);
+
   const [isLoadingPrice, setIsLoadingPrice] = useState<boolean>(false);
   const [priceLoadFailed, setPriceLoadFailed] = useState<boolean>(false);
   const hasLoadedPriceOnce = useRef<boolean>(false);
-  
+
   const [collateralTokenPrice, setCollateralTokenPrice] = useState<number | null>(null);
   const [isLoadingCollateralPrice, setIsLoadingCollateralPrice] = useState<boolean>(false);
   const [collateralPriceLoadFailed, setCollateralPriceLoadFailed] = useState<boolean>(false);
   const hasLoadedCollateralPriceOnce = useRef<boolean>(false);
-  
+
   const [positionInBorrowTokens, setPositionInBorrowTokens] = useState<string | null>(null);
   const [isLoadingPosition, setIsLoadingPosition] = useState<boolean>(false);
 
@@ -189,7 +267,7 @@ export default function Info() {
   return (
     <div className="relative rounded-lg bg-gray-50 p-3">
       <h3 className="text-lg font-medium text-gray-900 mb-3">Overview</h3>
-      <div className="w-full flex justify-between items-center text-sm mb-3">
+      <div className="w-full flex justify-between items-start text-sm mb-3">
         <div className="font-medium text-gray-700">Your Position:</div>
         <div className="min-w-[60px] text-right">
           {isMainnet ? (
@@ -198,10 +276,10 @@ export default function Info() {
                 <div className="mr-2 min-w-[60px] text-right">
                   {isRefreshingBalances ? (
                     <span className="text-gray-500 italic">Loading...</span>
-                  ) : 
+                  ) :
                     <TransitionLoader isLoading={isLoadingPosition || !positionInBorrowTokens}>
                       {positionInBorrowTokens ?
-                        <NumberDisplay value={positionInBorrowTokens} /> : 
+                        <NumberDisplay value={positionInBorrowTokens} /> :
                         null
                       }
                     </TransitionLoader>
@@ -219,7 +297,7 @@ export default function Info() {
                     <TransitionLoader isLoading={isLoadingPrice} isFailedToLoad={priceLoadFailed}>
                       {formatUsdValue(positionUsdValue)}
                     </TransitionLoader>
-                  ) : 
+                  ) :
                     formatUsdValue(positionUsdValue)
                   }
                 </div>
@@ -230,7 +308,7 @@ export default function Info() {
               <div className="mr-2 min-w-[60px] text-right">
                 {isRefreshingBalances ? (
                   <span className="text-gray-500 italic">Loading...</span>
-                ) : 
+                ) :
                   <TransitionLoader isLoading={!sharesBalance || sharesBalance === '0'}>
                     <NumberDisplay value={sharesBalance} />
                   </TransitionLoader>
@@ -248,7 +326,7 @@ export default function Info() {
           )}
         </div>
       </div>
-      <div className="w-full flex justify-between items-center text-sm mb-2">
+      <div className="w-full flex justify-between items-start text-sm mb-2">
         <div className="font-medium text-gray-700">APY:</div>
         <div className="min-w-[60px] min-h-[16px] text-right">
           <TransitionLoader isLoading={!apy} isFailedToLoad={apyLoadFailed}>
@@ -256,8 +334,34 @@ export default function Info() {
           </TransitionLoader>
         </div>
       </div>
+      {isMainnet && address && (
+        <>
+          <div className="w-full flex justify-between items-start text-sm mb-2">
+            <div className="font-medium text-gray-700">Your points:</div>
+            <div className="min-w-[60px] text-right">
+              <TransitionLoader isLoading={isLoadingPointsData}>
+                {isLp ? (
+                  <span className="text-gray-900">private LP</span>
+                ) : (
+                  <span className="text-gray-900">{userPoints !== null ? `${userPoints} Points` : '0 Points'}</span>
+                )}
+              </TransitionLoader>
+            </div>
+          </div>
+          {!isLp && (
+            <div className="w-full flex justify-between items-start text-sm mb-2">
+              <div className="font-medium text-gray-700">Points rate:</div>
+              <div className="min-w-[60px] text-right">
+                <TransitionLoader isLoading={!pointsRate}>
+                  {pointsRateDisplay}
+                </TransitionLoader>
+              </div>
+            </div>
+          )}
+        </>
+      )}
       {tvl && (
-        <div className="w-full flex justify-between items-center text-sm mb-2">
+        <div className="w-full flex justify-between items-start text-sm mb-2">
           <div className="font-medium text-gray-700">Leveraged TVL:</div>
           <div className="min-w-[60px] text-right">
             <div className="flex flex-col items-end">
@@ -279,7 +383,7 @@ export default function Info() {
                     <TransitionLoader isLoading={isLoadingCollateralPrice} isFailedToLoad={collateralPriceLoadFailed}>
                       {formatUsdValue(tvlUsdValue)}
                     </TransitionLoader>
-                  ) : 
+                  ) :
                     formatUsdValue(tvlUsdValue)
                   }
                 </div>
@@ -288,7 +392,7 @@ export default function Info() {
           </div>
         </div>
       )}
-      <div className="w-full flex justify-between items-center text-sm mb-2">
+      <div className="w-full flex justify-between items-start text-sm mb-2">
         <div className="font-medium text-gray-700">Deposited TVL:</div>
         <div className="min-w-[60px] text-right">
           <div className="flex flex-col items-end">

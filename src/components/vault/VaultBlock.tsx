@@ -451,10 +451,10 @@ export default function VaultBlock({ address }: VaultBlockProps) {
           </div>
         </div>
         <div className="flex justify-between text-sm">
-          <div className="font-medium text-gray-700">Points: </div>
+          <div className="font-medium text-gray-700">Points Rate: </div>
           <div className="font-normal text-gray-700 min-w-[60px] text-right">
             <TransitionLoader isLoading={isLoadingApy} isFailedToLoad={pointsRateLoadFailed}>
-              {memoizedApyData.pointsRate !== null ? `${memoizedApyData.pointsRate}/day` : ''}
+              {memoizedApyData.pointsRate !== null ? `~${memoizedApyData.pointsRate} per 1 token / day` : ''}
             </TransitionLoader>
           </div>
         </div>

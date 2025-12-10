@@ -124,3 +124,41 @@ export async function submitTermsOfUseSignature(
     return null;
   }
 }
+
+export async function fetchIsLiquidityProvider(address: string, chainId: string | null): Promise<boolean | null> {
+  try {
+    // Both Mainnet and Sepolia use the same API URL configuration for now
+    const apiUrl = API_URLS[chainId || SEPOLIA_CHAIN_ID_STRING] || API_URLS[SEPOLIA_CHAIN_ID_STRING];
+    const response = await fetchWithTimeout(`${apiUrl}/is-liquidity-provider/${address}`);
+    if (!response.ok) {
+      throw new Error(`Failed to check liquidity provider status: ${response.status}`);
+    }
+    const isLp: boolean = await response.json();
+    return isLp;
+  } catch (error) {
+    console.error('Error checking liquidity provider status:', error);
+    return null;
+  }
+}
+
+export async function fetchUserPoints(address: string, chainId: string | null): Promise<number | null> {
+  try {
+    const apiUrl = API_URLS[chainId || SEPOLIA_CHAIN_ID_STRING] || API_URLS[SEPOLIA_CHAIN_ID_STRING];
+    const response = await fetchWithTimeout(`${apiUrl}/points/${address}`);
+    if (!response.ok) {
+      if (response.status === 404) {
+        return 0;
+      }
+      throw new Error(`Failed to fetch user points: ${response.status}`);
+    }
+    const data = await response.json();
+    // Handle both object {points: number} and raw number formats
+    if (typeof data === 'number') {
+      return data;
+    }
+    return data && typeof data.points === 'number' ? data.points : 0;
+  } catch (error) {
+    console.error('Error fetching user points:', error);
+    return null;
+  }
+}

@@ -69,10 +69,10 @@ export default function WhitelistBanner() {
               </svg>
               <div className="flex-1">
                 <p className="text-sm text-green-800 font-medium">
-                  You're whitelisted
+                  Dear 42 NFT holder - you’re whitelisted!
                 </p>
                 <p className="text-sm text-green-700 mt-1">
-                  You have a whitelist signature. Click the button below to activate your whitelist access.
+                  You were included in the 42 NFT snapshot, and your whitelist signature is ready. Click the button below to activate your whitelist access.
                 </p>
               </div>
             </div>
@@ -118,7 +118,7 @@ export default function WhitelistBanner() {
           </button>
 
           <p className="text-xs text-gray-500 text-center">
-            This will submit a transaction to the blockchain. You can only use this signature once.
+            This action will submit a transaction to the blockchain, and you’ll only need to do it once.
           </p>
         </div>
       )}

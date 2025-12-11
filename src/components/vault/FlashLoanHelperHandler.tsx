@@ -210,13 +210,17 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     if (helperType === 'mint') {
       if (rawMinMint > rawMaxAmount) {
         setMinDisablesAction(true);
+      } else {
+        setMinDisablesAction(false);
       }
     } else {
       if (rawMinRedeem > rawMaxAmount) {
         setMinDisablesAction(true);
+      } else {
+        setMinDisablesAction(false);
       }
     }
-  }, [helperType, sharesDecimals, minMint, minRedeem]);
+  }, [helperType, sharesDecimals, minMint, minRedeem, maxAmount]);
 
   useEffect(() => {
     if (helperType === 'mint') {

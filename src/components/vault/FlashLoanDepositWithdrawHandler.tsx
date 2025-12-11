@@ -15,9 +15,6 @@ interface FlashLoanDepositWithdrawHandlerProps {
   actionType: ActionType;
 }
 
-const GAS_RESERVE_MULTIPLIER = 3n;
-const GAS_RESERVE = GAS_RESERVE_WEI * GAS_RESERVE_MULTIPLIER;
-
 // fixed slippage for redeem, 0.1%
 const REDEEM_SLIPPAGE_DIVIDEND = 999;
 const REDEEM_SLIPPAGE_DIVIDER = 1000;
@@ -249,7 +246,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
 
     const rawEthBalance = parseEther(ethBalance);
     const sharesFromEth = await vaultLens.convertToShares(rawEthBalance);
-    const userMaxMint = clampToPositive(sharesFromEth - GAS_RESERVE);
+    const userMaxMint = clampToPositive(sharesFromEth - GAS_RESERVE_WEI);
     const vaultMaxMint = await vaultLens.maxLowLevelRebalanceShares();
 
     const maxMint = minBigInt(userMaxMint, vaultMaxMint);

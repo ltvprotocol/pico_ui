@@ -5,7 +5,7 @@ import { isUserRejected, allowOnlyNumbers, isWstETHAddress, wrapEthToWstEth, cal
 import { PreviewBox, NumberDisplay, TransitionLoader } from '@/components/ui';
 import { useAdaptiveInterval, useFlashLoanPreview } from '@/hooks';
 import { GAS_RESERVE_WEI } from '@/constants';
-import { findSharesForEthDeposit, findSharesForEthWithdraw } from '@/utils/findSharesForAmount';
+import { findSharesForEthWithdraw } from '@/utils/findSharesForAmount';
 import { maxBigInt } from '@/utils';
 import { ERC20__factory } from '@/typechain-types';
 
@@ -24,6 +24,9 @@ const REDEEM_SLIPPAGE_DIVIDER = 1000;
 
 const MINT_SLIPPAGE_DIVIDEND = 1000001;
 const MINT_SLIPPAGE_DIVIDER = 1000000;
+
+const FLASH_LOAN_DEPOSIT_WITHDRAW_PRECISION_DIVIDEND = 99999;
+const FLASH_LOAN_DEPOSIT_WITHDRAW_PRECISION_DIVIDER = 100000;
 
 export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoanDepositWithdrawHandlerProps) {
   const [inputValue, setInputValue] = useState('');
@@ -110,6 +113,10 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     return amount * BigInt(MINT_SLIPPAGE_DIVIDEND) / BigInt(MINT_SLIPPAGE_DIVIDER);
   }
 
+  const applyFlashLoanDepositWithdrawSlippage = (amount: bigint) => {
+    return amount * BigInt(FLASH_LOAN_DEPOSIT_WITHDRAW_PRECISION_DIVIDEND) / BigInt(FLASH_LOAN_DEPOSIT_WITHDRAW_PRECISION_DIVIDER);
+  }
+
   const loadMinAvailable = async () => {
     if (!vaultLens || !publicProvider || !vaultAddress || !sharesDecimals) return;
 
@@ -193,15 +200,11 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
       if (actionType === 'deposit') {
         if (!flashLoanMintHelper || !publicProvider) return;
 
-        const shares = await findSharesForEthDeposit({
-          amount: inputAmount,
-          helper: flashLoanMintHelper,
-          provider: publicProvider,
-          vaultLens
-        })
-
+        let shares = await vaultLens.convertToShares(inputAmount);
+        
         if (!shares) return;
 
+        shares = applyFlashLoanDepositWithdrawSlippage(shares);
         setEstimatedShares(shares);
       } else {
         if (isMaxWithdraw) {
@@ -212,14 +215,15 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
 
         if (!flashLoanRedeemHelper) return;
 
-        const shares = await findSharesForEthWithdraw({
+        let shares = await findSharesForEthWithdraw({
           amount: inputAmount,
           helper: flashLoanRedeemHelper,
           vaultLens
         })
-
+        
         if (!shares) return;
 
+        shares = applyFlashLoanDepositWithdrawSlippage(shares);
         setEstimatedShares(shares);
       }
 

@@ -343,7 +343,7 @@ export default function Info() {
                 {isLp ? (
                   <span className="text-gray-900">private LP</span>
                 ) : (
-                  <span className="text-gray-900">{userPoints !== null ? `${userPoints} Points` : '0 Points'}</span>
+                  <span className="text-gray-900">{userPoints !== null ? `${formatUnits(userPoints, 24)} Points` : '0 Points'}</span>
                 )}
               </TransitionLoader>
             </div>

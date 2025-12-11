@@ -168,20 +168,25 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   useEffect(() => {
     if (!maxAmount || !minDeposit || !minWithdraw) return;
 
-    const rawMaxAmount = parseUnits(maxAmount, sharesDecimals);
-    const rawMinDeposit = parseUnits(minDeposit, sharesDecimals);
-    const rawMinWithdraw = parseUnits(minWithdraw, sharesDecimals);
+    const rawMaxAmount = parseEther(maxAmount);
+    const rawMinDeposit = parseEther(minDeposit);
+    const rawMinWithdraw = parseEther(minWithdraw);
 
     if (actionType === 'deposit') {
       if (rawMinDeposit > rawMaxAmount) {
         setMinDisablesAction(true);
+      } else {
+        setMinDisablesAction(false);
       }
     } else {
       if (rawMinWithdraw > rawMaxAmount) {
         setMinDisablesAction(true);
+      } else {
+        setMinDisablesAction(false);
       }
     }
-  }, [actionType, sharesDecimals, minDeposit, minWithdraw]);
+
+  }, [actionType, minDeposit, minWithdraw, maxAmount]);
 
   const calculateShares = async () => {
     if (!inputValue || !vaultLens) {

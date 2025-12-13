@@ -92,9 +92,11 @@ export const useFlashLoanPreview = ({
     return () => clearTimeout(timeoutId);
   }, [sharesToProcess, helperType, sharesBalance]);
 
-  // Reset preview data when helper type changes
+  // Reset preview data and errors when helper type changes
   useEffect(() => {
     setPreviewData(null);
+    setIsErrorLoadingPreview(false);
+    setInvalidRebalanceMode(false);
   }, [helperType]);
 
   const getReceiveAndProvide = () => {

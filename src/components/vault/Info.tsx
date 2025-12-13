@@ -102,6 +102,21 @@ export default function Info() {
     }
   }, [pointsRate, hasNft]);
 
+  function formatPointsApprox(
+    value: number,
+    decimals = 24,
+    fractionDigits = 2
+  ): string {
+    if (!Number.isFinite(value)) return '0';
+
+    const human = value / 10 ** decimals;
+
+    return new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits,
+    }).format(human);
+  }
+
   const [isLoadingPrice, setIsLoadingPrice] = useState<boolean>(false);
   const [priceLoadFailed, setPriceLoadFailed] = useState<boolean>(false);
   const hasLoadedPriceOnce = useRef<boolean>(false);
@@ -343,7 +358,7 @@ export default function Info() {
                 {isLp ? (
                   <span className="text-gray-900">private LP</span>
                 ) : (
-                  <span className="text-gray-900">{userPoints !== null ? `${formatUnits(userPoints, 24)} Points` : '0 Points'}</span>
+                  <span className="text-gray-900">{userPoints !== null ? `${formatPointsApprox(userPoints)} Points` : '0 Points'}</span>
                 )}
               </TransitionLoader>
             </div>

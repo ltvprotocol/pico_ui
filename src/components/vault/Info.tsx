@@ -292,6 +292,25 @@ export default function Info() {
                   {isRefreshingBalances ? (
                     <span className="text-gray-500 italic">Loading...</span>
                   ) :
+                    <TransitionLoader isLoading={!sharesBalance || sharesBalance === '0'}>
+                      <NumberDisplay value={sharesBalance} />
+                    </TransitionLoader>
+                  }
+                </div>
+                <div className="font-medium text-gray-700">
+                  <SymbolWithTooltip
+                    symbol={sharesSymbol}
+                    placeholder='Levereged Tokens'
+                    elementId='info-shares'
+                    isLoading={!sharesSymbol}
+                  />
+                </div>
+              </div>
+              <div className="flex">
+                <div className="mr-2 min-w-[60px] text-right">
+                  {isRefreshingBalances ? (
+                    <span className="text-gray-500 italic">Loading...</span>
+                  ) :
                     <TransitionLoader isLoading={isLoadingPosition || !positionInBorrowTokens}>
                       {positionInBorrowTokens ?
                         <NumberDisplay value={positionInBorrowTokens} /> :

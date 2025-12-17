@@ -48,7 +48,8 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   const [minWithdraw, setMinWithdraw] = useState('');
   const [minTooBig, setMinDisablesAction] = useState(false);
 
-  const { address, provider, signer, publicProvider } = useAppContext();
+  const { address, provider, signer, publicProvider, isMainnet } = useAppContext();
+  const [maxAmountUsd, setMaxAmountUsd] = useState<number | null>(null);
 
   const {
     vault,
@@ -69,7 +70,9 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     ethBalance,
     refreshBalances,
     refreshVaultLimits,
-    borrowTokenSymbol
+    borrowTokenSymbol,
+    borrowTokenPrice,
+    collateralTokenPrice
   } = useVaultContext();
 
   const helper = actionType === 'deposit' ? flashLoanMintHelper : flashLoanRedeemHelper;
@@ -93,6 +96,41 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     sharesBalance,
     sharesDecimals,
   });
+
+  const rawInputSymbol = actionType === 'deposit' ? (isWstETHVault ? 'ETH' : collateralTokenSymbol) : borrowTokenSymbol;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const inputSymbol = formatTokenSymbol(rawInputSymbol);
+
+  const tokenPrice = actionType === 'deposit' ? collateralTokenPrice : borrowTokenPrice;
+
+  useEffect(() => {
+    if (!maxAmount || !tokenPrice) {
+      setMaxAmountUsd(null);
+      return;
+    }
+
+    try {
+      const amount = parseFloat(maxAmount);
+      if (isNaN(amount)) {
+        setMaxAmountUsd(null);
+      } else {
+        setMaxAmountUsd(amount * tokenPrice);
+      }
+    } catch (e) {
+      console.error("Error calculating USD value", e);
+      setMaxAmountUsd(null);
+    }
+  }, [maxAmount, tokenPrice]);
+
+  const formatUsdValue = (value: number | null) => {
+    if (value === null) return null;
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
 
   useEffect(() => {
     setInputValue('');
@@ -206,7 +244,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
         if (!flashLoanMintHelper || !publicProvider) return;
 
         let shares = await vaultLens.convertToShares(inputAmount);
-        
+
         if (!shares) return;
 
         shares = applyFlashLoanDepositWithdrawSlippage(shares);
@@ -225,7 +263,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
           helper: flashLoanRedeemHelper,
           vaultLens
         })
-        
+
         if (!shares) return;
 
         shares = applyFlashLoanDepositWithdrawSlippage(shares);
@@ -345,7 +383,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
         setEthToWrapValue('');
         setPreviewedWstEthAmount(null);
 
-        
+
         if (previewData?.amount) {
           setHasInsufficientBalance(parseUnits(collateralTokenBalance, Number(collateralTokenDecimals)) < previewData.amount);
         } else {
@@ -507,9 +545,6 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     }
   };
 
-  const rawInputSymbol =actionType === 'deposit' ? (isWstETHVault ? 'ETH' : collateralTokenSymbol) : borrowTokenSymbol;
-  const inputSymbol = formatTokenSymbol(rawInputSymbol);
-
   return (
     <div>
       <form onSubmit={handleSubmit} className="space-y-3">
@@ -551,6 +586,11 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
               {' '}
               {inputSymbol}
             </span>
+          </TransitionLoader>
+          <TransitionLoader isLoading={!maxAmountUsd}>
+            <div className="ml-2">
+              ({formatUsdValue(maxAmountUsd)})
+            </div>
           </TransitionLoader>
         </div>
 

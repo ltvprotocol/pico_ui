@@ -9,7 +9,7 @@ import {
   calculateEthWrapForFlashLoan,
   minBigInt,
   formatTokenSymbol,
-  clampToPositive
+  clampToPositive,
 } from '@/utils';
 import { PreviewBox, NumberDisplay, TransitionLoader } from '@/components/ui';
 import { useAdaptiveInterval, useFlashLoanPreview } from '@/hooks';
@@ -57,6 +57,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
   const [minTooBig, setMinDisablesAction] = useState(false);
 
   const { address, provider, signer, publicProvider } = useAppContext();
+  const [maxAmountUsd, setMaxAmountUsd] = useState<number | null>(null);
 
   const {
     vault,
@@ -77,6 +78,8 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     ethBalance,
     refreshBalances,
     refreshVaultLimits,
+    borrowTokenDecimals,
+    borrowTokenPrice: tokenPrice,
   } = useVaultContext();
 
   const helper = helperType === 'mint' ? flashLoanMintHelper : flashLoanRedeemHelper;
@@ -100,6 +103,36 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     sharesBalance,
     sharesDecimals,
   });
+
+  useEffect(() => {
+    if (!maxAmount || !tokenPrice || !vaultLens || !sharesDecimals || !borrowTokenDecimals) {
+      setMaxAmountUsd(null);
+      return;
+    }
+
+    const calcUsd = async () => {
+      try {
+        const shares = parseUnits(maxAmount, Number(sharesDecimals));
+        const assets = await vaultLens.convertToAssets(shares);
+        const assetsFormatted = parseFloat(formatUnits(assets, borrowTokenDecimals));
+        setMaxAmountUsd(assetsFormatted * tokenPrice);
+      } catch (e) {
+        console.error("Error calculating USD value", e);
+        setMaxAmountUsd(null);
+      }
+    };
+    calcUsd();
+  }, [maxAmount, tokenPrice, vaultLens, helperType, sharesDecimals, borrowTokenDecimals]);
+
+  const formatUsdValue = (value: number | null) => {
+    if (value === null) return null;
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
 
   useEffect(() => {
     setInputValue('');
@@ -514,6 +547,11 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
           <span>Max Available:</span>
           <TransitionLoader isLoading={!maxAmount}>
             <NumberDisplay value={maxAmount} />{' '}{sharesSymbol}
+          </TransitionLoader>
+          <TransitionLoader isLoading={!maxAmountUsd}>
+            <div className="ml-2">
+              ({formatUsdValue(maxAmountUsd)})
+            </div>
           </TransitionLoader>
         </div>
 

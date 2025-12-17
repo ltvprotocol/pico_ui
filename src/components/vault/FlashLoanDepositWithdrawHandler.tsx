@@ -48,7 +48,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   const [minWithdraw, setMinWithdraw] = useState('');
   const [minTooBig, setMinDisablesAction] = useState(false);
 
-  const { address, provider, signer, publicProvider, isMainnet } = useAppContext();
+  const { address, provider, signer, publicProvider } = useAppContext();
   const [maxAmountUsd, setMaxAmountUsd] = useState<number | null>(null);
 
   const {

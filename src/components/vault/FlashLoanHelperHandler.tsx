@@ -13,7 +13,7 @@ import {
   calculateEthWrapForFlashLoan
 } from '@/utils';
 import { PreviewBox, NumberDisplay, TransitionLoader } from '@/components/ui';
-import { useAdaptiveInterval, useFlashLoanPreview } from '@/hooks';
+import { useAdaptiveInterval, useFlashLoanPreview, useMaxAmountUsd } from '@/hooks';
 import { GAS_RESERVE_WEI } from '@/constants';
 import { maxBigInt } from '@/utils';
 import { ERC20__factory } from '@/typechain-types';
@@ -58,7 +58,6 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
   const [minTooBig, setMinDisablesAction] = useState(false);
 
   const { address, provider, signer, publicProvider } = useAppContext();
-  const [maxAmountUsd, setMaxAmountUsd] = useState<number | null>(null);
 
   const {
     vault,
@@ -105,25 +104,14 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     sharesDecimals,
   });
 
-  useEffect(() => {
-    if (!maxAmount || !tokenPrice || !vaultLens || !sharesDecimals || !borrowTokenDecimals) {
-      setMaxAmountUsd(null);
-      return;
-    }
-
-    const calcUsd = async () => {
-      try {
-        const shares = parseUnits(maxAmount, Number(sharesDecimals));
-        const assets = await vaultLens.convertToAssets(shares);
-        const assetsFormatted = parseFloat(formatUnits(assets, borrowTokenDecimals));
-        setMaxAmountUsd(assetsFormatted * tokenPrice);
-      } catch (e) {
-        console.error("Error calculating USD value", e);
-        setMaxAmountUsd(null);
-      }
-    };
-    calcUsd();
-  }, [maxAmount, tokenPrice, vaultLens, helperType, sharesDecimals, borrowTokenDecimals]);
+  const maxAmountUsd = useMaxAmountUsd({
+    mode: 'shares',
+    maxAmount,
+    tokenPrice,
+    vaultLens,
+    sharesDecimals,
+    borrowTokenDecimals,
+  });
 
   useEffect(() => {
     setInputValue('');

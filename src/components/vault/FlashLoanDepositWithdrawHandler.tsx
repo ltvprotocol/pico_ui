@@ -13,7 +13,7 @@ import {
   calculateEthWrapForFlashLoan
 } from '@/utils';
 import { PreviewBox, NumberDisplay, TransitionLoader } from '@/components/ui';
-import { useAdaptiveInterval, useFlashLoanPreview } from '@/hooks';
+import { useAdaptiveInterval, useFlashLoanPreview, useMaxAmountUsd } from '@/hooks';
 import { GAS_RESERVE_WEI } from '@/constants';
 import { findSharesForEthWithdraw } from '@/utils/findSharesForAmount';
 import { maxBigInt } from '@/utils';
@@ -59,7 +59,6 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   const [minTooBig, setMinDisablesAction] = useState(false);
 
   const { address, provider, signer, publicProvider } = useAppContext();
-  const [maxAmountUsd, setMaxAmountUsd] = useState<number | null>(null);
 
   const {
     vault,
@@ -111,29 +110,11 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const inputSymbol = formatTokenSymbol(rawInputSymbol);
 
-  useEffect(() => {
-    const tokenPrice =
-      actionType === 'deposit' ?
-        collateralTokenPrice :
-        borrowTokenPrice;
-
-    if (!maxAmount || !tokenPrice) {
-      setMaxAmountUsd(null);
-      return;
-    }
-
-    try {
-      const amount = parseFloat(maxAmount);
-      if (isNaN(amount)) {
-        setMaxAmountUsd(null);
-      } else {
-        setMaxAmountUsd(amount * tokenPrice);
-      }
-    } catch (e) {
-      console.error("Error calculating USD value", e);
-      setMaxAmountUsd(null);
-    }
-  }, [maxAmount, collateralTokenPrice, borrowTokenPrice]);
+  const maxAmountUsd = useMaxAmountUsd({
+    mode: 'direct',
+    maxAmount,
+    tokenPrice: actionType === 'deposit' ? collateralTokenPrice : borrowTokenPrice,
+  });
 
   useEffect(() => {
     setInputValue('');

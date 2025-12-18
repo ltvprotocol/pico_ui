@@ -111,9 +111,12 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const inputSymbol = formatTokenSymbol(rawInputSymbol);
 
-  const tokenPrice = actionType === 'deposit' ? collateralTokenPrice : borrowTokenPrice;
-
   useEffect(() => {
+    const tokenPrice =
+      actionType === 'deposit' ?
+        collateralTokenPrice :
+        borrowTokenPrice;
+
     if (!maxAmount || !tokenPrice) {
       setMaxAmountUsd(null);
       return;
@@ -130,7 +133,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
       console.error("Error calculating USD value", e);
       setMaxAmountUsd(null);
     }
-  }, [maxAmount, tokenPrice]);
+  }, [maxAmount, collateralTokenPrice, borrowTokenPrice]);
 
   useEffect(() => {
     setInputValue('');

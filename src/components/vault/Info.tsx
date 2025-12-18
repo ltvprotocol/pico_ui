@@ -2,7 +2,12 @@ import { useEffect, useState, useMemo } from 'react';
 import { formatUnits, parseUnits, Contract } from 'ethers';
 import { useVaultContext } from '@/contexts';
 import { useAppContext } from '@/contexts';
-import { fetchIsLiquidityProvider, fetchUserPoints, formatTokenSymbol } from '@/utils';
+import {
+  fetchIsLiquidityProvider,
+  fetchUserPoints,
+  formatTokenSymbol,
+  formatUsdValue
+} from '@/utils';
 import { NumberDisplay, TransitionLoader, SymbolWithTooltip } from '@/components/ui';
 
 export default function Info() {
@@ -137,17 +142,6 @@ export default function Info() {
     }
     return totalAssetsNum * tokenPrice;
   }, [isMainnet, tokenPrice, totalAssets]);
-
-  const formatUsdValue = (value: number | null) => {
-    if (value === null) return null;
-    // Format with thousands separator
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
 
   // Calculate TVL USD value
   const tvlUsdValue = useMemo(() => {

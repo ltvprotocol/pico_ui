@@ -3,13 +3,14 @@ import { parseUnits, parseEther, formatUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
 import {
   isUserRejected,
-  allowOnlyNumbers,
   isWstETHAddress,
-  wrapEthToWstEth,
-  calculateEthWrapForFlashLoan,
+  allowOnlyNumbers,
   minBigInt,
-  formatTokenSymbol,
   clampToPositive,
+  formatTokenSymbol,
+  formatUsdValue,
+  wrapEthToWstEth,
+  calculateEthWrapForFlashLoan
 } from '@/utils';
 import { PreviewBox, NumberDisplay, TransitionLoader } from '@/components/ui';
 import { useAdaptiveInterval, useFlashLoanPreview } from '@/hooks';
@@ -123,16 +124,6 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     };
     calcUsd();
   }, [maxAmount, tokenPrice, vaultLens, helperType, sharesDecimals, borrowTokenDecimals]);
-
-  const formatUsdValue = (value: number | null) => {
-    if (value === null) return null;
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
 
   useEffect(() => {
     setInputValue('');

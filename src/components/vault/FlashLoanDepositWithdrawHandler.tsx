@@ -1,7 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { parseUnits, parseEther, formatUnits, formatEther } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
-import { isUserRejected, allowOnlyNumbers, isWstETHAddress, wrapEthToWstEth, calculateEthWrapForFlashLoan, minBigInt, formatTokenSymbol, clampToPositive } from '@/utils';
+import {
+  isUserRejected,
+  isWstETHAddress,
+  allowOnlyNumbers,
+  minBigInt,
+  clampToPositive,
+  formatTokenSymbol,
+  formatUsdValue,
+  wrapEthToWstEth,
+  calculateEthWrapForFlashLoan
+} from '@/utils';
 import { PreviewBox, NumberDisplay, TransitionLoader } from '@/components/ui';
 import { useAdaptiveInterval, useFlashLoanPreview } from '@/hooks';
 import { GAS_RESERVE_WEI } from '@/constants';
@@ -121,16 +131,6 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
       setMaxAmountUsd(null);
     }
   }, [maxAmount, tokenPrice]);
-
-  const formatUsdValue = (value: number | null) => {
-    if (value === null) return null;
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
 
   useEffect(() => {
     setInputValue('');

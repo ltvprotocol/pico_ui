@@ -111,7 +111,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   const inputSymbol = formatTokenSymbol(rawInputSymbol);
 
   const maxAmountUsd = useMaxAmountUsd({
-    mode: 'direct',
+    needConvertFromShares: false,
     maxAmount,
     tokenPrice: actionType === 'deposit' ? collateralTokenPrice : borrowTokenPrice,
   });

@@ -2,78 +2,60 @@ import { useState, useEffect } from 'react';
 import { parseUnits, formatUnits } from 'ethers';
 import { Vault } from '@/typechain-types';
 
-interface UseMaxAmountUsdBaseOptions {
+interface UseMaxAmountUsdOptions {
   maxAmount: string;
   tokenPrice: number | null;
+  needConvertFromShares: boolean;
+  vaultLens?: Vault | null;
+  sharesDecimals?: bigint | null;
+  borrowTokenDecimals?: bigint | null;
 }
-
-interface UseMaxAmountUsdWithConversionOptions extends UseMaxAmountUsdBaseOptions {
-  mode: 'shares';
-  vaultLens: Vault | null;
-  sharesDecimals: bigint | null;
-  borrowTokenDecimals: bigint | null;
-}
-
-interface UseMaxAmountUsdDirectOptions extends UseMaxAmountUsdBaseOptions {
-  mode: 'direct';
-}
-
-type UseMaxAmountUsdOptions = UseMaxAmountUsdWithConversionOptions | UseMaxAmountUsdDirectOptions;
 
 export function useMaxAmountUsd(options: UseMaxAmountUsdOptions): number | null {
   const [maxAmountUsd, setMaxAmountUsd] = useState<number | null>(null);
 
   useEffect(() => {
-    const { maxAmount, tokenPrice, mode } = options;
+    const { maxAmount, tokenPrice, needConvertFromShares, vaultLens, sharesDecimals, borrowTokenDecimals } = options;
 
-    if (!maxAmount || !tokenPrice) {
+    const needToSkip = !maxAmount || !tokenPrice || (needConvertFromShares && (!vaultLens || !sharesDecimals || !borrowTokenDecimals));
+
+    if (needToSkip) {
       setMaxAmountUsd(null);
       return;
     }
 
-    if (mode === 'direct') {
+    const calculateMaxAmountUsd = async () => {
       try {
-        const amount = parseFloat(maxAmount);
+        let amount: number;
+        if (needConvertFromShares) {
+          const shares = parseUnits(maxAmount, Number(sharesDecimals));
+          const assets = await vaultLens!.convertToAssets(shares);
+          amount = parseFloat(formatUnits(assets, borrowTokenDecimals!));
+        } else {
+          amount = parseFloat(maxAmount);
+        }
+
         if (isNaN(amount)) {
           setMaxAmountUsd(null);
-        } else {
-          setMaxAmountUsd(amount * tokenPrice);
+          return;
         }
-      } catch (e) {
+
+        setMaxAmountUsd(amount * tokenPrice);
+      }
+      catch (e) {
         console.error("Error calculating USD value", e);
         setMaxAmountUsd(null);
       }
-      return;
     }
 
-    // mode === 'shares'
-    const { vaultLens, sharesDecimals, borrowTokenDecimals } = options;
-
-    if (!vaultLens || !sharesDecimals || !borrowTokenDecimals) {
-      setMaxAmountUsd(null);
-      return;
-    }
-
-    const calcUsdMaxFromShares = async () => {
-      try {
-        const shares = parseUnits(maxAmount, Number(sharesDecimals));
-        const assets = await vaultLens.convertToAssets(shares);
-        const assetsFormatted = parseFloat(formatUnits(assets, borrowTokenDecimals));
-        setMaxAmountUsd(assetsFormatted * tokenPrice);
-      } catch (e) {
-        console.error("Error calculating USD value", e);
-        setMaxAmountUsd(null);
-      }
-    };
-
-    calcUsdMaxFromShares();
+    calculateMaxAmountUsd();
   }, [
     options.maxAmount,
     options.tokenPrice,
-    options.mode,
-    options.mode === 'shares' ? options.vaultLens : null,
-    options.mode === 'shares' ? options.sharesDecimals : null,
-    options.mode === 'shares' ? options.borrowTokenDecimals : null,
+    options.needConvertFromShares,
+    options.vaultLens,
+    options.sharesDecimals,
+    options.borrowTokenDecimals,
   ]);
 
   return maxAmountUsd;

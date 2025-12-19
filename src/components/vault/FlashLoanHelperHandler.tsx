@@ -105,7 +105,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
   });
 
   const maxAmountUsd = useMaxAmountUsd({
-    mode: 'shares',
+    needConvertFromShares: true,
     maxAmount,
     tokenPrice,
     vaultLens,

@@ -527,7 +527,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
           <TransitionLoader isLoading={!maxAmount}>
             <NumberDisplay value={maxAmount} />{' '}{sharesSymbol}
           </TransitionLoader>
-          <TransitionLoader isLoading={!maxAmountUsd}>
+          <TransitionLoader isLoading={maxAmountUsd === null}>
             <div className="ml-2">
               ({formatUsdValue(maxAmountUsd)})
             </div>

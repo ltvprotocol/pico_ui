@@ -571,7 +571,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
               {inputSymbol}
             </span>
           </TransitionLoader>
-          <TransitionLoader isLoading={!maxAmountUsd}>
+          <TransitionLoader isLoading={maxAmountUsd === null}>
             <div className="ml-2">
               ({formatUsdValue(maxAmountUsd)})
             </div>

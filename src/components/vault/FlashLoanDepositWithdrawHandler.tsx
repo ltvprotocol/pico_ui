@@ -81,7 +81,6 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     refreshVaultLimits,
     borrowTokenSymbol,
     borrowTokenPrice,
-    collateralTokenPrice
   } = useVaultContext();
 
   const helper = actionType === 'deposit' ? flashLoanMintHelper : flashLoanRedeemHelper;
@@ -113,7 +112,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   const maxAmountUsd = useMaxAmountUsd({
     needConvertFromShares: false,
     maxAmount,
-    tokenPrice: actionType === 'deposit' ? collateralTokenPrice : borrowTokenPrice,
+    tokenPrice: borrowTokenPrice,
   });
 
   useEffect(() => {

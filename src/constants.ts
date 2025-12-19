@@ -32,6 +32,10 @@ export const MAINNET_CHAIN_ID = 1n;
 export const MAINNET_CHAIN_ID_HEX = '0x1'; // 1 in hex
 export const MAINNET_CHAIN_ID_STRING = "1";
 
+export const DEFAULT_CHAIN_ID = MAINNET_CHAIN_ID;
+export const DEFAULT_CHAIN_ID_HEX = MAINNET_CHAIN_ID_HEX;
+export const DEFAULT_CHAIN_ID_STRING = MAINNET_CHAIN_ID_STRING;
+
 export const SEPOLIA_NETWORK = {
   chainId: SEPOLIA_CHAIN_ID_HEX,
   chainName: 'Sepolia',

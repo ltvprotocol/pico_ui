@@ -1,5 +1,5 @@
 import { API_URLS, APY_API_URLS, TERMS_API_URLS } from '@/config';
-import { SEPOLIA_CHAIN_ID_STRING } from '@/constants';
+import { DEFAULT_CHAIN_ID_STRING } from '@/constants';
 
 export interface ApyData {
   "30d_apy": number;
@@ -41,41 +41,56 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout 
   }
 }
 
-export async function fetchApy(vaultAddress: string, chainId: string | null): Promise<ApyData | null> {
+export async function fetchApy(
+  vaultAddress: string,
+  chainId: string | null
+) : Promise<ApyData | null> {
   try {
-    const apiUrl = APY_API_URLS[chainId || SEPOLIA_CHAIN_ID_STRING] || APY_API_URLS[SEPOLIA_CHAIN_ID_STRING];
+    const apiUrl = APY_API_URLS[chainId || DEFAULT_CHAIN_ID_STRING];
+
+    if (!apiUrl) {
+      throw new Error(`No API URL found for chainId: ${chainId}`);
+    }
+
     const response = await fetchWithTimeout(`${apiUrl}/timed-apy/${vaultAddress}`);
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch APY: ${response.status}`);
+      throw new Error(`Failed to fetch APY: ${response.status} ${response.statusText}`);
     }
 
-    const data: ApyData = await response.json();
-    const apy30d = data['30d_apy'];
-    const apy7d = data['7d_apy'];
+    let data: ApyData;
 
-    const isInvalidData =  typeof apy30d !== 'number' || typeof apy7d !== 'number';
-    if (isInvalidData) {
-      throw new Error(`Server returned invalid data: ${JSON.stringify(data)}`);
+    try {
+      data = await response.json();
+    } catch (err) {
+      throw new Error(`Failed to parse APY response as JSON: ${err}`);
+    }
+
+    if (!data || typeof data !== 'object') {
+      throw new Error(`Server returned non-object response: ${typeof data}`);
+    }
+    
+    const rawApy30d = data['30d_apy'];
+    const rawApy7d = data['7d_apy'];
+
+    if (typeof rawApy30d !== 'number' || typeof rawApy7d !== 'number') {
+      throw new Error(`Server returned invalid data types: ${JSON.stringify(data)}`);
     }
 
     /* 
-      API returns something eg: 
-      {
-        "30d_apy": 0.1042251324358659,
-        "7d_apy": 0.09208446193502251
-      }
-      
-      So we need to multiply by 100 to receive human-redable values
+      API returns values as decimals (e.g. 0.1042 for 10.42%)
+      We multiply by 100 to receive human-readable values for the UI.
+      If one value is missing APY show that failed to load every value
     */
     const MULTIPLIER = 100;
-    const formattedApy30 = apy30d * MULTIPLIER;
-    const formattedApy7 = apy7d * MULTIPLIER;
+    const formattedApy30 = rawApy30d * MULTIPLIER;
+    const formattedApy7 = rawApy7d * MULTIPLIER;
 
     return {
       "30d_apy": formattedApy30,
       "7d_apy": formattedApy7
     };
+
   } catch (error) {
     console.error('Error fetching APY:', error);
     return null;
@@ -84,7 +99,7 @@ export async function fetchApy(vaultAddress: string, chainId: string | null): Pr
 
 export async function fetchPointsRate(vaultAddress: string, chainId: string | null): Promise<number | null> {
   try {
-    const apiUrl = API_URLS[chainId || SEPOLIA_CHAIN_ID_STRING] || API_URLS[SEPOLIA_CHAIN_ID_STRING];
+    const apiUrl = API_URLS[chainId || DEFAULT_CHAIN_ID_STRING];
     const response = await fetchWithTimeout(`${apiUrl}/points-rate/${vaultAddress}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch points rate: ${response.status}`);
@@ -99,7 +114,7 @@ export async function fetchPointsRate(vaultAddress: string, chainId: string | nu
 
 export async function fetchTermsOfUseText(chainId: string | null): Promise<string | null> {
   try {
-    const apiUrl = TERMS_API_URLS[chainId || SEPOLIA_CHAIN_ID_STRING] || TERMS_API_URLS[SEPOLIA_CHAIN_ID_STRING];
+    const apiUrl = TERMS_API_URLS[chainId || DEFAULT_CHAIN_ID_STRING] || TERMS_API_URLS[DEFAULT_CHAIN_ID_STRING];
     const response = await fetchWithTimeout(`${apiUrl}/terms-of-use-text`);
     if (!response.ok) {
       throw new Error(`Failed to fetch terms of use text: ${response.status}`);
@@ -114,7 +129,7 @@ export async function fetchTermsOfUseText(chainId: string | null): Promise<strin
 
 export async function checkTermsOfUseStatus(address: string, chainId: string | null): Promise<TermsOfUseStatusResponse | null> {
   try {
-    const apiUrl = TERMS_API_URLS[chainId || SEPOLIA_CHAIN_ID_STRING] || TERMS_API_URLS[SEPOLIA_CHAIN_ID_STRING];
+    const apiUrl = TERMS_API_URLS[chainId || DEFAULT_CHAIN_ID_STRING] || TERMS_API_URLS[DEFAULT_CHAIN_ID_STRING];
     const response = await fetchWithTimeout(`${apiUrl}/terms-of-use/${address}`);
     if (!response.ok) {
       throw new Error(`Failed to check terms of use status: ${response.status}`);
@@ -133,7 +148,7 @@ export async function submitTermsOfUseSignature(
   chainId: string | null
 ): Promise<TermsOfUseSignResponse | null> {
   try {
-    const apiUrl = TERMS_API_URLS[chainId || SEPOLIA_CHAIN_ID_STRING] || TERMS_API_URLS[SEPOLIA_CHAIN_ID_STRING];
+    const apiUrl = TERMS_API_URLS[chainId || DEFAULT_CHAIN_ID_STRING] || TERMS_API_URLS[DEFAULT_CHAIN_ID_STRING];
     const response = await fetchWithTimeout(`${apiUrl}/terms-of-use/${address}`, {
       method: 'POST',
       headers: {
@@ -155,7 +170,7 @@ export async function submitTermsOfUseSignature(
 export async function fetchIsLiquidityProvider(address: string, chainId: string | null): Promise<boolean | null> {
   try {
     // Both Mainnet and Sepolia use the same API URL configuration for now
-    const apiUrl = API_URLS[chainId || SEPOLIA_CHAIN_ID_STRING] || API_URLS[SEPOLIA_CHAIN_ID_STRING];
+    const apiUrl = API_URLS[chainId || DEFAULT_CHAIN_ID_STRING];
     const response = await fetchWithTimeout(`${apiUrl}/is-liquidity-provider/${address}`);
     if (!response.ok) {
       throw new Error(`Failed to check liquidity provider status: ${response.status}`);
@@ -170,7 +185,7 @@ export async function fetchIsLiquidityProvider(address: string, chainId: string 
 
 export async function fetchUserPoints(address: string, chainId: string | null): Promise<number | null> {
   try {
-    const apiUrl = API_URLS[chainId || SEPOLIA_CHAIN_ID_STRING] || API_URLS[SEPOLIA_CHAIN_ID_STRING];
+    const apiUrl = API_URLS[chainId || DEFAULT_CHAIN_ID_STRING];
     const response = await fetchWithTimeout(`${apiUrl}/points/${address}`);
     if (!response.ok) {
       if (response.status === 404) {

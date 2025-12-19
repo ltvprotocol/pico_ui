@@ -52,7 +52,9 @@ export const useFlashLoanPreview = ({
       // setHasInsufficientBalance(false);
       return;
     }
-
+    
+    setIsErrorLoadingPreview(false);
+    setInvalidRebalanceMode(false);
     setIsLoadingPreview(true);
 
     try {

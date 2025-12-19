@@ -1,8 +1,9 @@
-import { API_URLS, TERMS_API_URLS } from '@/config';
+import { API_URLS, APY_API_URLS, TERMS_API_URLS } from '@/config';
 import { SEPOLIA_CHAIN_ID_STRING } from '@/constants';
 
-export interface ApyResponse {
-  apy: number;
+export interface ApyData {
+  "30d_apy": number;
+  "7d_apy": number;
 }
 
 export interface PointsRateResponse {
@@ -40,15 +41,41 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout 
   }
 }
 
-export async function fetchApy(vaultAddress: string, chainId: string | null): Promise<number | null> {
+export async function fetchApy(vaultAddress: string, chainId: string | null): Promise<ApyData | null> {
   try {
-    const apiUrl = API_URLS[chainId || SEPOLIA_CHAIN_ID_STRING];
-    const response = await fetchWithTimeout(`${apiUrl}/apy/${vaultAddress}`);
+    const apiUrl = APY_API_URLS[chainId || SEPOLIA_CHAIN_ID_STRING] || APY_API_URLS[SEPOLIA_CHAIN_ID_STRING];
+    const response = await fetchWithTimeout(`${apiUrl}/timed-apy/${vaultAddress}`);
+
     if (!response.ok) {
       throw new Error(`Failed to fetch APY: ${response.status}`);
     }
-    const data: ApyResponse = await response.json();
-    return data.apy;
+
+    const data: ApyData = await response.json();
+    const apy30d = data['30d_apy'];
+    const apy7d = data['7d_apy'];
+
+    const isInvalidData =  typeof apy30d !== 'number' || typeof apy7d !== 'number';
+    if (isInvalidData) {
+      throw new Error(`Server returned invalid data: ${JSON.stringify(data)}`);
+    }
+
+    /* 
+      API returns something eg: 
+      {
+        "30d_apy": 0.1042251324358659,
+        "7d_apy": 0.09208446193502251
+      }
+      
+      So we need to multiply by 100 to receive human-redable values
+    */
+    const MULTIPLIER = 100;
+    const formattedApy30 = apy30d * MULTIPLIER;
+    const formattedApy7 = apy7d * MULTIPLIER;
+
+    return {
+      "30d_apy": formattedApy30,
+      "7d_apy": formattedApy7
+    };
   } catch (error) {
     console.error('Error fetching APY:', error);
     return null;

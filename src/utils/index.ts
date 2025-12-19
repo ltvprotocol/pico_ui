@@ -18,4 +18,5 @@ export { clampToPositive } from './clampToPositive';
 export { minBigInt } from './minBigInt';
 export { maxBigInt } from './maxBigInt';
 export { formatTokenSymbol } from './formatTokenSymbol';
+export { formatApy } from './formatApy';
 export * from './api';

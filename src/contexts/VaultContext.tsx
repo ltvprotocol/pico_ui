@@ -10,9 +10,10 @@ import {
   WhitelistRegistry__factory
 } from '@/typechain-types';
 import { ltvToLeverage, getLendingProtocolAddress, isVaultExists, isUserRejected, fetchApy, fetchPointsRate, loadTVL, minBigInt, clampToPositive } from '@/utils';
+import { ApyData } from '@/utils/api';
 import vaultsConfig from '../../vaults.config.json';
 import signaturesConfig from '../../signatures.config.json';
-import { isWETHAddress, GAS_RESERVE_WEI, SEPOLIA_CHAIN_ID_STRING, SEPOLIA_MORPHO_MARKET_ID, CONNECTOR_ADDRESSES} from '@/constants';
+import { isWETHAddress, GAS_RESERVE_WEI, SEPOLIA_CHAIN_ID_STRING, SEPOLIA_MORPHO_MARKET_ID, CONNECTOR_ADDRESSES } from '@/constants';
 import { useAdaptiveInterval } from '@/hooks';
 import { loadGhostLtv, loadAaveLtv, loadMorphoLtv } from '@/utils';
 
@@ -99,7 +100,7 @@ interface VaultContextType {
   maxMintCollateral: string;
   maxWithdrawCollateral: string;
   maxLowLevelRebalanceShares: string;
-  apy: number | null;
+  apy: ApyData | null;
   pointsRate: number | null;
   apyLoadFailed: boolean;
   pointsRateLoadFailed: boolean;
@@ -124,7 +125,7 @@ interface Params {
   borrowTokenSymbol: string | null,
   maxLeverage: string | null,
   lendingName: string | null,
-  apy: number | null,
+  apy: ApyData | null,
   pointsRate: number | null,
   isWhitelistActivated: boolean | null,
   isWhitelisted: boolean | null,
@@ -191,7 +192,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   const [maxWithdrawCollateral, setMaxWithdrawCollateral] = useState<string>('0');
   const [maxLowLevelRebalanceShares, setMaxLowLevelRebalanceShares] = useState<string>('0');
 
-  const [apy, setApy] = useState<number | null>(null);
+  const [apy, setApy] = useState<ApyData | null>(null);
   const [pointsRate, setPointsRate] = useState<number | null>(null);
   const [apyLoadFailed, setApyLoadFailed] = useState<boolean>(false);
   const [pointsRateLoadFailed, setPointsRateLoadFailed] = useState<boolean>(false);
@@ -256,35 +257,43 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
     }
   }, [vaultAddress, params, currentNetwork]);
 
-  const loadApyData = useCallback(async () => {
-    if (params.apy !== null && params.pointsRate !== null) {
+  const loadApy = useCallback(async (
+    addr: string,
+    network: string,
+    paramsApy: ApyData | null
+  ) => {
+    if (paramsApy !== null) {
       return;
     }
 
     try {
-      const [apyResult, pointsRateResult] = await Promise.all([
-        params.apy === null ? fetchApy(vaultAddress, currentNetwork) : Promise.resolve(params.apy),
-        params.pointsRate === null ? fetchPointsRate(vaultAddress, currentNetwork) : Promise.resolve(params.pointsRate)
-      ]);
-
-      if (params.apy === null) {
-        setApy(apyResult);
-        setApyLoadFailed(apyResult === null);
-      }
-      if (params.pointsRate === null) {
-        setPointsRate(pointsRateResult);
-        setPointsRateLoadFailed(pointsRateResult === null);
-      }
+      const apyResult = await fetchApy(addr, network);
+      setApyLoadFailed(apyResult === null);
+      setApy(apyResult);
     } catch (err) {
       console.error('Error loading APY data:', err);
-      if (params.apy === null) {
-        setApyLoadFailed(true);
-      }
-      if (params.pointsRate === null) {
-        setPointsRateLoadFailed(true);
-      }
+      setApyLoadFailed(true);
     }
-  }, [vaultAddress, currentNetwork, params.apy, params.pointsRate]);
+  }, []);
+
+  const loadPointsRate = useCallback(async (
+    addr: string,
+    network: string,
+    paramsPointsRate: number | null
+  ) => {
+    if (paramsPointsRate !== null) {
+      return;
+    }
+
+    try {
+      const pointsRateResult = await fetchPointsRate(addr, network);
+      setPointsRate(pointsRateResult);
+      setPointsRateLoadFailed(pointsRateResult === null);
+    } catch (err) {
+      console.error('Error loading points rate:', err);
+      setPointsRateLoadFailed(true);
+    }
+  }, []);
 
   const initializeContracts = useCallback(async () => {
     if (!publicProvider || !currentNetwork) return;
@@ -866,8 +875,15 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
 
   // Load APY data from API if not provided in params
   useEffect(() => {
-    loadApyData();
-  }, [loadApyData]);
+    if (!vaultAddress || !currentNetwork) return;
+    loadApy(vaultAddress, currentNetwork, params.apy);
+  }, [vaultAddress, currentNetwork, params.apy]);
+
+  // Load poinrts rate from API if not provided in params
+  useEffect(() => {
+    if (!vaultAddress || !currentNetwork) return;
+    loadPointsRate(vaultAddress, currentNetwork, params.pointsRate);
+  }, [vaultAddress, currentNetwork, params.pointsRate]);
 
   // Initialize contracts
   useEffect(() => {

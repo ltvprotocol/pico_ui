@@ -9,8 +9,9 @@ import {
   FlashLoanRedeemHelper, FlashLoanRedeemHelper__factory,
   WhitelistRegistry__factory
 } from '@/typechain-types';
-import { ltvToLeverage, getLendingProtocolAddress, isVaultExists, isUserRejected, fetchApy, fetchPointsRate, loadTVL, minBigInt, clampToPositive } from '@/utils';
-import { ApyData } from '@/utils/api';
+import { ltvToLeverage, getLendingProtocolAddress, isVaultExists, isUserRejected, loadTVL, minBigInt, clampToPositive } from '@/utils';
+import { getTimedApy, getPointsRate } from '@/api';
+import { ApyData } from '@/api/apy/getTimedApy';
 import vaultsConfig from '../../vaults.config.json';
 import signaturesConfig from '../../signatures.config.json';
 import { isWETHAddress, GAS_RESERVE_WEI, SEPOLIA_CHAIN_ID_STRING, SEPOLIA_MORPHO_MARKET_ID, CONNECTOR_ADDRESSES } from '@/constants';
@@ -267,7 +268,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
     }
 
     try {
-      const apyResult = await fetchApy(addr, network);
+      const apyResult = await getTimedApy(addr, network);
       setApyLoadFailed(apyResult === null);
       setApy(apyResult);
     } catch (err) {
@@ -286,7 +287,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
     }
 
     try {
-      const pointsRateResult = await fetchPointsRate(addr, network);
+      const pointsRateResult = await getPointsRate(addr, network);
       setPointsRate(pointsRateResult);
       setPointsRateLoadFailed(pointsRateResult === null);
     } catch (err) {

@@ -2,13 +2,8 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import { formatUnits, parseUnits, Contract } from 'ethers';
 import { useVaultContext } from '@/contexts';
 import { useAppContext } from '@/contexts';
-import { 
-  fetchTokenPrice,
-  fetchUserPoints,
-  fetchIsLiquidityProvider,
-  formatTokenSymbol,
-  formatApy
-} from '@/utils';
+import { formatTokenSymbol, formatApy } from '@/utils';
+import { getPointsBalance, isLiquidityProvider, getTokenPrice } from '@/api';
 import { NumberDisplay, TransitionLoader, SymbolWithTooltip } from '@/components/ui';
 
 export default function Info() {
@@ -50,8 +45,8 @@ export default function Info() {
       setIsLoadingPointsData(true);
       try {
         const [lpStatus, points] = await Promise.all([
-          fetchIsLiquidityProvider(address, null),
-          fetchUserPoints(address, null)
+          isLiquidityProvider(address, null),
+          getPointsBalance(address, null)
         ]);
 
         setIsLp(lpStatus || false);
@@ -152,7 +147,7 @@ export default function Info() {
       }
       setPriceLoadFailed(false);
       try {
-        const price = await fetchTokenPrice(borrowTokenSymbol);
+        const price = await getTokenPrice(borrowTokenSymbol);
         setTokenPrice(price);
         if (price === null) {
           setPriceLoadFailed(true);
@@ -188,7 +183,7 @@ export default function Info() {
       }
       setCollateralPriceLoadFailed(false);
       try {
-        const price = await fetchTokenPrice(collateralTokenSymbol);
+        const price = await getTokenPrice(collateralTokenSymbol);
         setCollateralTokenPrice(price);
         if (price === null) {
           setCollateralPriceLoadFailed(true);

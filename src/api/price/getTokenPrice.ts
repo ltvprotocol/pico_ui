@@ -32,7 +32,9 @@ const TOKEN_TO_COINGECKO_ID: Record<string, string> = {
   'WSTETH': 'wrapped-steth',
 };
 
-export async function fetchTokenPrice(tokenSymbol: string | null): Promise<number | null> {
+export async function getTokenPrice(
+  tokenSymbol: string | null
+) : Promise<number | null> {
   if (!tokenSymbol) {
     return null;
   }

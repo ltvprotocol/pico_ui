@@ -2,14 +2,9 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { formatUnits, ZeroAddress } from "ethers";
 import { useAppContext } from "@/contexts";
-import {
-  fetchApy,
-  fetchPointsRate,
-  formatTokenSymbol,
-  formatApy,
-  ltvToLeverage
-} from "@/utils";
-import { ApyData } from "@/utils/api";
+import { formatTokenSymbol, formatApy, ltvToLeverage } from "@/utils";
+import { getTimedApy, getPointsRate } from '@/api'
+import { ApyData } from '@/api/apy/getTimedApy';
 import { useAdaptiveInterval } from "@/hooks";
 import { Vault__factory, ERC20__factory, WhitelistRegistry__factory } from "@/typechain-types";
 import { NumberDisplay, TransitionLoader } from "@/components/ui";
@@ -107,7 +102,7 @@ export default function VaultBlock({ address }: VaultBlockProps) {
       setIsLoadingApy(true);
       setApyLoadFailed(false);
 
-      const apyResult = await fetchApy(addr, network);
+      const apyResult = await getTimedApy(addr, network);
 
       if (apyResult === null) {
         setApyLoadFailed(true);
@@ -130,7 +125,7 @@ export default function VaultBlock({ address }: VaultBlockProps) {
       setIsLoadingPointsRate(true);
       setPointsRateLoadFailed(false);
 
-      const pointsRateResult = await fetchPointsRate(addr, network);
+      const pointsRateResult = await getPointsRate(addr, network);
 
       if (pointsRateResult === null) {
         setPointsRateLoadFailed(true);

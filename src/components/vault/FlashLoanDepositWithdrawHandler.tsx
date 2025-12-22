@@ -106,6 +106,11 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     setPreviewedWstEthAmount(null);
     setCalculationWarning(null);
     setHasInsufficientBalance(false);
+    setMaxAmount('');
+    setIsMaxWithdraw(false);
+    setMinDeposit('');
+    setMinWithdraw('');
+    setMinDisablesAction(false);
   }, [actionType]);
 
   const applyRedeemSlippage = (amount: bigint) => {

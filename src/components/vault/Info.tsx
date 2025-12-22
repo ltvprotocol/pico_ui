@@ -2,12 +2,13 @@ import { useEffect, useState, useMemo, useRef } from 'react';
 import { formatUnits, parseUnits, Contract } from 'ethers';
 import { useVaultContext } from '@/contexts';
 import { useAppContext } from '@/contexts';
-import { 
+import {
   fetchTokenPrice,
   fetchUserPoints,
   fetchIsLiquidityProvider,
   formatTokenSymbol,
-  formatApy
+  formatApy,
+  ApyPeriod
 } from '@/utils';
 import { NumberDisplay, TransitionLoader, SymbolWithTooltip } from '@/components/ui';
 
@@ -347,11 +348,11 @@ export default function Info() {
         <div className="flex gap-1 min-w-[60px] min-h-[16px] text-right">
           <span className="text-gray-500">7 day:</span>
           <TransitionLoader isLoading={!apy} isFailedToLoad={apyLoadFailed}>
-            {formatApy(apy ? apy["7d_apy"] : 0)}
+            {formatApy(apy, ApyPeriod.SevenDays)}
           </TransitionLoader>
           <span className="text-gray-500 ml-2">30 day:</span>
           <TransitionLoader isLoading={!apy} isFailedToLoad={apyLoadFailed}>
-            {formatApy(apy ? apy["30d_apy"] : 0)}
+            {formatApy(apy, ApyPeriod.ThirtyDays)}
           </TransitionLoader>
         </div>
       </div>

@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { formatUnits, ZeroAddress } from "ethers";
 import { useAppContext } from "@/contexts";
-import { formatTokenSymbol, formatApy, ltvToLeverage } from "@/utils";
+import { formatTokenSymbol, formatApy, ApyPeriod, ltvToLeverage } from "@/utils";
 import { useAdaptiveInterval, useVaultApy, useVaultPointsRate } from "@/hooks";
 import { Vault__factory, ERC20__factory, WhitelistRegistry__factory } from "@/typechain-types";
 import { NumberDisplay, TransitionLoader } from "@/components/ui";
@@ -418,14 +418,14 @@ export default function VaultBlock({ address }: VaultBlockProps) {
             isLoading={isLoadingApy}
             isFailedToLoad={apyLoadFailed}
           >
-            {formatApy(apyData ? apyData["7d_apy"] : 0)}
+            {formatApy(apyData, ApyPeriod.SevenDays)}
           </TransitionLoader>
           <span className="text-gray-500 ml-2">30 day:</span>
           <TransitionLoader
             isLoading={isLoadingApy}
             isFailedToLoad={apyLoadFailed}
           >
-            {formatApy(apyData ? apyData["30d_apy"]: 0)}
+            {formatApy(apyData, ApyPeriod.ThirtyDays)}
           </TransitionLoader>
         </div>
       </div>

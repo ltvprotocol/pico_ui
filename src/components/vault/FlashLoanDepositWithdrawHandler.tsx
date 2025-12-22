@@ -37,6 +37,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   const [isApproving, setIsApproving] = useState(false);
   const [approvalError, setApprovalError] = useState<string | null>(null);
   const [hasInsufficientBalance, setHasInsufficientBalance] = useState(false);
+  const [calculationWarning, setCalculationWarning] = useState<string | null>(null);
 
   const [useEthWrapToWSTETH, setUseEthWrapToWSTETH] = useState(true);
   const [ethToWrapValue, setEthToWrapValue] = useState('');
@@ -103,6 +104,8 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     setUseEthWrapToWSTETH(true);
     setEthToWrapValue('');
     setPreviewedWstEthAmount(null);
+    setCalculationWarning(null);
+    setHasInsufficientBalance(false);
   }, [actionType]);
 
   const applyRedeemSlippage = (amount: bigint) => {
@@ -191,8 +194,11 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   const calculateShares = async () => {
     if (!inputValue || !vaultLens) {
       setEstimatedShares(null);
+      setCalculationWarning(null);
       return;
     }
+
+    setCalculationWarning(null);
 
     try {
       const inputAmount = parseUnits(inputValue, 18); // TODO: Dynamically fetch
@@ -225,8 +231,11 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
           helper: flashLoanRedeemHelper,
           vaultLens
         })
-        
-        if (!shares) return;
+
+        if (!shares) {
+          setCalculationWarning("Not available to withdraw this amount right now, try again later");
+          return;
+        }
 
         shares = applyFlashLoanDepositWithdrawSlippage(shares);
         setEstimatedShares(shares);
@@ -345,7 +354,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
         setEthToWrapValue('');
         setPreviewedWstEthAmount(null);
 
-        
+
         if (previewData?.amount) {
           setHasInsufficientBalance(parseUnits(collateralTokenBalance, Number(collateralTokenDecimals)) < previewData.amount);
         } else {
@@ -497,6 +506,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     setError(null);
     setSuccess(null);
     setApprovalError(null);
+    setCalculationWarning(null);
   };
 
   const handleSetMax = () => {
@@ -507,7 +517,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     }
   };
 
-  const rawInputSymbol =actionType === 'deposit' ? (isWstETHVault ? 'ETH' : collateralTokenSymbol) : borrowTokenSymbol;
+  const rawInputSymbol = actionType === 'deposit' ? (isWstETHVault ? 'ETH' : collateralTokenSymbol) : borrowTokenSymbol;
   const inputSymbol = formatTokenSymbol(rawInputSymbol);
 
   return (
@@ -605,6 +615,13 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
                 ? "Flash loan rebalance is currently unavailable for this amount."
                 : "Error loading preview. Amount might be too high or low."}
             </span>
+          </div>
+        )}
+
+        {/* Calculation Warning */}
+        {calculationWarning && (
+          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-sm">
+            {calculationWarning}
           </div>
         )}
 

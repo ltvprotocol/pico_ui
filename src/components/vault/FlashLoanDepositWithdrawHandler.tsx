@@ -226,7 +226,10 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
           vaultLens
         })
         
-        if (!shares) return;
+        if (!shares) {
+          setEstimatedShares(null);
+          return;
+        };
 
         shares = applyFlashLoanDepositWithdrawSlippage(shares);
         setEstimatedShares(shares);

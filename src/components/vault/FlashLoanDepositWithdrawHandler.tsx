@@ -234,6 +234,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
 
         if (!shares) {
           setCalculationWarning("Not available to withdraw this amount right now, try again later");
+          setEstimatedShares(null);
           return;
         }
 

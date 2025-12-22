@@ -48,6 +48,9 @@ export async function fetchApy(vaultAddress: string, chainId: string | null): Pr
       throw new Error(`Failed to fetch APY: ${response.status}`);
     }
     const data: ApyResponse = await response.json();
+    if (typeof data.apy !== 'number') {
+      throw new Error(`Server returned invalid data: ${JSON.stringify(data)}`);
+    }
     return data.apy;
   } catch (error) {
     console.error('Error fetching APY:', error);
@@ -63,6 +66,9 @@ export async function fetchPointsRate(vaultAddress: string, chainId: string | nu
       throw new Error(`Failed to fetch points rate: ${response.status}`);
     }
     const data: PointsRateResponse = await response.json();
+    if (typeof data.pointsPerDay !== 'number') {
+      throw new Error(`Server returned invalid data: ${JSON.stringify(data)}`);
+    }
     return data.pointsPerDay;
   } catch (error) {
     console.error('Error fetching points rate:', error);
@@ -78,6 +84,9 @@ export async function fetchTermsOfUseText(chainId: string | null): Promise<strin
       throw new Error(`Failed to fetch terms of use text: ${response.status}`);
     }
     const data: TermsOfUseTextResponse = await response.json();
+    if (typeof data.text !== 'string') {
+      throw new Error(`Server returned invalid data: ${JSON.stringify(data)}`);
+    }
     return data.text;
   } catch (error) {
     console.error('Error fetching terms of use text:', error);
@@ -93,6 +102,9 @@ export async function checkTermsOfUseStatus(address: string, chainId: string | n
       throw new Error(`Failed to check terms of use status: ${response.status}`);
     }
     const data: TermsOfUseStatusResponse = await response.json();
+    if (typeof data.signed !== 'boolean' || typeof data.signed_at !== 'string') {
+      throw new Error(`Server returned invalid data: ${JSON.stringify(data)}`);
+    }
     return data;
   } catch (error) {
     console.error('Error checking terms of use status:', error);
@@ -118,6 +130,9 @@ export async function submitTermsOfUseSignature(
       throw new Error(`Failed to submit terms of use signature: ${response.status}`);
     }
     const data: TermsOfUseSignResponse = await response.json();
+    if (typeof data.success !== 'boolean' || typeof data.message !== 'string' || typeof data.signed_at !== 'string') {
+      throw new Error(`Server returned invalid data: ${JSON.stringify(data)}`);
+    }
     return data;
   } catch (error) {
     console.error('Error submitting terms of use signature:', error);
@@ -134,6 +149,9 @@ export async function fetchIsLiquidityProvider(address: string, chainId: string 
       throw new Error(`Failed to check liquidity provider status: ${response.status}`);
     }
     const isLp: boolean = await response.json();
+    if (typeof isLp !== 'boolean') {
+      throw new Error(`Server returned invalid data: ${JSON.stringify(isLp)}`);
+    }
     return isLp;
   } catch (error) {
     console.error('Error checking liquidity provider status:', error);
@@ -151,12 +169,11 @@ export async function fetchUserPoints(address: string, chainId: string | null): 
       }
       throw new Error(`Failed to fetch user points: ${response.status}`);
     }
-    const data = await response.json();
-    // Handle both object {points: number} and raw number formats
-    if (typeof data === 'number') {
-      return data;
+    const data: { points: number } = await response.json();
+    if (typeof data.points !== 'number') {
+      throw new Error(`Server returned invalid data: ${JSON.stringify(data)}`);
     }
-    return data && typeof data.points === 'number' ? data.points : 0;
+    return data.points;
   } catch (error) {
     console.error('Error fetching user points:', error);
     return null;

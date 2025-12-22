@@ -2,15 +2,8 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { formatUnits, ZeroAddress } from "ethers";
 import { useAppContext } from "@/contexts";
-import {
-  fetchApy,
-  fetchPointsRate,
-  formatTokenSymbol,
-  formatApy,
-  ltvToLeverage
-} from "@/utils";
-import { ApyData } from "@/utils/api";
-import { useAdaptiveInterval } from "@/hooks";
+import { formatTokenSymbol, formatApy, ltvToLeverage } from "@/utils";
+import { useAdaptiveInterval, useVaultApy, useVaultPointsRate } from "@/hooks";
 import { Vault__factory, ERC20__factory, WhitelistRegistry__factory } from "@/typechain-types";
 import { NumberDisplay, TransitionLoader } from "@/components/ui";
 import vaultsConfig from "../../../vaults.config.json";
@@ -67,13 +60,8 @@ export default function VaultBlock({ address }: VaultBlockProps) {
     deposits: null,
   });
 
-  const [apyData, setApyData] = useState<ApyData | null>(null);
-  const [isLoadingApy, setIsLoadingApy] = useState(false);
-  const [apyLoadFailed, setApyLoadFailed] = useState(false);
-
-  const [pointsRate, setPointsRate] = useState<number | null>(null);
-  const [isLoadingPointsRate, setIsLoadingPointsRate] = useState(false);
-  const [pointsRateLoadFailed, setPointsRateLoadFailed] = useState(false);
+  const { apy: apyData, isLoadingApy, apyLoadFailed, loadApy } = useVaultApy();
+  const { pointsRate, isLoadingPointsRate, pointsRateLoadFailed, loadPointsRate } = useVaultPointsRate();
 
   const [vaultDecimals, setVaultDecimals] = useState<VaultDecimals>({
     sharesDecimals: 18n,
@@ -99,51 +87,6 @@ export default function VaultBlock({ address }: VaultBlockProps) {
 
   const { publicProvider, currentNetwork, address: userAddress, isConnected } = useAppContext();
 
-  const loadApy = useCallback(async (
-    addr: string,
-    network: string
-  ) => {
-    try {
-      setIsLoadingApy(true);
-      setApyLoadFailed(false);
-
-      const apyResult = await fetchApy(addr, network);
-
-      if (apyResult === null) {
-        setApyLoadFailed(true);
-      }
-
-      setApyData(apyResult);
-    } catch (err) {
-      console.error('Error loading APY:', err);
-      setApyLoadFailed(true);
-    } finally {
-      setIsLoadingApy(false);
-    }
-  }, []);
-
-  const loadPointsRate = useCallback(async (
-    addr: string,
-    network: string
-  ) => {
-    try {
-      setIsLoadingPointsRate(true);
-      setPointsRateLoadFailed(false);
-
-      const pointsRateResult = await fetchPointsRate(addr, network);
-
-      if (pointsRateResult === null) {
-        setPointsRateLoadFailed(true);
-      }
-
-      setPointsRate(pointsRateResult);
-    } catch (err) {
-      console.error('Error points rate:', err);
-      setPointsRateLoadFailed(true);
-    } finally {
-      setIsLoadingPointsRate(false);
-    }
-  }, []);
 
   const vaultConfig = useMemo(() => {
     if (!currentNetwork) return;

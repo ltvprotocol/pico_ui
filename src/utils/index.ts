@@ -19,4 +19,5 @@ export { minBigInt } from './minBigInt';
 export { maxBigInt } from './maxBigInt';
 export { formatTokenSymbol } from './formatTokenSymbol';
 export { formatApy, ApyPeriod } from './formatApy';
+export { formatUsdValue } from './formatUsdValue';
 export * from './api';

@@ -1,14 +1,14 @@
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { formatUnits, parseUnits, Contract } from 'ethers';
 import { useVaultContext } from '@/contexts';
 import { useAppContext } from '@/contexts';
 import {
-  fetchTokenPrice,
   fetchUserPoints,
   fetchIsLiquidityProvider,
   formatTokenSymbol,
   formatApy,
-  ApyPeriod
+  ApyPeriod,
+  formatUsdValue
 } from '@/utils';
 import { NumberDisplay, TransitionLoader, SymbolWithTooltip } from '@/components/ui';
 
@@ -28,10 +28,11 @@ export default function Info() {
     sharesDecimals,
     pointsRate,
     isRefreshingBalances,
+    borrowTokenPrice: tokenPrice,
+    collateralTokenPrice,
   } = useVaultContext();
 
   const { isMainnet, address, publicProvider } = useAppContext();
-  const [tokenPrice, setTokenPrice] = useState<number | null>(null);
 
   // Points Logic
   const [userPoints, setUserPoints] = useState<number | null>(null);
@@ -124,89 +125,8 @@ export default function Info() {
     }).format(human);
   }
 
-  const [isLoadingPrice, setIsLoadingPrice] = useState<boolean>(false);
-  const [priceLoadFailed, setPriceLoadFailed] = useState<boolean>(false);
-  const hasLoadedPriceOnce = useRef<boolean>(false);
-
-  const [collateralTokenPrice, setCollateralTokenPrice] = useState<number | null>(null);
-  const [isLoadingCollateralPrice, setIsLoadingCollateralPrice] = useState<boolean>(false);
-  const [collateralPriceLoadFailed, setCollateralPriceLoadFailed] = useState<boolean>(false);
-  const hasLoadedCollateralPriceOnce = useRef<boolean>(false);
-
   const [positionInBorrowTokens, setPositionInBorrowTokens] = useState<string | null>(null);
   const [isLoadingPosition, setIsLoadingPosition] = useState<boolean>(false);
-
-  // Fetch token price only on mainnet
-  useEffect(() => {
-    if (!isMainnet || !borrowTokenSymbol) {
-      setTokenPrice(null);
-      setIsLoadingPrice(false);
-      setPriceLoadFailed(false);
-      hasLoadedPriceOnce.current = false;
-      return;
-    }
-
-    const loadPrice = async () => {
-      // Only show loader on first load
-      if (!hasLoadedPriceOnce.current) {
-        setIsLoadingPrice(true);
-      }
-      setPriceLoadFailed(false);
-      try {
-        const price = await fetchTokenPrice(borrowTokenSymbol);
-        setTokenPrice(price);
-        if (price === null) {
-          setPriceLoadFailed(true);
-        }
-        hasLoadedPriceOnce.current = true;
-      } catch (error) {
-        console.error('Error loading token price:', error);
-        setPriceLoadFailed(true);
-        setTokenPrice(null);
-        hasLoadedPriceOnce.current = true;
-      } finally {
-        setIsLoadingPrice(false);
-      }
-    };
-
-    loadPrice();
-  }, [isMainnet, borrowTokenSymbol]);
-
-  // Fetch collateral token price only on mainnet (for TVL)
-  useEffect(() => {
-    if (!isMainnet || !collateralTokenSymbol || !tvl) {
-      setCollateralTokenPrice(null);
-      setIsLoadingCollateralPrice(false);
-      setCollateralPriceLoadFailed(false);
-      hasLoadedCollateralPriceOnce.current = false;
-      return;
-    }
-
-    const loadCollateralPrice = async () => {
-      // Only show loader on first load
-      if (!hasLoadedCollateralPriceOnce.current) {
-        setIsLoadingCollateralPrice(true);
-      }
-      setCollateralPriceLoadFailed(false);
-      try {
-        const price = await fetchTokenPrice(collateralTokenSymbol);
-        setCollateralTokenPrice(price);
-        if (price === null) {
-          setCollateralPriceLoadFailed(true);
-        }
-        hasLoadedCollateralPriceOnce.current = true;
-      } catch (error) {
-        console.error('Error loading collateral token price:', error);
-        setCollateralPriceLoadFailed(true);
-        setCollateralTokenPrice(null);
-        hasLoadedCollateralPriceOnce.current = true;
-      } finally {
-        setIsLoadingCollateralPrice(false);
-      }
-    };
-
-    loadCollateralPrice();
-  }, [isMainnet, collateralTokenSymbol, tvl]);
 
   // Calculate USD value
   const usdValue = useMemo(() => {
@@ -219,17 +139,6 @@ export default function Info() {
     }
     return totalAssetsNum * tokenPrice;
   }, [isMainnet, tokenPrice, totalAssets]);
-
-  const formatUsdValue = (value: number | null) => {
-    if (value === null) return null;
-    // Format with thousands separator
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(value);
-  };
 
   // Calculate TVL USD value
   const tvlUsdValue = useMemo(() => {
@@ -294,6 +203,25 @@ export default function Info() {
                   {isRefreshingBalances ? (
                     <span className="text-gray-500 italic">Loading...</span>
                   ) :
+                    <TransitionLoader isLoading={!sharesBalance || sharesBalance === '0'}>
+                      <NumberDisplay value={sharesBalance} />
+                    </TransitionLoader>
+                  }
+                </div>
+                <div className="font-medium text-gray-700">
+                  <SymbolWithTooltip
+                    symbol={sharesSymbol}
+                    placeholder='Levereged Tokens'
+                    elementId='info-shares'
+                    isLoading={!sharesSymbol}
+                  />
+                </div>
+              </div>
+              <div className="flex">
+                <div className="mr-2 min-w-[60px] text-right">
+                  {isRefreshingBalances ? (
+                    <span className="text-gray-500 italic">Loading...</span>
+                  ) :
                     <TransitionLoader isLoading={isLoadingPosition || !positionInBorrowTokens}>
                       {positionInBorrowTokens ?
                         <NumberDisplay value={positionInBorrowTokens} /> :
@@ -310,13 +238,9 @@ export default function Info() {
               </div>
               {positionInBorrowTokens && (
                 <div className="text-gray-700 text-xs mt-0.5">
-                  {!hasLoadedPriceOnce.current ? (
-                    <TransitionLoader isLoading={isLoadingPrice} isFailedToLoad={priceLoadFailed}>
-                      {formatUsdValue(positionUsdValue)}
-                    </TransitionLoader>
-                  ) :
-                    formatUsdValue(positionUsdValue)
-                  }
+                  <TransitionLoader isLoading={!tokenPrice}>
+                    {formatUsdValue(positionUsdValue)}
+                  </TransitionLoader>
                 </div>
               )}
             </div>
@@ -401,13 +325,9 @@ export default function Info() {
               </div>
               {isMainnet && (
                 <div className="text-gray-700 text-xs mt-0.5">
-                  {!hasLoadedCollateralPriceOnce.current ? (
-                    <TransitionLoader isLoading={isLoadingCollateralPrice} isFailedToLoad={collateralPriceLoadFailed}>
-                      {formatUsdValue(tvlUsdValue)}
-                    </TransitionLoader>
-                  ) :
-                    formatUsdValue(tvlUsdValue)
-                  }
+                  <TransitionLoader isLoading={!collateralTokenPrice}>
+                    {formatUsdValue(tvlUsdValue)}
+                  </TransitionLoader>
                 </div>
               )}
             </div>
@@ -432,13 +352,9 @@ export default function Info() {
             </div>
             {isMainnet && (
               <div className="text-gray-700 text-xs mt-0.5">
-                {!hasLoadedPriceOnce.current ? (
-                  <TransitionLoader isLoading={isLoadingPrice} isFailedToLoad={priceLoadFailed}>
-                    {formatUsdValue(usdValue)}
-                  </TransitionLoader>
-                ) :
-                  formatUsdValue(usdValue)
-                }
+                <TransitionLoader isLoading={!tokenPrice}>
+                  {formatUsdValue(usdValue)}
+                </TransitionLoader>
               </div>
             )}
           </div>

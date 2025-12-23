@@ -11,11 +11,11 @@ import {
 } from '@/typechain-types';
 import { ltvToLeverage, getLendingProtocolAddress, isVaultExists, isUserRejected, loadTVL, minBigInt, clampToPositive } from '@/utils';
 import { ApyData } from '@/utils/api';
-import vaultsConfig from '../../vaults.config.json';
-import signaturesConfig from '../../signatures.config.json';
 import { isWETHAddress, GAS_RESERVE_WEI, SEPOLIA_CHAIN_ID_STRING, SEPOLIA_MORPHO_MARKET_ID, CONNECTOR_ADDRESSES } from '@/constants';
 import { useAdaptiveInterval, useVaultApy, useVaultPointsRate } from '@/hooks';
-import { loadGhostLtv, loadAaveLtv, loadMorphoLtv } from '@/utils';
+import { loadGhostLtv, loadAaveLtv, loadMorphoLtv, fetchTokenPrice } from '@/utils';
+import vaultsConfig from '../../vaults.config.json';
+import signaturesConfig from '../../signatures.config.json';
 
 interface Signature {
   v: number;
@@ -118,6 +118,8 @@ interface VaultContextType {
   refreshBalances: () => Promise<void>;
   refreshVaultLimits: () => Promise<void>;
   isRefreshingBalances: boolean;
+  borrowTokenPrice: number | null;
+  collateralTokenPrice: number | null;
 };
 
 interface Params {
@@ -208,8 +210,10 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   const [lastCheckedAddressForSignature, setLastCheckedAddressForSignature] = useState<string | null>(null);
   const [hasUsedInitialWhitelistParams, setHasUsedInitialWhitelistParams] = useState<boolean>(false);
   const [isRefreshingBalances, setIsRefreshingBalances] = useState<boolean>(false);
+  const [borrowTokenPrice, setBorrowTokenPrice] = useState<number | null>(null);
+  const [collateralTokenPrice, setCollateralTokenPrice] = useState<number | null>(null);
 
-  const { publicProvider, signer, isConnected, address, currentNetwork } = useAppContext();
+  const { publicProvider, signer, isConnected, address, currentNetwork, isMainnet } = useAppContext();
 
   const checkVaultExistence = useCallback(async () => {
     if (!vaultAddress || !publicProvider) {
@@ -572,7 +576,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
     try {
       const lendingConnectorAddress = await vaultLens.lendingConnector();
       const networkConnectors = CONNECTOR_ADDRESSES[currentNetwork];
-      
+
       if (!networkConnectors) {
         console.log('No connectors configured for network:', currentNetwork);
         setCurrentLtv('UNKNOWN_NETWORK');
@@ -593,16 +597,16 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         }
       } else if (networkConnectors.MORPHO && lendingConnectorAddress.toLowerCase() === networkConnectors.MORPHO.toLowerCase()) {
         // Use SEPOLIA_MORPHO_MARKET_ID only on Sepolia network
-        const marketId = currentNetwork === SEPOLIA_CHAIN_ID_STRING 
-          ? SEPOLIA_MORPHO_MARKET_ID 
+        const marketId = currentNetwork === SEPOLIA_CHAIN_ID_STRING
+          ? SEPOLIA_MORPHO_MARKET_ID
           : ''; // TODO: Get market ID from config or contract for non-Sepolia networks
-        
+
         if (!marketId) {
           console.log('No Morpho market ID configured for network:', currentNetwork);
           setCurrentLtv('MISSING_MARKET_ID');
           return;
         }
-        
+
         const morphoLtv = await loadMorphoLtv(
           lendingAddress,
           vaultAddress,
@@ -627,7 +631,36 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
       setCurrentLtv('LOAD_FAILED');
     }
   }, [publicProvider, vaultLens, lendingAddress, vaultAddress, borrowTokenDecimals, currentNetwork, vaultConfig]);
-  
+
+  const loadPrices = useCallback(async () => {
+    if (!isMainnet) {
+      setBorrowTokenPrice(null);
+      setCollateralTokenPrice(null);
+      return;
+    }
+
+    try {
+      if (borrowTokenSymbol) {
+        const price = await fetchTokenPrice(borrowTokenSymbol);
+        setBorrowTokenPrice(price);
+      }
+
+      if (collateralTokenSymbol) {
+        const price = await fetchTokenPrice(collateralTokenSymbol);
+        setCollateralTokenPrice(price);
+      }
+    } catch (err) {
+      console.error('Error loading token prices:', err);
+    }
+  }, [isMainnet, borrowTokenSymbol, collateralTokenSymbol]);
+
+  useAdaptiveInterval(loadPrices, {
+    initialDelay: 60000,
+    maxDelay: 60000,
+    multiplier: 1,
+    enabled: isMainnet && (!!borrowTokenSymbol || !!collateralTokenSymbol)
+  });
+
   // Check whitelist activation status
   const checkWhitelistActivation = useCallback(async () => {
     if (!vaultLens || params.isWhitelistActivated !== null) {
@@ -656,7 +689,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
     if (!lastCheckedAddressForSignature && params.hasSignature !== undefined) {
       setHasSignature(params.hasSignature);
       setLastCheckedAddressForSignature(address);
-      
+
       // If params say user has signature, load the signature data
       if (params.hasSignature) {
         const networkSignatures = (signaturesConfig as any)[currentNetwork];
@@ -664,7 +697,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         const signaturesMap = vaultSignatures?.signatures;
         const addressLower = address.toLowerCase();
         const signatureData = signaturesMap?.[addressLower];
-        
+
         if (signatureData) {
           setSignature({
             v: signatureData.v,
@@ -691,7 +724,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
 
       const addressLower = address.toLowerCase();
       const signatureData = signaturesMap[addressLower];
-      
+
       if (signatureData) {
         setHasSignature(true);
         setSignature({
@@ -703,7 +736,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         setHasSignature(false);
         setSignature(null);
       }
-      
+
       setLastCheckedAddressForSignature(address);
     }
   }, [address, currentNetwork, vaultAddress, params.hasSignature, lastCheckedAddressForSignature]);
@@ -781,10 +814,10 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
       console.log('Whitelist activation transaction confirmed');
 
       await checkWhitelistStatus();
-      
+
     } catch (err: any) {
       console.error('Error activating whitelist:', err);
-      
+
       if (isUserRejected(err)) {
         setWhitelistError('Transaction rejected by user');
       } else if (err.message?.includes('AddressWhitelistingBySignatureDisabled')) {
@@ -975,7 +1008,9 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         whitelistError,
         refreshBalances,
         refreshVaultLimits: loadVaultLimits,
-        isRefreshingBalances
+        isRefreshingBalances,
+        borrowTokenPrice,
+        collateralTokenPrice
       }}
     >
       {children}

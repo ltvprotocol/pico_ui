@@ -2,8 +2,8 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { formatUnits, ZeroAddress } from "ethers";
 import { useAppContext } from "@/contexts";
-import { ltvToLeverage, fetchApy, fetchPointsRate, formatTokenSymbol } from "@/utils";
-import { useAdaptiveInterval } from "@/hooks";
+import { formatTokenSymbol, formatApy, ApyPeriod, ltvToLeverage } from "@/utils";
+import { useAdaptiveInterval, useVaultApy, useVaultPointsRate } from "@/hooks";
 import { Vault__factory, ERC20__factory, WhitelistRegistry__factory } from "@/typechain-types";
 import { NumberDisplay, TransitionLoader } from "@/components/ui";
 import vaultsConfig from "../../../vaults.config.json";
@@ -60,13 +60,8 @@ export default function VaultBlock({ address }: VaultBlockProps) {
     deposits: null,
   });
 
-  const [apyData, setApyData] = useState<{ apy: number | null; pointsRate: number | null }>({
-    apy: null,
-    pointsRate: null,
-  });
-  const [isLoadingApy, setIsLoadingApy] = useState<boolean>(false);
-  const [apyLoadFailed, setApyLoadFailed] = useState<boolean>(false);
-  const [pointsRateLoadFailed, setPointsRateLoadFailed] = useState<boolean>(false);
+  const { apy: apyData, isLoadingApy, apyLoadFailed, loadApy } = useVaultApy();
+  const { pointsRate, isLoadingPointsRate, pointsRateLoadFailed, loadPointsRate } = useVaultPointsRate();
 
   const [vaultDecimals, setVaultDecimals] = useState<VaultDecimals>({
     sharesDecimals: 18n,
@@ -92,38 +87,6 @@ export default function VaultBlock({ address }: VaultBlockProps) {
 
   const { publicProvider, currentNetwork, address: userAddress, isConnected } = useAppContext();
 
-  const loadApyAndPointsRate = useCallback(async () => {
-    try {
-      setIsLoadingApy(true);
-      setApyLoadFailed(false);
-      setPointsRateLoadFailed(false);
-      
-      const [apyResult, pointsRateResult] = await Promise.all([
-        fetchApy(address, currentNetwork),
-        fetchPointsRate(address, currentNetwork)
-      ]);
-      
-      setApyData({
-        apy: apyResult,
-        pointsRate: pointsRateResult,
-      });
-      
-      if (apyResult === null) {
-        setApyLoadFailed(true);
-      }
-      if (pointsRateResult === null) {
-        setPointsRateLoadFailed(true);
-      }
-    } catch (err) {
-      console.error('Error loading APY and points rate:', err);
-      setApyLoadFailed(true);
-      setPointsRateLoadFailed(true);
-    } finally {
-      setIsLoadingApy(false);
-    }
-  }, [address, currentNetwork]);
-
-  const memoizedApyData = useMemo(() => apyData, [apyData.apy, apyData.pointsRate]);
 
   const vaultConfig = useMemo(() => {
     if (!currentNetwork) return;
@@ -267,7 +230,7 @@ export default function VaultBlock({ address }: VaultBlockProps) {
 
     const addressLower = userAddress.toLowerCase();
     const hasSignature = !!signaturesMap[addressLower];
-    
+
     setWhitelistData(prev => ({ ...prev, hasSignature }));
   }, [userAddress, currentNetwork, address]);
 
@@ -371,8 +334,14 @@ export default function VaultBlock({ address }: VaultBlockProps) {
   });
 
   useEffect(() => {
-    loadApyAndPointsRate();
-  }, [loadApyAndPointsRate]);
+    if (!address || !currentNetwork) return;
+    loadApy(address, currentNetwork);
+  }, [address, currentNetwork]);
+
+  useEffect(() => {
+    if (!address || !currentNetwork) return;
+    loadPointsRate(address, currentNetwork);
+  }, [address, currentNetwork]);
 
   const formattedDeposits = useMemo(() => {
     if (!dynamicData.deposits) return null;
@@ -392,72 +361,86 @@ export default function VaultBlock({ address }: VaultBlockProps) {
   }, [staticData.collateralTokenSymbol, staticData.borrowTokenSymbol]);
 
   return (
-      <Link
-        to={`/${address}`}
-        state={{
-          collateralTokenSymbol: staticData.collateralTokenSymbol,
-          borrowTokenSymbol: staticData.borrowTokenSymbol,
-          maxLeverage: staticData.maxLeverage,
-          lendingName: staticData.lendingName,
-          apy: memoizedApyData.apy,
-          pointsRate: memoizedApyData.pointsRate,
-          isWhitelistActivated: staticData.isWhitelistActivated,
-          isWhitelisted: whitelistData.isWhitelisted,
-          hasSignature: whitelistData.hasSignature
-        }}
-        className="wrapper block w-full bg-gray-50 transition-colors border border-gray-50 rounded-lg mb-4 last:mb-0 p-3">
-        <div className="w-full">
-          <div className="w-full flex flex-row justify-between mb-2">
-            <div className="flex items-center text-base font-medium text-gray-900">
-              <div className="mr-2 min-w-[60px]">
-                <TransitionLoader isLoading={loadingState.isLoadingTokens && !loadingState.hasLoadedTokens}>
-                  {tokenPairDisplay}
-                </TransitionLoader>
-              </div>
-              <div className="mr-2 font-normal">
-                <TransitionLoader isLoading={loadingState.isLoadingLeverage && !loadingState.hasLoadedLeverage}>
-                  {staticData.maxLeverage ? `x${staticData.maxLeverage}` : null}
-                </TransitionLoader>
-              </div>
-              <div className="font-normal">{staticData.lendingName || "Lending"}</div>
+    <Link
+      to={`/${address}`}
+      state={{
+        collateralTokenSymbol: staticData.collateralTokenSymbol,
+        borrowTokenSymbol: staticData.borrowTokenSymbol,
+        maxLeverage: staticData.maxLeverage,
+        lendingName: staticData.lendingName,
+        apy: apyData,
+        pointsRate,
+        isWhitelistActivated: staticData.isWhitelistActivated,
+        isWhitelisted: whitelistData.isWhitelisted,
+        hasSignature: whitelistData.hasSignature
+      }}
+      className="wrapper block w-full bg-gray-50 transition-colors border border-gray-50 rounded-lg mb-4 last:mb-0 p-3">
+      <div className="w-full">
+        <div className="w-full flex flex-row justify-between mb-2">
+          <div className="flex items-center text-base font-medium text-gray-900">
+            <div className="mr-2 min-w-[60px]">
+              <TransitionLoader isLoading={loadingState.isLoadingTokens && !loadingState.hasLoadedTokens}>
+                {tokenPairDisplay}
+              </TransitionLoader>
             </div>
+            <div className="mr-2 font-normal">
+              <TransitionLoader isLoading={loadingState.isLoadingLeverage && !loadingState.hasLoadedLeverage}>
+                {staticData.maxLeverage ? `x${staticData.maxLeverage}` : null}
+              </TransitionLoader>
+            </div>
+            <div className="font-normal">{staticData.lendingName || "Lending"}</div>
           </div>
         </div>
-        <div className="flex justify-between text-sm">
-          <div className="font-medium text-gray-700">Deposited TVL: </div>
-          <div className="font-normal text-gray-700 min-w-[100px] text-right">
-            <TransitionLoader 
-              isLoading={
+      </div>
+      <div className="flex justify-between text-sm">
+        <div className="font-medium text-gray-700">Deposited TVL: </div>
+        <div className="font-normal text-gray-700 min-w-[100px] text-right">
+          <TransitionLoader
+            isLoading={
               (loadingState.isLoadingAssets && !loadingState.hasLoadedAssets) ||
               (loadingState.isLoadingTokens && !loadingState.hasLoadedTokens)
             }>
-              {formattedDeposits && staticData.borrowTokenSymbol ? (
-                <div className="flex justify-end">
-                  <div className="font-normal text-gray-700 mr-2">
-                    <NumberDisplay value={formattedDeposits} />
-                  </div>
-                  <div className="font-medium text-gray-700">{formatTokenSymbol(staticData.borrowTokenSymbol)}</div>
+            {formattedDeposits && staticData.borrowTokenSymbol ? (
+              <div className="flex justify-end">
+                <div className="font-normal text-gray-700 mr-2">
+                  <NumberDisplay value={formattedDeposits} />
                 </div>
-              ) : null}
-            </TransitionLoader>
-          </div>
+                <div className="font-medium text-gray-700">{formatTokenSymbol(staticData.borrowTokenSymbol)}</div>
+              </div>
+            ) : null}
+          </TransitionLoader>
         </div>
-        <div className="flex justify-between text-sm">
-          <div className="font-medium text-gray-700">APY: </div>
-          <div className="font-normal text-gray-700 min-w-[60px] text-right">
-            <TransitionLoader isLoading={isLoadingApy} isFailedToLoad={apyLoadFailed}>
-              {memoizedApyData.apy !== null ? `${memoizedApyData.apy.toFixed(2)}%` : ''}
-            </TransitionLoader>
-          </div>
+      </div>
+      <div className="flex justify-between text-sm">
+        <div className="font-medium text-gray-700">APY: </div>
+        <div className="flex gap-1 font-normal text-gray-700 min-w-[60px] text-right">
+          <span className="text-gray-500">7 day:</span>
+          <TransitionLoader
+            isLoading={isLoadingApy}
+            isFailedToLoad={apyLoadFailed}
+          >
+            {formatApy(apyData, ApyPeriod.SevenDays)}
+          </TransitionLoader>
+          <span className="text-gray-500 ml-2">30 day:</span>
+          <TransitionLoader
+            isLoading={isLoadingApy}
+            isFailedToLoad={apyLoadFailed}
+          >
+            {formatApy(apyData, ApyPeriod.ThirtyDays)}
+          </TransitionLoader>
         </div>
-        <div className="flex justify-between text-sm">
-          <div className="font-medium text-gray-700">Points Rate: </div>
-          <div className="font-normal text-gray-700 min-w-[60px] text-right">
-            <TransitionLoader isLoading={isLoadingApy} isFailedToLoad={pointsRateLoadFailed}>
-              {memoizedApyData.pointsRate !== null ? `~${memoizedApyData.pointsRate} per 1 token / day` : ''}
-            </TransitionLoader>
-          </div>
+      </div>
+      <div className="flex justify-between text-sm">
+        <div className="font-medium text-gray-700">Points Rate: </div>
+        <div className="font-normal text-gray-700 min-w-[60px] text-right">
+          <TransitionLoader
+            isLoading={isLoadingPointsRate}
+            isFailedToLoad={pointsRateLoadFailed}
+          >
+            {pointsRate ? `~${pointsRate} per 1 token / day` : ''}
+          </TransitionLoader>
         </div>
-      </Link>
+      </div>
+    </Link>
   );
 }

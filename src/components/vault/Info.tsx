@@ -3,9 +3,11 @@ import { formatUnits, parseUnits, Contract } from 'ethers';
 import { useVaultContext } from '@/contexts';
 import { useAppContext } from '@/contexts';
 import {
-  fetchIsLiquidityProvider,
   fetchUserPoints,
+  fetchIsLiquidityProvider,
   formatTokenSymbol,
+  formatApy,
+  ApyPeriod,
   formatUsdValue
 } from '@/utils';
 import { NumberDisplay, TransitionLoader, SymbolWithTooltip } from '@/components/ui';
@@ -125,11 +127,6 @@ export default function Info() {
 
   const [positionInBorrowTokens, setPositionInBorrowTokens] = useState<string | null>(null);
   const [isLoadingPosition, setIsLoadingPosition] = useState<boolean>(false);
-
-  const formatApy = (value: number | null) => {
-    if (value === null) return null;
-    return `${value.toFixed(2)}%`;
-  };
 
   // Calculate USD value
   const usdValue = useMemo(() => {
@@ -272,9 +269,14 @@ export default function Info() {
       </div>
       <div className="w-full flex justify-between items-start text-sm mb-2">
         <div className="font-medium text-gray-700">APY:</div>
-        <div className="min-w-[60px] min-h-[16px] text-right">
+        <div className="flex gap-1 min-w-[60px] min-h-[16px] text-right">
+          <span className="text-gray-500">7 day:</span>
           <TransitionLoader isLoading={!apy} isFailedToLoad={apyLoadFailed}>
-            {formatApy(apy)}
+            {formatApy(apy, ApyPeriod.SevenDays)}
+          </TransitionLoader>
+          <span className="text-gray-500 ml-2">30 day:</span>
+          <TransitionLoader isLoading={!apy} isFailedToLoad={apyLoadFailed}>
+            {formatApy(apy, ApyPeriod.ThirtyDays)}
           </TransitionLoader>
         </div>
       </div>

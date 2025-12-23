@@ -3,16 +3,17 @@ import { parseUnits, parseEther, formatUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
 import {
   isUserRejected,
-  allowOnlyNumbers,
   isWstETHAddress,
-  wrapEthToWstEth,
-  calculateEthWrapForFlashLoan,
+  allowOnlyNumbers,
   minBigInt,
+  clampToPositive,
   formatTokenSymbol,
-  clampToPositive
+  formatUsdValue,
+  wrapEthToWstEth,
+  calculateEthWrapForFlashLoan
 } from '@/utils';
 import { PreviewBox, NumberDisplay, TransitionLoader } from '@/components/ui';
-import { useAdaptiveInterval, useFlashLoanPreview } from '@/hooks';
+import { useAdaptiveInterval, useFlashLoanPreview, useMaxAmountUsd } from '@/hooks';
 import { GAS_RESERVE_WEI } from '@/constants';
 import { maxBigInt } from '@/utils';
 import { ERC20__factory } from '@/typechain-types';
@@ -77,6 +78,8 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     ethBalance,
     refreshBalances,
     refreshVaultLimits,
+    borrowTokenDecimals,
+    borrowTokenPrice: tokenPrice,
   } = useVaultContext();
 
   const helper = helperType === 'mint' ? flashLoanMintHelper : flashLoanRedeemHelper;
@@ -99,6 +102,15 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     collateralTokenDecimals,
     sharesBalance,
     sharesDecimals,
+  });
+
+  const maxAmountUsd = useMaxAmountUsd({
+    needConvertFromShares: true,
+    maxAmount,
+    tokenPrice,
+    vaultLens,
+    sharesDecimals,
+    borrowTokenDecimals,
   });
 
   useEffect(() => {
@@ -514,6 +526,11 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
           <span>Max Available:</span>
           <TransitionLoader isLoading={!maxAmount}>
             <NumberDisplay value={maxAmount} />{' '}{sharesSymbol}
+          </TransitionLoader>
+          <TransitionLoader isLoading={maxAmountUsd === null}>
+            <div className="ml-2">
+              ({formatUsdValue(maxAmountUsd)})
+            </div>
           </TransitionLoader>
         </div>
 

@@ -1,9 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { parseUnits, parseEther, formatUnits, formatEther } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
-import { isUserRejected, allowOnlyNumbers, isWstETHAddress, wrapEthToWstEth, calculateEthWrapForFlashLoan, minBigInt, formatTokenSymbol, clampToPositive } from '@/utils';
+import {
+  isUserRejected,
+  isWstETHAddress,
+  allowOnlyNumbers,
+  minBigInt,
+  clampToPositive,
+  formatTokenSymbol,
+  formatUsdValue,
+  wrapEthToWstEth,
+  calculateEthWrapForFlashLoan
+} from '@/utils';
 import { PreviewBox, NumberDisplay, TransitionLoader } from '@/components/ui';
-import { useAdaptiveInterval, useFlashLoanPreview } from '@/hooks';
+import { useAdaptiveInterval, useFlashLoanPreview, useMaxAmountUsd } from '@/hooks';
 import { GAS_RESERVE_WEI } from '@/constants';
 import { findSharesForEthWithdraw } from '@/utils/findSharesForAmount';
 import { maxBigInt } from '@/utils';
@@ -70,7 +80,8 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     ethBalance,
     refreshBalances,
     refreshVaultLimits,
-    borrowTokenSymbol
+    borrowTokenSymbol,
+    borrowTokenPrice,
   } = useVaultContext();
 
   const helper = actionType === 'deposit' ? flashLoanMintHelper : flashLoanRedeemHelper;
@@ -93,6 +104,16 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     collateralTokenDecimals,
     sharesBalance,
     sharesDecimals,
+  });
+
+  const rawInputSymbol = actionType === 'deposit' ? (isWstETHVault ? 'ETH' : collateralTokenSymbol) : borrowTokenSymbol;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const inputSymbol = formatTokenSymbol(rawInputSymbol);
+
+  const maxAmountUsd = useMaxAmountUsd({
+    needConvertFromShares: false,
+    maxAmount,
+    tokenPrice: borrowTokenPrice,
   });
 
   useEffect(() => {
@@ -213,7 +234,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
         if (!flashLoanMintHelper || !publicProvider) return;
 
         let shares = await vaultLens.convertToShares(inputAmount);
-        
+
         if (!shares) return;
 
         shares = applyFlashLoanDepositWithdrawSlippage(shares);
@@ -232,7 +253,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
           helper: flashLoanRedeemHelper,
           vaultLens
         })
-        
+
         if (!shares) return;
 
         shares = applyFlashLoanDepositWithdrawSlippage(shares);
@@ -352,7 +373,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
         setEthToWrapValue('');
         setPreviewedWstEthAmount(null);
 
-        
+
         if (previewData?.amount) {
           setHasInsufficientBalance(parseUnits(collateralTokenBalance, Number(collateralTokenDecimals)) < previewData.amount);
         } else {
@@ -514,9 +535,6 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     }
   };
 
-  const rawInputSymbol =actionType === 'deposit' ? (isWstETHVault ? 'ETH' : collateralTokenSymbol) : borrowTokenSymbol;
-  const inputSymbol = formatTokenSymbol(rawInputSymbol);
-
   return (
     <div>
       <form onSubmit={handleSubmit} className="space-y-3">
@@ -558,6 +576,11 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
               {' '}
               {inputSymbol}
             </span>
+          </TransitionLoader>
+          <TransitionLoader isLoading={maxAmountUsd === null}>
+            <div className="ml-2">
+              ({formatUsdValue(maxAmountUsd)})
+            </div>
           </TransitionLoader>
         </div>
 

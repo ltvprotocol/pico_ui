@@ -373,7 +373,6 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
         setEthToWrapValue('');
         setPreviewedWstEthAmount(null);
 
-
         if (previewData?.amount) {
           setHasInsufficientBalance(parseUnits(collateralTokenBalance, Number(collateralTokenDecimals)) < previewData.amount);
         } else {
@@ -535,6 +534,14 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     }
   };
 
+  const handlePercentage = (percentage: bigint) => {
+    if (!maxAmount) return;
+    const rawMax = parseEther(maxAmount);
+    const amount = rawMax * percentage / 100n;
+    handleInputChange(formatEther(amount));
+    setIsMaxWithdraw(false);
+  };
+
   return (
     <div>
       <form onSubmit={handleSubmit} className="space-y-3">
@@ -565,6 +572,19 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
               </button>
               <span className="text-gray-500 sm:text-sm">{inputSymbol}</span>
             </div>
+          </div>
+          <div className="flex gap-2 mt-2">
+            {[25, 50, 75].map((percentage) => (
+              <button
+                key={percentage}
+                type="button"
+                onClick={() => handlePercentage(BigInt(percentage))}
+                className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 disabled:opacity-50"
+                disabled={loading || !maxAmount}
+              >
+                {percentage}%
+              </button>
+            ))}
           </div>
         </div>
 

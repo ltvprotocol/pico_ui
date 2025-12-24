@@ -518,6 +518,8 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   };
 
   const handleInputChange = (value: string) => {
+    setIsMaxWithdraw(false);
+    
     const cleanedValue = allowOnlyNumbers(value);
     setInputValue(cleanedValue);
 

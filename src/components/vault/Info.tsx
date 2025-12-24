@@ -2,15 +2,10 @@ import { useEffect, useState, useMemo } from 'react';
 import { formatUnits, parseUnits, Contract } from 'ethers';
 import { useVaultContext } from '@/contexts';
 import { useAppContext } from '@/contexts';
-import {
-  fetchUserPoints,
-  fetchIsLiquidityProvider,
-  formatTokenSymbol,
-  formatApy,
-  ApyPeriod,
-  formatUsdValue
-} from '@/utils';
+import { formatTokenSymbol, formatApy, ApyPeriod } from '@/utils';
+import { getPointsBalance, isLiquidityProvider } from '@/api';
 import { NumberDisplay, TransitionLoader, SymbolWithTooltip } from '@/components/ui';
+import { formatUsdValue } from '@/utils/formatUsdValue';
 
 export default function Info() {
   const {
@@ -52,8 +47,8 @@ export default function Info() {
       setIsLoadingPointsData(true);
       try {
         const [lpStatus, points] = await Promise.all([
-          fetchIsLiquidityProvider(address, null),
-          fetchUserPoints(address, null)
+          isLiquidityProvider(address, null),
+          getPointsBalance(address, null)
         ]);
 
         setIsLp(lpStatus || false);

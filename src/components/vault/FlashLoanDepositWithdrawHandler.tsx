@@ -1,9 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { parseUnits, parseEther, formatUnits, formatEther } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
-import { isUserRejected, allowOnlyNumbers, isWstETHAddress, wrapEthToWstEth, calculateEthWrapForFlashLoan, minBigInt, formatTokenSymbol, clampToPositive } from '@/utils';
+import {
+  isUserRejected,
+  isWstETHAddress,
+  allowOnlyNumbers,
+  minBigInt,
+  clampToPositive,
+  formatTokenSymbol,
+  formatUsdValue,
+  wrapEthToWstEth,
+  calculateEthWrapForFlashLoan
+} from '@/utils';
 import { PreviewBox, NumberDisplay, TransitionLoader } from '@/components/ui';
-import { useAdaptiveInterval, useFlashLoanPreview } from '@/hooks';
+import { useAdaptiveInterval, useFlashLoanPreview, useMaxAmountUsd } from '@/hooks';
 import { GAS_RESERVE_WEI } from '@/constants';
 import { findSharesForEthWithdraw } from '@/utils/findSharesForAmount';
 import { maxBigInt } from '@/utils';
@@ -47,6 +57,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   const [minDeposit, setMinDeposit] = useState('');
   const [minWithdraw, setMinWithdraw] = useState('');
   const [minTooBig, setMinDisablesAction] = useState(false);
+  const [inputMoreThanMax, setInputMoreThanMax] = useState(false);
 
   const { address, provider, signer, publicProvider } = useAppContext();
 
@@ -69,7 +80,8 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     ethBalance,
     refreshBalances,
     refreshVaultLimits,
-    borrowTokenSymbol
+    borrowTokenSymbol,
+    borrowTokenPrice,
   } = useVaultContext();
 
   const helper = actionType === 'deposit' ? flashLoanMintHelper : flashLoanRedeemHelper;
@@ -94,6 +106,16 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     sharesDecimals,
   });
 
+  const rawInputSymbol = actionType === 'deposit' ? (isWstETHVault ? 'ETH' : collateralTokenSymbol) : borrowTokenSymbol;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const inputSymbol = formatTokenSymbol(rawInputSymbol);
+
+  const maxAmountUsd = useMaxAmountUsd({
+    needConvertFromShares: false,
+    maxAmount,
+    tokenPrice: borrowTokenPrice,
+  });
+
   useEffect(() => {
     setInputValue('');
     setEstimatedShares(null);
@@ -104,6 +126,12 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     setEthToWrapValue('');
     setPreviewedWstEthAmount(null);
   }, [actionType]);
+
+  useEffect(() => {
+    if (!inputValue || !maxAmount) return;
+    const isMoreThanMax = parseEther(inputValue) > parseEther(maxAmount);
+    setInputMoreThanMax(isMoreThanMax);
+  }, [inputValue, maxAmount])
 
   const applyRedeemSlippage = (amount: bigint) => {
     return amount * BigInt(REDEEM_SLIPPAGE_DIVIDEND) / BigInt(REDEEM_SLIPPAGE_DIVIDER);
@@ -206,7 +234,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
         if (!flashLoanMintHelper || !publicProvider) return;
 
         let shares = await vaultLens.convertToShares(inputAmount);
-        
+
         if (!shares) return;
 
         shares = applyFlashLoanDepositWithdrawSlippage(shares);
@@ -225,7 +253,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
           helper: flashLoanRedeemHelper,
           vaultLens
         })
-        
+
         if (!shares) return;
 
         shares = applyFlashLoanDepositWithdrawSlippage(shares);
@@ -345,7 +373,6 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
         setEthToWrapValue('');
         setPreviewedWstEthAmount(null);
 
-        
         if (previewData?.amount) {
           setHasInsufficientBalance(parseUnits(collateralTokenBalance, Number(collateralTokenDecimals)) < previewData.amount);
         } else {
@@ -507,8 +534,13 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     }
   };
 
-  const rawInputSymbol =actionType === 'deposit' ? (isWstETHVault ? 'ETH' : collateralTokenSymbol) : borrowTokenSymbol;
-  const inputSymbol = formatTokenSymbol(rawInputSymbol);
+  const handlePercentage = (percentage: bigint) => {
+    if (!maxAmount) return;
+    const rawMax = parseEther(maxAmount);
+    const amount = rawMax * percentage / 100n;
+    handleInputChange(formatEther(amount));
+    setIsMaxWithdraw(false);
+  };
 
   return (
     <div>
@@ -541,6 +573,19 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
               <span className="text-gray-500 sm:text-sm">{inputSymbol}</span>
             </div>
           </div>
+          <div className="flex gap-2 mt-2">
+            {[25, 50, 75].map((percentage) => (
+              <button
+                key={percentage}
+                type="button"
+                onClick={() => handlePercentage(BigInt(percentage))}
+                className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 disabled:opacity-50"
+                disabled={loading || !maxAmount}
+              >
+                {percentage}%
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="flex gap-1 mt-1 text-sm text-gray-500">
@@ -551,6 +596,11 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
               {' '}
               {inputSymbol}
             </span>
+          </TransitionLoader>
+          <TransitionLoader isLoading={maxAmountUsd === null}>
+            <div className="ml-2">
+              ({formatUsdValue(maxAmountUsd)})
+            </div>
           </TransitionLoader>
         </div>
 
@@ -629,7 +679,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
             isErrorLoadingPreview ||
             invalidRebalanceMode ||
             minTooBig ||
-            parseEther(inputValue) > parseEther(maxAmount)
+            inputMoreThanMax
           }
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >

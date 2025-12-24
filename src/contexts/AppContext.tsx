@@ -1,9 +1,21 @@
 import { createContext, ReactNode, useContext, useEffect, useState, useCallback } from 'react';
 import { BrowserProvider, JsonRpcSigner, JsonRpcProvider, Eip1193Provider } from 'ethers';
-import { SEPOLIA_CHAIN_ID, MAINNET_CHAIN_ID, NETWORK_CONFIGS, URL_PARAM_TO_CHAIN_ID, SAFE_HELPER_ADDRESSES } from '@/constants';
-import { Safe4626Helper, Safe4626CollateralHelper } from '@/typechain-types';
-import { Safe4626Helper__factory, Safe4626CollateralHelper__factory } from '@/typechain-types/factories';
-import { getTermsSignedStatus, getTermsText, submitTermsSignature } from '@/api';
+import {
+  SEPOLIA_CHAIN_ID,
+  MAINNET_CHAIN_ID,
+  NETWORK_CONFIGS,
+  URL_PARAM_TO_CHAIN_ID,
+  SAFE_HELPER_ADDRESSES
+} from '@/constants';
+import {
+  Safe4626Helper, Safe4626CollateralHelper,
+  Safe4626Helper__factory, Safe4626CollateralHelper__factory
+} from '@/typechain-types';
+import {
+  getTermsText,
+  getTermsSignedStatus,
+  submitTermsSignature
+} from '@/api';
 import { isUserRejected } from '@/utils';
 
 type DiscoveredWallet = {

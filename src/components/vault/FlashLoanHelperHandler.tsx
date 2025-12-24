@@ -13,7 +13,13 @@ import {
   calculateEthWrapForFlashLoan
 } from '@/utils';
 import { PreviewBox, NumberDisplay, TransitionLoader } from '@/components/ui';
-import { useAdaptiveInterval, useFlashLoanPreview, useMaxAmountUsd } from '@/hooks';
+import {
+  useAdaptiveInterval,
+  useFlashLoanPreview,
+  useMaxAmountUsd,
+  useIsAmountMoreThanMax,
+  useIsMinMoreThanMax
+} from '@/hooks';
 import { GAS_RESERVE_WEI } from '@/constants';
 import { maxBigInt } from '@/utils';
 import { ERC20__factory } from '@/typechain-types';
@@ -55,7 +61,6 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
   const [maxAmount, setMaxAmount] = useState('');
   const [minMint, setMinMint] = useState('');
   const [minRedeem, setMinRedeem] = useState('');
-  const [minTooBig, setMinDisablesAction] = useState(false);
 
   const { address, provider, signer, publicProvider } = useAppContext();
 
@@ -123,6 +128,20 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     setEthToWrapValue('');
     setPreviewedWstEthAmount(null);
   }, [helperType]);
+
+  const isInputMoreThanMax = useIsAmountMoreThanMax({
+    amount: inputValue,
+    max: maxAmount,
+    decimals: Number(sharesDecimals)
+  });
+
+  const isMinMoreThanMax = useIsMinMoreThanMax({
+    maxAmount,
+    minMint,
+    minRedeem,
+    helperType,
+    decimals: Number(sharesDecimals)
+  });
 
   const applyRedeemSlippage = (amount: bigint) => {
     return amount * BigInt(REDEEM_SLIPPAGE_DIVIDEND) / BigInt(REDEEM_SLIPPAGE_DIVIDER);
@@ -211,28 +230,6 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     multiplier: 2,
     enabled: !!vaultLens && !!publicProvider
   });
-
-  useEffect(() => {
-    if (!maxAmount || !minMint || !minRedeem) return;
-
-    const rawMaxAmount = parseUnits(maxAmount, sharesDecimals);
-    const rawMinMint = parseUnits(minMint, sharesDecimals);
-    const rawMinRedeem = parseUnits(minRedeem, sharesDecimals);
-
-    if (helperType === 'mint') {
-      if (rawMinMint > rawMaxAmount) {
-        setMinDisablesAction(true);
-      } else {
-        setMinDisablesAction(false);
-      }
-    } else {
-      if (rawMinRedeem > rawMaxAmount) {
-        setMinDisablesAction(true);
-      } else {
-        setMinDisablesAction(false);
-      }
-    }
-  }, [helperType, sharesDecimals, minMint, minRedeem, maxAmount]);
 
   useEffect(() => {
     if (helperType === 'mint') {
@@ -627,15 +624,14 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
           type="submit"
           disabled={
             loading ||
-            !sharesToProcess ||
-            sharesToProcess <= 0n ||
-            sharesToProcess > parseUnits(maxAmount, sharesDecimals) ||
             isApproving ||
             isWrapping ||
+            !sharesToProcess ||
             hasInsufficientBalance ||
             isErrorLoadingPreview ||
             invalidRebalanceMode ||
-            minTooBig
+            isMinMoreThanMax ||
+            isInputMoreThanMax
           }
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >

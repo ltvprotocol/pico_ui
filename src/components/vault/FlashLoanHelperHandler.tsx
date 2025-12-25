@@ -10,7 +10,8 @@ import {
   formatTokenSymbol,
   formatUsdValue,
   wrapEthToWstEth,
-  calculateEthWrapForFlashLoan
+  calculateEthWrapForFlashLoan,
+  limitDecimals
 } from '@/utils';
 import { PreviewBox, NumberDisplay, TransitionLoader } from '@/components/ui';
 import { useAdaptiveInterval, useFlashLoanPreview, useMaxAmountUsd } from '@/hooks';
@@ -451,26 +452,28 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
   };
 
   const handleInputChange = (value: string) => {
-    const cleanedValue = allowOnlyNumbers(value);
-    setInputValue(cleanedValue);
+    const numbersOnly = allowOnlyNumbers(value);
+    const limited = limitDecimals(numbersOnly);
+
+    setInputValue(limited);
 
     setError(null);
     setSuccess(null);
     setApprovalError(null);
 
-    if (!cleanedValue || cleanedValue === '' || cleanedValue === '.') {
+    if (!limited || limited === '' || limited === '.') {
       setSharesToProcess(null);
       return;
     }
 
     try {
-      const numValue = parseFloat(cleanedValue);
+      const numValue = parseFloat(limited);
       if (isNaN(numValue)) {
         setSharesToProcess(null);
         return;
       }
 
-      const parsed = parseUnits(cleanedValue, Number(sharesDecimals));
+      const parsed = parseUnits(limited, Number(sharesDecimals));
       setSharesToProcess(parsed);
     } catch {
       setSharesToProcess(null);

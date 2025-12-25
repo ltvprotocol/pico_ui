@@ -10,7 +10,8 @@ import {
   formatTokenSymbol,
   formatUsdValue,
   wrapEthToWstEth,
-  calculateEthWrapForFlashLoan
+  calculateEthWrapForFlashLoan,
+  limitDecimals
 } from '@/utils';
 import { PreviewBox, NumberDisplay, TransitionLoader } from '@/components/ui';
 import { useAdaptiveInterval, useFlashLoanPreview, useMaxAmountUsd } from '@/hooks';
@@ -518,8 +519,10 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   };
 
   const handleInputChange = (value: string) => {
-    const cleanedValue = allowOnlyNumbers(value);
-    setInputValue(cleanedValue);
+    const numbersOnly = allowOnlyNumbers(value);
+    const limited = limitDecimals(numbersOnly);
+
+    setInputValue(limited);
 
     setError(null);
     setSuccess(null);

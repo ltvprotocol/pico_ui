@@ -58,6 +58,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   const [minWithdraw, setMinWithdraw] = useState('');
   const [minTooBig, setMinDisablesAction] = useState(false);
   const [inputMoreThanMax, setInputMoreThanMax] = useState(false);
+  const [calculationWarning, setCalculationWarning] = useState<string | null>(null);
 
   const { address, provider, signer, publicProvider } = useAppContext();
 
@@ -125,6 +126,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     setUseEthWrapToWSTETH(true);
     setEthToWrapValue('');
     setPreviewedWstEthAmount(null);
+    setCalculationWarning(null);
   }, [actionType]);
 
   useEffect(() => {
@@ -219,6 +221,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   const calculateShares = async () => {
     if (!inputValue || !vaultLens) {
       setEstimatedShares(null);
+      setCalculationWarning(null);
       return;
     }
 
@@ -252,9 +255,13 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
           amount: inputAmount,
           helper: flashLoanRedeemHelper,
           vaultLens
-        })
+        });
 
-        if (!shares) return;
+        if (!shares) {
+          setCalculationWarning("Not available to withdraw this amount right now, try again later");
+          setEstimatedShares(null);
+          return;
+        }
 
         shares = applyFlashLoanDepositWithdrawSlippage(shares);
         setEstimatedShares(shares);
@@ -524,6 +531,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     setError(null);
     setSuccess(null);
     setApprovalError(null);
+    setCalculationWarning(null);
   };
 
   const handleSetMax = () => {
@@ -655,6 +663,13 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
                 ? "Flash loan rebalance is currently unavailable for this amount."
                 : "Error loading preview. Amount might be too high or low."}
             </span>
+          </div>
+        )}
+
+        {/* Calculation Warning */}
+        {calculationWarning && (
+          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-sm">
+            {calculationWarning}
           </div>
         )}
 

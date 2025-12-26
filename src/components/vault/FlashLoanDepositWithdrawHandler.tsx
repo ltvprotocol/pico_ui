@@ -288,7 +288,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   };
 
   const setMaxWithdraw = async () => {
-    if (!helper || !sharesBalance || sharesBalance === '0') {
+    if (!helper || !sharesBalance) {
       setMaxAmount('0');
       return;
     }

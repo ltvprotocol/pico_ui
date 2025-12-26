@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { formatUnits, parseUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
-import { isUserRejected, allowOnlyNumbers, formatTokenSymbol } from '@/utils';
+import { isUserRejected, allowOnlyNumbers, formatTokenSymbol, applyGasSlippage } from '@/utils';
 import { NumberDisplay, PreviewBox, TransitionLoader } from '@/components/ui';
 import { TokenType } from '@/types/actions';
 
@@ -240,7 +240,8 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
         }
 
         const isSharesPositiveHint = deltaShares >= 0n;
-        tx = await vault.executeLowLevelRebalanceBorrowHint(amount, isSharesPositiveHint);
+        const estimatedGas = await vaultLens.executeLowLevelRebalanceBorrowHint.estimateGas(amount, isSharesPositiveHint);
+        tx = await vault.executeLowLevelRebalanceBorrowHint(amount, isSharesPositiveHint, { gasLimit: applyGasSlippage(estimatedGas)});
       } else {
         const preview = await vaultLens.previewLowLevelRebalanceCollateral(amount);
         const deltaShares = preview?.[1] as bigint | undefined;
@@ -252,7 +253,8 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
         }
 
         const isSharesPositiveHint = deltaShares >= 0n;
-        tx = await vault.executeLowLevelRebalanceCollateralHint(amount, isSharesPositiveHint);
+        const estimatedGas = await vaultLens.executeLowLevelRebalanceCollateralHint.estimateGas(amount, isSharesPositiveHint);
+        tx = await vault.executeLowLevelRebalanceCollateralHint(amount, isSharesPositiveHint, { gasLimit: applyGasSlippage(estimatedGas)});
       }
 
       await tx.wait();

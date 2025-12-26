@@ -167,32 +167,32 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   const [flashLoanMintHelperAddress, setFlashLoanMintHelperAddress] = useState<string | null>(null);
   const [flashLoanRedeemHelperAddress, setFlashLoanRedeemHelperAddress] = useState<string | null>(null);
 
-  const [ethBalance, setEthBalance] = useState<string>('0');
-  const [sharesBalance, setSharesBalance] = useState<string>('0');
-  const [borrowTokenBalance, setBorrowTokenBalance] = useState<string>('0');
-  const [collateralTokenBalance, setCollateralTokenBalance] = useState<string>('0');
+  const [ethBalance, setEthBalance] = useState('');
+  const [sharesBalance, setSharesBalance] = useState('');
+  const [borrowTokenBalance, setBorrowTokenBalance] = useState('');
+  const [collateralTokenBalance, setCollateralTokenBalance] = useState('');
 
-  const [vaultMaxDeposit, setVaultMaxDeposit] = useState<string>('0');
-  const [vaultMaxRedeem, setVaultMaxRedeem] = useState<string>('0');
-  const [vaultMaxMint, setVaultMaxMint] = useState<string>('0');
-  const [vaultMaxWithdraw, setVaultMaxWithdraw] = useState<string>('0');
-  const [vaultMaxDepositCollateral, setVaultMaxDepositCollateral] = useState<string>('0');
-  const [vaultMaxRedeemCollateral, setVaultMaxRedeemCollateral] = useState<string>('0');
-  const [vaultMaxMintCollateral, setVaultMaxMintCollateral] = useState<string>('0');
-  const [vaultMaxWithdrawCollateral, setVaultMaxWithdrawCollateral] = useState<string>('0');
-  const [totalAssets, setTotalAssets] = useState<string>('0');
+  const [vaultMaxDeposit, setVaultMaxDeposit] = useState('');
+  const [vaultMaxRedeem, setVaultMaxRedeem] = useState('');
+  const [vaultMaxMint, setVaultMaxMint] = useState('');
+  const [vaultMaxWithdraw, setVaultMaxWithdraw] = useState('');
+  const [vaultMaxDepositCollateral, setVaultMaxDepositCollateral] = useState('');
+  const [vaultMaxRedeemCollateral, setVaultMaxRedeemCollateral] = useState('');
+  const [vaultMaxMintCollateral, setVaultMaxMintCollateral] = useState('');
+  const [vaultMaxWithdrawCollateral, setVaultMaxWithdrawCollateral] = useState('');
+  const [totalAssets, setTotalAssets] = useState('');
   const [tvl, setTvl] = useState<string | null>(null);
   const hasLoadedTvlOnce = useRef<boolean>(false);
 
-  const [maxDeposit, setMaxDeposit] = useState<string>('0');
-  const [maxRedeem, setMaxRedeem] = useState<string>('0');
-  const [maxMint, setMaxMint] = useState<string>('0');
-  const [maxWithdraw, setMaxWithdraw] = useState<string>('0');
-  const [maxDepositCollateral, setMaxDepositCollateral] = useState<string>('0');
-  const [maxRedeemCollateral, setMaxRedeemCollateral] = useState<string>('0');
-  const [maxMintCollateral, setMaxMintCollateral] = useState<string>('0');
-  const [maxWithdrawCollateral, setMaxWithdrawCollateral] = useState<string>('0');
-  const [maxLowLevelRebalanceShares, setMaxLowLevelRebalanceShares] = useState<string>('0');
+  const [maxDeposit, setMaxDeposit] = useState('');
+  const [maxRedeem, setMaxRedeem] = useState('');
+  const [maxMint, setMaxMint] = useState('');
+  const [maxWithdraw, setMaxWithdraw] = useState('');
+  const [maxDepositCollateral, setMaxDepositCollateral] = useState('');
+  const [maxRedeemCollateral, setMaxRedeemCollateral] = useState('');
+  const [maxMintCollateral, setMaxMintCollateral] = useState('');
+  const [maxWithdrawCollateral, setMaxWithdrawCollateral] = useState('');
+  const [maxLowLevelRebalanceShares, setMaxLowLevelRebalanceShares] = useState('');
 
   const { apy, apyLoadFailed, loadApy } = useVaultApy();
   const { pointsRate, pointsRateLoadFailed, loadPointsRate } = useVaultPointsRate();
@@ -899,9 +899,9 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
 
   // Calculate max values for user based on balances and vault limits
   useEffect(() => {
-    if (ethBalance !== '0' || sharesBalance !== '0' || borrowTokenBalance !== '0' || collateralTokenBalance !== '0') {
-      if (vaultMaxDeposit !== '0' || vaultMaxRedeem !== '0' || vaultMaxMint !== '0' || vaultMaxWithdraw !== '0' ||
-        vaultMaxDepositCollateral !== '0' || vaultMaxRedeemCollateral !== '0' || vaultMaxMintCollateral !== '0' || vaultMaxWithdrawCollateral !== '0') {
+    if (ethBalance || sharesBalance || borrowTokenBalance || collateralTokenBalance) {
+      if (vaultMaxDeposit || vaultMaxRedeem || vaultMaxMint || vaultMaxWithdraw ||
+        vaultMaxDepositCollateral || vaultMaxRedeemCollateral || vaultMaxMintCollateral || vaultMaxWithdrawCollateral) {
         calculateMaxValues();
       }
     }

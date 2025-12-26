@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { parseUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
-import { isUserRejected, wrapEth, formatTokenSymbol } from '@/utils';
+import { isUserRejected, wrapEth, formatTokenSymbol, applyGasSlippage } from '@/utils';
 import { ActionForm, PreviewBox } from '@/components/ui';
 import { isWETHAddress } from '@/constants';
 import { WETH } from '@/typechain-types';
@@ -152,26 +152,42 @@ export default function ActionHandler({ actionType, tokenType }: ActionHandlerPr
   };
 
   const executeVaultMethod = async (parsedAmount: bigint) => {
-    if (!vault || !address) return;
+    if (!vault || !vaultLens || !address) return;
 
     let tx;
 
     if (actionType === 'deposit') {
+      const estimatedGas = isBorrow
+        ? await vaultLens.deposit.estimateGas(parsedAmount, address)
+        : await vaultLens.depositCollateral.estimateGas(parsedAmount, address);
+
       tx = isBorrow
-        ? await vault.deposit(parsedAmount, address)
-        : await vault.depositCollateral(parsedAmount, address);
+        ? await vault.deposit(parsedAmount, address, {gasLimit: applyGasSlippage(estimatedGas)})
+        : await vault.depositCollateral(parsedAmount, address, {gasLimit: applyGasSlippage(estimatedGas)});
     } else if (actionType === 'mint') {
+      const estimatedGas = isBorrow
+        ? await vaultLens.mint.estimateGas(parsedAmount, address)
+        : await vaultLens.mintCollateral.estimateGas(parsedAmount, address);
+
       tx = isBorrow
-        ? await vault.mint(parsedAmount, address)
-        : await vault.mintCollateral(parsedAmount, address);
+        ? await vault.mint(parsedAmount, address, {gasLimit: applyGasSlippage(estimatedGas)})
+        : await vault.mintCollateral(parsedAmount, address, {gasLimit: applyGasSlippage(estimatedGas)});
     } else if (actionType === 'withdraw') {
+      const estimatedGas = isBorrow
+        ? await vaultLens.withdraw.estimateGas(parsedAmount, address, address)
+        : await vaultLens.withdrawCollateral.estimateGas(parsedAmount, address, address);
+
       tx = isBorrow
-        ? await vault.withdraw(parsedAmount, address, address)
-        : await vault.withdrawCollateral(parsedAmount, address, address);
+        ? await vault.withdraw(parsedAmount, address, address, {gasLimit: applyGasSlippage(estimatedGas)})
+        : await vault.withdrawCollateral(parsedAmount, address, address, {gasLimit: applyGasSlippage(estimatedGas)});
     } else if (actionType === 'redeem') {
+      const estimatedGas = isBorrow
+        ? await vaultLens.redeem.estimateGas(parsedAmount, address, address)
+        : await vaultLens.redeemCollateral.estimateGas(parsedAmount, address, address);
+
       tx = isBorrow
-        ? await vault.redeem(parsedAmount, address, address)
-        : await vault.redeemCollateral(parsedAmount, address, address);
+        ? await vault.redeem(parsedAmount, address, address, {gasLimit: applyGasSlippage(estimatedGas)})
+        : await vault.redeemCollateral(parsedAmount, address, address, {gasLimit: applyGasSlippage(estimatedGas)});
     }
 
     await tx?.wait();

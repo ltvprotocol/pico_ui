@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { parseUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
-import { isUserRejected, wrapEth, formatTokenSymbol } from '@/utils';
+import { isUserRejected, wrapEth, formatTokenSymbol, applyGasSlippage } from '@/utils';
 import { ActionForm, PreviewBox } from '@/components/ui';
 import { isWETHAddress } from '@/constants';
 import { WETH } from '@/typechain-types';
@@ -229,13 +229,17 @@ export default function SafeActionHandler({ actionType, tokenType }: SafeActionH
       let tx;
 
       if (actionType === 'deposit') {
-        tx = await safeHelperBorrow.safeDeposit(vaultAddress, parsedAmount, address, bound);
+        const estimatedGas = await safeHelperBorrow.safeDeposit.estimateGas(vaultAddress, parsedAmount, address, bound);
+        tx = await safeHelperBorrow.safeDeposit(vaultAddress, parsedAmount, address, bound, {gasLimit: applyGasSlippage(estimatedGas)});
       } else if (actionType === 'mint') {
-        tx = await safeHelperBorrow.safeMint(vaultAddress, parsedAmount, address, bound);
+        const estimatedGas = await safeHelperBorrow.safeMint.estimateGas(vaultAddress, parsedAmount, address, bound);
+        tx = await safeHelperBorrow.safeMint(vaultAddress, parsedAmount, address, bound, {gasLimit: applyGasSlippage(estimatedGas)});
       } else if (actionType === 'withdraw') {
-        tx = await safeHelperBorrow.safeWithdraw(vaultAddress, parsedAmount, address, bound);
+        const estimatedGas = await safeHelperBorrow.safeWithdraw.estimateGas(vaultAddress, parsedAmount, address, bound);
+        tx = await safeHelperBorrow.safeWithdraw(vaultAddress, parsedAmount, address, bound, {gasLimit: applyGasSlippage(estimatedGas)});
       } else if (actionType === 'redeem') {
-        tx = await safeHelperBorrow.safeRedeem(vaultAddress, parsedAmount, address, bound);
+        const estimatedGas = await safeHelperBorrow.safeRedeem.estimateGas(vaultAddress, parsedAmount, address, bound);
+        tx = await safeHelperBorrow.safeRedeem(vaultAddress, parsedAmount, address, bound, {gasLimit: applyGasSlippage(estimatedGas)});
       }
 
       await tx?.wait();
@@ -248,13 +252,17 @@ export default function SafeActionHandler({ actionType, tokenType }: SafeActionH
       let tx;
 
       if (actionType === 'deposit') {
-        tx = await safeHelperCollateral.safeDepositCollateral(vaultAddress, parsedAmount, address, bound);
+        const estimatedGas = await safeHelperCollateral.safeDepositCollateral.estimateGas(vaultAddress, parsedAmount, address, bound);
+        tx = await safeHelperCollateral.safeDepositCollateral(vaultAddress, parsedAmount, address, bound, {gasLimit: applyGasSlippage(estimatedGas)});
       } else if (actionType === 'mint') {
-        tx = await safeHelperCollateral.safeMintCollateral(vaultAddress, parsedAmount, address, bound);
+        const estimatedGas = await safeHelperCollateral.safeMintCollateral.estimateGas(vaultAddress, parsedAmount, address, bound);
+        tx = await safeHelperCollateral.safeMintCollateral(vaultAddress, parsedAmount, address, bound, {gasLimit: applyGasSlippage(estimatedGas)});
       } else if (actionType === 'withdraw') {
-        tx = await safeHelperCollateral.safeWithdrawCollateral(vaultAddress, parsedAmount, address, bound);
+        const estimatedGas = await safeHelperCollateral.safeWithdrawCollateral.estimateGas(vaultAddress, parsedAmount, address, bound);
+        tx = await safeHelperCollateral.safeWithdrawCollateral(vaultAddress, parsedAmount, address, bound, {gasLimit: applyGasSlippage(estimatedGas)});
       } else if (actionType === 'redeem') {
-        tx = await safeHelperCollateral.safeRedeemCollateral(vaultAddress, parsedAmount, address, bound);
+        const estimatedGas = await safeHelperCollateral.safeRedeemCollateral.estimateGas(vaultAddress, parsedAmount, address, bound);
+        tx = await safeHelperCollateral.safeRedeemCollateral(vaultAddress, parsedAmount, address, bound, {gasLimit: applyGasSlippage(estimatedGas)});
       }
 
       await tx?.wait();

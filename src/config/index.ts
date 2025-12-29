@@ -1,8 +1,8 @@
 import { MAINNET_CHAIN_ID_STRING, SEPOLIA_CHAIN_ID_STRING } from '@/constants';
 
-export const API_URLS: Record<string, string> = {
-  [SEPOLIA_CHAIN_ID_STRING]: "https://api-testnet.ltv.finance",
-  [MAINNET_CHAIN_ID_STRING]: "https://api-testnet.ltv.finance"
+export const POINTS_API_URLS: Record<string, string> = {
+  [SEPOLIA_CHAIN_ID_STRING]: "https://api-points.ltv.finance",
+  [MAINNET_CHAIN_ID_STRING]: "https://api-points.ltv.finance"
 };
 
 export const APY_API_URLS: Record<string, string> = {

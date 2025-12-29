@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { fetchPointsRate } from '@/utils';
+import { getPointsRate } from '@/api';
 
 export function useVaultPointsRate() {
   const [pointsRate, setPointsRate] = useState<number | null>(null);
@@ -16,7 +16,7 @@ export function useVaultPointsRate() {
     try {
       setIsLoadingPointsRate(true);
       setPointsRateLoadFailed(false);
-      const result = await fetchPointsRate(addr, network);
+      const result = await getPointsRate(addr, network);
       setPointsRate(result);
       setPointsRateLoadFailed(result === null);
     } catch (err) {

@@ -1,9 +1,22 @@
 import { createContext, ReactNode, useContext, useEffect, useState, useCallback } from 'react';
 import { BrowserProvider, JsonRpcSigner, JsonRpcProvider, Eip1193Provider } from 'ethers';
-import { SEPOLIA_CHAIN_ID, MAINNET_CHAIN_ID, NETWORK_CONFIGS, URL_PARAM_TO_CHAIN_ID, SAFE_HELPER_ADDRESSES } from '@/constants';
-import { Safe4626Helper, Safe4626CollateralHelper } from '@/typechain-types';
-import { Safe4626Helper__factory, Safe4626CollateralHelper__factory } from '@/typechain-types/factories';
-import { isUserRejected, checkTermsOfUseStatus, fetchTermsOfUseText, submitTermsOfUseSignature } from '@/utils';
+import {
+  SEPOLIA_CHAIN_ID,
+  MAINNET_CHAIN_ID,
+  NETWORK_CONFIGS,
+  URL_PARAM_TO_CHAIN_ID,
+  SAFE_HELPER_ADDRESSES
+} from '@/constants';
+import {
+  Safe4626Helper, Safe4626CollateralHelper,
+  Safe4626Helper__factory, Safe4626CollateralHelper__factory
+} from '@/typechain-types';
+import {
+  getTermsText,
+  getTermsSignedStatus,
+  submitTermsSignature
+} from '@/api';
+import { isUserRejected } from '@/utils';
 
 type DiscoveredWallet = {
   info: {
@@ -479,7 +492,7 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const loadTermsText = async () => {
       try {
-        const text = await fetchTermsOfUseText(currentNetwork);
+        const text = await getTermsText(currentNetwork);
         if (text) {
           setTermsText(text);
           setTermsTextFetchingError(false);
@@ -506,7 +519,7 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     setIsCheckingTerms(true);
 
     try {
-      const status = await checkTermsOfUseStatus(address, currentNetwork);
+      const status = await getTermsSignedStatus(address, currentNetwork);
       if (status) {
         setIsTermsSigned(status.signed);
       } else {
@@ -533,7 +546,7 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     try {
       const signature = await signer.signMessage(termsText);
       
-      const result = await submitTermsOfUseSignature(address, signature, currentNetwork);
+      const result = await submitTermsSignature(address, signature, currentNetwork);
       if (result && result.success) {
         setIsTermsSigned(true);
       } else {

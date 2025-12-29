@@ -1,5 +1,5 @@
-import { createContext, ReactNode, useContext, useEffect, useState, useCallback, useRef } from 'react'
-import { formatUnits, formatEther, parseUnits, ZeroAddress, parseEther } from 'ethers'
+import { createContext, ReactNode, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import { formatUnits, formatEther, parseUnits, parseEther, ZeroAddress } from 'ethers';
 import { useAppContext } from '@/contexts/AppContext';
 import {
   Vault, Vault__factory,
@@ -9,11 +9,26 @@ import {
   FlashLoanRedeemHelper, FlashLoanRedeemHelper__factory,
   WhitelistRegistry__factory
 } from '@/typechain-types';
-import { ltvToLeverage, getLendingProtocolAddress, isVaultExists, isUserRejected, loadTVL, minBigInt, clampToPositive } from '@/utils';
-import { ApyData } from '@/utils/api';
-import { isWETHAddress, GAS_RESERVE_WEI, SEPOLIA_CHAIN_ID_STRING, SEPOLIA_MORPHO_MARKET_ID, CONNECTOR_ADDRESSES } from '@/constants';
+import {
+  isVaultExists, isUserRejected,
+  loadTVL, loadAaveLtv, loadGhostLtv, loadMorphoLtv,
+  minBigInt,clampToPositive,
+  ltvToLeverage, getLendingProtocolAddress
+} from '@/utils';
+// API
+import { ApyData } from '@/api/apy/getTimedApy';
+import { getTokenPrice } from '@/api';
+// Constants
+import {
+  isWETHAddress, 
+  GAS_RESERVE_WEI, 
+  SEPOLIA_CHAIN_ID_STRING, 
+  SEPOLIA_MORPHO_MARKET_ID, 
+  CONNECTOR_ADDRESSES 
+} from '@/constants';
+// Hooks
 import { useAdaptiveInterval, useVaultApy, useVaultPointsRate } from '@/hooks';
-import { loadGhostLtv, loadAaveLtv, loadMorphoLtv, fetchTokenPrice } from '@/utils';
+// Configs
 import vaultsConfig from '../../vaults.config.json';
 import signaturesConfig from '../../signatures.config.json';
 
@@ -641,12 +656,12 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
 
     try {
       if (borrowTokenSymbol) {
-        const price = await fetchTokenPrice(borrowTokenSymbol);
+        const price = await getTokenPrice(borrowTokenSymbol);
         setBorrowTokenPrice(price);
       }
 
       if (collateralTokenSymbol) {
-        const price = await fetchTokenPrice(collateralTokenSymbol);
+        const price = await getTokenPrice(collateralTokenSymbol);
         setCollateralTokenPrice(price);
       }
     } catch (err) {

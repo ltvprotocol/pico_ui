@@ -1,4 +1,4 @@
-import { ApyData } from "./api";
+import { ApyData } from "@/api/apy/getTimedApy";
 
 export enum ApyPeriod {
   SevenDays = '7d',

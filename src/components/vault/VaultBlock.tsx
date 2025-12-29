@@ -87,7 +87,6 @@ export default function VaultBlock({ address }: VaultBlockProps) {
 
   const { publicProvider, currentNetwork, address: userAddress, isConnected } = useAppContext();
 
-
   const vaultConfig = useMemo(() => {
     if (!currentNetwork) return;
     const vaults = (vaultsConfig as any)[currentNetwork]?.vaults || [];

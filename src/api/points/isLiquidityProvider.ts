@@ -1,4 +1,4 @@
-import { API_URLS } from '@/config';
+import { POINTS_API_URLS } from '@/config';
 import { DEFAULT_CHAIN_ID_STRING } from '@/constants';
 import { fetchWithTimeout } from '@/api/client/request';
 
@@ -8,7 +8,7 @@ export async function isLiquidityProvider(
 ) : Promise<boolean | null> {
   try {
     // Both Mainnet and Sepolia use the same API URL configuration for now
-    const apiUrl = API_URLS[chainId || DEFAULT_CHAIN_ID_STRING];
+    const apiUrl = POINTS_API_URLS[chainId || DEFAULT_CHAIN_ID_STRING];
     const response = await fetchWithTimeout(`${apiUrl}/is-liquidity-provider/${address}`);
     if (!response.ok) {
       throw new Error(`Failed to check liquidity provider status: ${response.status}`);

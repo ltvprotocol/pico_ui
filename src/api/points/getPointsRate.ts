@@ -1,4 +1,4 @@
-import { API_URLS } from '@/config';
+import { POINTS_API_URLS } from '@/config';
 import { DEFAULT_CHAIN_ID_STRING } from '@/constants';
 import { fetchWithTimeout } from '@/api/client/request';
 
@@ -11,7 +11,7 @@ export async function getPointsRate(
   chainId: string | null
 ) : Promise<number | null> {
   try {
-    const apiUrl = API_URLS[chainId || DEFAULT_CHAIN_ID_STRING];
+    const apiUrl = POINTS_API_URLS[chainId || DEFAULT_CHAIN_ID_STRING];
     const response = await fetchWithTimeout(`${apiUrl}/points-rate/${vaultAddress}`);
 
     if (!response.ok) {

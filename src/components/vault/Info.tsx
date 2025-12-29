@@ -57,11 +57,7 @@ export default function Info() {
         ]);
 
         setIsLp(lpStatus || false);
-
-        // As per requirements: if LP, don't show points (handled in render), otherwise fetch/show points
-        if (!lpStatus) {
-          setUserPoints(points);
-        }
+        setUserPoints(points);
 
         // NFT Check
         if (publicProvider) {
@@ -287,14 +283,19 @@ export default function Info() {
             <div className="min-w-[60px] text-right">
               <TransitionLoader isLoading={isLoadingPointsData}>
                 {isLp ? (
-                  <span className="text-gray-900">private LP</span>
+                  <span className="text-gray-900">
+                    {`private LP ${(userPoints !== null && userPoints > 0) ? 
+                      `+ ${formatPointsApprox(userPoints)} Points` : ''}`}
+                  </span>
                 ) : (
-                  <span className="text-gray-900">{userPoints !== null ? `${formatPointsApprox(userPoints)} Points` : '0 Points'}</span>
+                  <span className="text-gray-900">
+                    {userPoints !== null ? `${formatPointsApprox(userPoints)} Points` : '0 Points'}
+                  </span>
                 )}
               </TransitionLoader>
             </div>
           </div>
-          {!isLp && (
+          {(!isLp || (userPoints !== null && userPoints > 0)) && (
             <div className="w-full flex justify-between items-start text-sm mb-2">
               <div className="font-medium text-gray-700">Points rate:</div>
               <div className="min-w-[60px] text-right">

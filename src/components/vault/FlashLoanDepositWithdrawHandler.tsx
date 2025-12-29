@@ -10,7 +10,8 @@ import {
   formatUsdValue,
   wrapEthToWstEth,
   calculateEthWrapForFlashLoan,
-  processInput
+  processInput,
+  applyGasSlippage
 } from '@/utils';
 import { PreviewBox, NumberDisplay, TransitionLoader } from '@/components/ui';
 import { useAdaptiveInterval, useFlashLoanPreview, useMaxAmountUsd } from '@/hooks';
@@ -118,13 +119,26 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
 
   useEffect(() => {
     setInputValue('');
+    setIsMaxWithdraw(false);
+    setInputMoreThanMax(false);
+    setMaxAmount('');
+
     setEstimatedShares(null);
+    setPreviewedWstEthAmount(null);
+    setEthToWrapValue('');
+
+    setHasInsufficientBalance(false);
+
+    setLoading(false);
+    setIsApproving(false);
+    setIsWrapping(false);
+
     setError(null);
     setApprovalError(null);
     setSuccess(null);
+
+    // Something very ugly here, should be rewrited in future
     setUseEthWrapToWSTETH(true);
-    setEthToWrapValue('');
-    setPreviewedWstEthAmount(null);
   }, [actionType]);
 
   useEffect(() => {
@@ -288,7 +302,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   };
 
   const setMaxWithdraw = async () => {
-    if (!helper || !sharesBalance || sharesBalance === '0') {
+    if (!helper || !sharesBalance) {
       setMaxAmount('0');
       return;
     }
@@ -481,10 +495,15 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
       let tx;
       if (actionType === 'deposit') {
         // @ts-expect-error - helper is FlashLoanMintHelper
-        tx = await helper.mintSharesWithFlashLoanCollateral(estimatedShares);
+        const estimatedGas = await helper.mintSharesWithFlashLoanCollateral.estimateGas(estimatedShares);
+        // @ts-expect-error - helper is FlashLoanMintHelper
+        tx = await helper.mintSharesWithFlashLoanCollateral(estimatedShares, {gasLimit: applyGasSlippage(estimatedGas)});
       } else {
+        const amountOut = applyRedeemSlippage(previewData!.amount);
         // @ts-expect-error - helper is FlashLoanRedeemHelper
-        tx = await helper.redeemSharesWithCurveAndFlashLoanBorrow(estimatedShares, applyRedeemSlippage(previewData!.amount));
+        const estimatedGas = await helper.redeemSharesWithCurveAndFlashLoanBorrow.estimateGas(estimatedShares, amountOut);
+        // @ts-expect-error - helper is FlashLoanRedeemHelper
+        tx = await helper.redeemSharesWithCurveAndFlashLoanBorrow(estimatedShares, amountOut, {gasLimit: applyGasSlippage(estimatedGas)});
       }
 
       await tx.wait();
@@ -518,6 +537,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   };
 
   const handleInputChange = (value: string) => {
+    setIsMaxWithdraw(false);
     const { formattedValue } = processInput(value);
 
     setInputValue(formattedValue);

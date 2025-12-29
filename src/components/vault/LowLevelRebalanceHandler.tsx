@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { formatUnits, parseUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
-import { isUserRejected, formatTokenSymbol, processInput } from '@/utils';
+import { isUserRejected, formatTokenSymbol, processInput, applyGasSlippage } from '@/utils';
 import { NumberDisplay, PreviewBox, TransitionLoader } from '@/components/ui';
 import { TokenType } from '@/types/actions';
 
@@ -228,7 +228,8 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
       let tx;
 
       if (rebalanceType === 'shares') {
-        tx = await vault.executeLowLevelRebalanceShares(amount);
+        const estimatedGas = await vaultLens.executeLowLevelRebalanceShares.estimateGas(amount);
+        tx = await vault.executeLowLevelRebalanceShares(amount, { gasLimit: applyGasSlippage(estimatedGas)});
       } else if (rebalanceType === 'borrow') {
         const preview = await vaultLens.previewLowLevelRebalanceBorrow(amount);
         const deltaShares = preview?.[1] as bigint | undefined;
@@ -240,7 +241,8 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
         }
 
         const isSharesPositiveHint = deltaShares >= 0n;
-        tx = await vault.executeLowLevelRebalanceBorrowHint(amount, isSharesPositiveHint);
+        const estimatedGas = await vaultLens.executeLowLevelRebalanceBorrowHint.estimateGas(amount, isSharesPositiveHint);
+        tx = await vault.executeLowLevelRebalanceBorrowHint(amount, isSharesPositiveHint, { gasLimit: applyGasSlippage(estimatedGas)});
       } else {
         const preview = await vaultLens.previewLowLevelRebalanceCollateral(amount);
         const deltaShares = preview?.[1] as bigint | undefined;
@@ -252,7 +254,8 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
         }
 
         const isSharesPositiveHint = deltaShares >= 0n;
-        tx = await vault.executeLowLevelRebalanceCollateralHint(amount, isSharesPositiveHint);
+        const estimatedGas = await vaultLens.executeLowLevelRebalanceCollateralHint.estimateGas(amount, isSharesPositiveHint);
+        tx = await vault.executeLowLevelRebalanceCollateralHint(amount, isSharesPositiveHint, { gasLimit: applyGasSlippage(estimatedGas)});
       }
 
       await tx.wait();

@@ -228,7 +228,8 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
       let tx;
 
       if (rebalanceType === 'shares') {
-        tx = await vault.executeLowLevelRebalanceShares(amount);
+        const estimatedGas = await vaultLens.executeLowLevelRebalanceShares.estimateGas(amount);
+        tx = await vault.executeLowLevelRebalanceShares(amount, { gasLimit: applyGasSlippage(estimatedGas)});
       } else if (rebalanceType === 'borrow') {
         const preview = await vaultLens.previewLowLevelRebalanceBorrow(amount);
         const deltaShares = preview?.[1] as bigint | undefined;

@@ -437,7 +437,7 @@ export default function VaultBlock({ address }: VaultBlockProps) {
             isLoading={isLoadingPointsRate}
             isFailedToLoad={pointsRateLoadFailed}
           >
-            {pointsRate ? `~${pointsRate} per 1 token / day` : ''}
+            {pointsRate !== null ? `~${pointsRate} per 1 token / day` : 'No Points'}
           </TransitionLoader>
         </div>
       </div>

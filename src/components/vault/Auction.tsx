@@ -209,7 +209,7 @@ export default function Auction() {
                   <span className="text-blue-700">Auction Started:</span>
                   <span className="font-medium text-blue-900">
                     {auctionStartBlock && auctionStartBlock > 0n ? (
-                      auctionStartTimestamp ? 
+                      auctionStartTimestamp !== null ? 
                         new Date(auctionStartTimestamp * 1000).toLocaleString() :
                         `Block ${auctionStartBlock.toString()}`
                     ) : 'Not Started'}

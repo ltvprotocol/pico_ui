@@ -413,11 +413,16 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
 
       let tx;
       if (helperType === 'mint') {
-        // @ts-expect-error - helper is FlashLoanMintHelper when helperType is 'mint'
-        tx = await helper.mintSharesWithFlashLoanCollateral(sharesToProcess);
+        // @ts-expect-error - helper is FlashLoanMintHelper
+        const estimatedGas = await helper.mintSharesWithFlashLoanCollateral.estimateGas(sharesToProcess);
+        // @ts-expect-error - helper is FlashLoanMintHelper
+        tx = await helper.mintSharesWithFlashLoanCollateral(sharesToProcess, {gasLimit: applyGasSlippage(estimatedGas)});
       } else {
-        // @ts-expect-error - helper is FlashLoanRedeemHelper when helperType is 'redeem'
-        tx = await helper.redeemSharesWithCurveAndFlashLoanBorrow(sharesToProcess, applyRedeemSlippage(previewData.amount));
+        const amountOut = applyRedeemSlippage(previewData!.amount);
+        // @ts-expect-error - helper is FlashLoanRedeemHelper
+        const estimatedGas = await helper.redeemSharesWithCurveAndFlashLoanBorrow.estimateGas(sharesToProcess, amountOut);
+        // @ts-expect-error - helper is FlashLoanRedeemHelper
+        tx = await helper.redeemSharesWithCurveAndFlashLoanBorrow(sharesToProcess, amountOut, {gasLimit: applyGasSlippage(estimatedGas)});
       }
 
       await tx.wait();

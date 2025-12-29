@@ -17,7 +17,7 @@ export function useMaxAmountUsd(options: UseMaxAmountUsdOptions): number | null 
   useEffect(() => {
     const { maxAmount, tokenPrice, needConvertFromShares, vaultLens, sharesDecimals, borrowTokenDecimals } = options;
 
-    const needToSkip = !maxAmount || tokenPrice === null || (needConvertFromShares && (!vaultLens || !sharesDecimals || !borrowTokenDecimals));
+    const needToSkip = !maxAmount || tokenPrice === null || (needConvertFromShares && (!vaultLens || sharesDecimals === null || borrowTokenDecimals === null));
 
     if (needToSkip) {
       setMaxAmountUsd(null);

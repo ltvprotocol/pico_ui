@@ -254,7 +254,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
           vaultLens
         })
 
-        if (!shares) return;
+        if (!shares) return; // Here we need return if 0 and if undefined
 
         shares = applyFlashLoanDepositWithdrawSlippage(shares);
         setEstimatedShares(shares);
@@ -314,7 +314,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
 
   useEffect(() => {
     // Reset state if input is empty or invalid
-    if (!estimatedShares || estimatedShares <= 0n) {
+    if (estimatedShares === null || estimatedShares <= 0n) {
       setPreviewedWstEthAmount(null);
       setEthToWrapValue('');
       setHasInsufficientBalance(false);
@@ -323,7 +323,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   }, [estimatedShares]);
 
   useEffect(() => {
-    if (!estimatedShares || estimatedShares <= 0n) {
+    if (estimatedShares === null || estimatedShares <= 0n) {
       return;
     }
 
@@ -444,7 +444,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!helper || !address || !estimatedShares || estimatedShares <= 0n) return;
+    if (!helper || !address || estimatedShares === null || estimatedShares <= 0n) return;
 
     setLoading(true);
     setError(null);
@@ -638,7 +638,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
         )}
 
         {/* Preview Section */}
-        {!!estimatedShares && estimatedShares > 0n && previewData && !isErrorLoadingPreview && (
+        {estimatedShares !== null && estimatedShares > 0n && previewData && !isErrorLoadingPreview && (
           <PreviewBox
             receive={receive}
             provide={provide}
@@ -648,7 +648,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
         )}
 
         {/* Preview Error */}
-        {!!estimatedShares && (isErrorLoadingPreview || invalidRebalanceMode) && (
+        {estimatedShares !== null && (isErrorLoadingPreview || invalidRebalanceMode) && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
             <span>
               {invalidRebalanceMode
@@ -659,7 +659,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
         )}
 
         {/* Balance warning */}
-        {hasInsufficientBalance && !!estimatedShares && estimatedShares > 0n && (
+        {hasInsufficientBalance && estimatedShares !== null && estimatedShares > 0n && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
             <span>
               Insufficient balance.
@@ -671,7 +671,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
           type="submit"
           disabled={
             loading ||
-            !estimatedShares ||
+            estimatedShares === null ||
             estimatedShares <= 0n ||
             isApproving ||
             isWrapping ||

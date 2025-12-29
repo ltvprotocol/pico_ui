@@ -132,7 +132,7 @@ export default function Auction() {
 
   // Calculate auction progress
   const calculateAuctionProgress = () => {
-    if (!auctionStartBlock || !currentBlock || !auctionDuration || auctionStartBlock === 0n) {
+    if (auctionStartBlock === null || !currentBlock || !auctionDuration || auctionStartBlock === 0n) {
       return { progress: 0, currentStep: 0, isComplete: false };
     }
 
@@ -208,8 +208,8 @@ export default function Auction() {
                 <div className="flex justify-between">
                   <span className="text-blue-700">Auction Started:</span>
                   <span className="font-medium text-blue-900">
-                    {auctionStartBlock && auctionStartBlock > 0n ? (
-                      auctionStartTimestamp !== null ? 
+                    {auctionStartBlock !== null && auctionStartBlock > 0n ? (
+                      auctionStartTimestamp !== null ?
                         new Date(auctionStartTimestamp * 1000).toLocaleString() :
                         `Block ${auctionStartBlock.toString()}`
                     ) : 'Not Started'}
@@ -225,7 +225,7 @@ export default function Auction() {
                 </div>
                 
                 {/* Auction Progress Bar */}
-                {auctionStartBlock && auctionStartBlock > 0n && auctionDuration && (
+                {auctionStartBlock !== null && auctionStartBlock > 0n && auctionDuration && (
                   <div className="mt-3">
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-blue-700 text-sm">Auction Progress:</span>

@@ -378,7 +378,7 @@ export default function SafeActionHandler({ actionType, tokenType }: SafeActionH
       if (isMaxSelected && (actionType === 'redeem' || actionType === 'withdraw')) {
         const maxBeforeTx = await refetchMaxBeforeTx();
 
-        if (!maxBeforeTx) {
+        if (maxBeforeTx === undefined) {
           setError('Error refetching max amount before tx.');
           console.error('Error refetching max amount before tx.');
           setLoading(false);
@@ -456,4 +456,3 @@ export default function SafeActionHandler({ actionType, tokenType }: SafeActionH
     />
   );
 }
-

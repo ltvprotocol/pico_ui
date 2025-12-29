@@ -36,7 +36,7 @@ export function useIsAmountLessThanMin({
 
       if (parsedAmount === 0n) return false;
 
-      // mint / redeem path
+      // mint / redeem
       if (minMint !== undefined || minRedeem !== undefined) {
         if (helperType === 'mint') {
           if (!minMint || minMint === '0') return false;
@@ -51,7 +51,7 @@ export function useIsAmountLessThanMin({
         return false;
       }
 
-      // deposit / withdraw path
+      // deposit / withdraw
       if (minDeposit !== undefined || minWithdraw !== undefined) {
         if (actionType === 'deposit') {
           if (!minDeposit || minDeposit === '0') return false;

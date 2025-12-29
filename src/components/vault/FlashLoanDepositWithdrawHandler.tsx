@@ -122,9 +122,6 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     setIsMaxWithdraw(false);
     setInputMoreThanMax(false);
     setMaxAmount('');
-    setMinDeposit('');
-    setMinWithdraw('');
-    setMinDisablesAction(false);
 
     setEstimatedShares(null);
     setPreviewedWstEthAmount(null);

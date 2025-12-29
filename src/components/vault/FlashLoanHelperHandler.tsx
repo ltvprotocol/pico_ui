@@ -18,7 +18,8 @@ import {
   useFlashLoanPreview,
   useMaxAmountUsd,
   useIsAmountMoreThanMax,
-  useIsMinMoreThanMax
+  useIsMinMoreThanMax,
+  useIsAmountLessThanMin
 } from '@/hooks';
 import { GAS_RESERVE_WEI } from '@/constants';
 import { maxBigInt } from '@/utils';
@@ -141,6 +142,14 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     minRedeem,
     helperType,
     decimals: Number(sharesDecimals)
+  });
+
+  const isAmountLessThanMin = useIsAmountLessThanMin({
+    amount: inputValue,
+    decimals: Number(sharesDecimals),
+    minMint,
+    minRedeem,
+    helperType,
   });
 
   const applyRedeemSlippage = (amount: bigint) => {
@@ -631,7 +640,8 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
             isErrorLoadingPreview ||
             invalidRebalanceMode ||
             isMinMoreThanMax ||
-            isInputMoreThanMax
+            isInputMoreThanMax ||
+            isAmountLessThanMin
           }
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >

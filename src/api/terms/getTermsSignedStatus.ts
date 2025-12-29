@@ -1,6 +1,5 @@
 import { TERMS_API_URLS } from '@/config';
-import { DEFAULT_CHAIN_ID_STRING } from '@/constants';
-import { fetchWithTimeout } from '@/api/client/request';
+import { fetchApiJson } from "@/api/utils/fetchApiJson";
 
 export interface TermsSignedStatusResponse {
   signed: boolean;
@@ -12,14 +11,13 @@ export async function getTermsSignedStatus(
   chainId: string | null
 ): Promise<TermsSignedStatusResponse | null> {
   try {
-    const apiUrl = TERMS_API_URLS[chainId || DEFAULT_CHAIN_ID_STRING] || TERMS_API_URLS[DEFAULT_CHAIN_ID_STRING];
-    const response = await fetchWithTimeout(`${apiUrl}/terms-of-use/${address}`);
+    const data = await fetchApiJson<TermsSignedStatusResponse>({
+      apiUrls: TERMS_API_URLS,
+      chainId,
+      path: `/terms-of-use/${address}`,
+    });
 
-    if (!response.ok) {
-      throw new Error(`Failed to check terms of use status: ${response.status}`);
-    }
-
-    const data: TermsSignedStatusResponse = await response.json();
+    if (!data) return null;
 
     if (typeof data.signed !== 'boolean' || typeof data.signed_at !== 'string') {
       throw new Error(`Server returned invalid data: ${JSON.stringify(data)}`);

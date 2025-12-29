@@ -1,29 +1,30 @@
 import { POINTS_API_URLS } from '@/config';
-import { DEFAULT_CHAIN_ID_STRING } from '@/constants';
-import { fetchWithTimeout } from '@/api/client/request';
+import { fetchApiJson } from '@/api/utils/fetchApiJson';
+
+export interface PointsBalanceResponse {
+  points: number;
+}
 
 export async function getPointsBalance(
   address: string,
   chainId: string | null
 ) : Promise<number | null> {
   try {
-    const apiUrl = POINTS_API_URLS[chainId || DEFAULT_CHAIN_ID_STRING];
-    const response = await fetchWithTimeout(`${apiUrl}/points/${address}`);
+    const data = await fetchApiJson<PointsBalanceResponse>({
+      apiUrls: POINTS_API_URLS,
+      chainId,
+      path: `/points/${address}`,
+      on404: () => ({ points: 0 }),
+    });
 
-    if (!response.ok) {
-      if (response.status === 404) {
-        return 0;
-      }
-      throw new Error(`Failed to fetch user points: ${response.status}`);
-    }
+    if (!data) return null;
+    const points = data.points;
 
-    const data: { points: number } = await response.json();
-
-    if (typeof data.points !== 'number') {
+    if (typeof points !== 'number') {
       throw new Error(`Server returned invalid data: ${JSON.stringify(data)}`);
     }
 
-    return data.points;
+    return points;
   } catch (err) {
     console.error('Error fetching user points:', err);
     return null;

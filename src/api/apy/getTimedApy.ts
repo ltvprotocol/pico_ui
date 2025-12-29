@@ -1,6 +1,5 @@
 import { APY_API_URLS } from '@/config';
-import { DEFAULT_CHAIN_ID_STRING } from '@/constants';
-import { fetchWithTimeout } from '@/api/client/request';
+import { fetchApiJson } from '@/api/utils/fetchApiJson';
 
 export interface ApyData {
   "30d_apy": number;
@@ -12,29 +11,13 @@ export async function getTimedApy(
   chainId: string | null
 ) : Promise<ApyData | null> {
   try {
-    const apiUrl = APY_API_URLS[chainId || DEFAULT_CHAIN_ID_STRING];
+    const data = await fetchApiJson<ApyData>({
+      apiUrls: APY_API_URLS,
+      chainId,
+      path: `/timed-apy/${vaultAddress}`,
+    });
 
-    if (!apiUrl) {
-      throw new Error(`No API URL found for chainId: ${chainId}`);
-    }
-
-    const response = await fetchWithTimeout(`${apiUrl}/timed-apy/${vaultAddress}`);
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch APY: ${response.status} ${response.statusText}`);
-    }
-
-    let data: ApyData;
-
-    try {
-      data = await response.json();
-    } catch (err) {
-      throw new Error(`Failed to parse APY response as JSON: ${err}`);
-    }
-
-    if (!data || typeof data !== 'object') {
-      throw new Error(`Server returned non-object response: ${typeof data}`);
-    }
+    if (!data) return null;
     
     const rawApy30d = data['30d_apy'];
     const rawApy7d = data['7d_apy'];

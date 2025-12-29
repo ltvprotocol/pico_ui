@@ -1,4 +1,6 @@
 export { fetchWithTimeout } from './client/request';
+export { fetchApiJson } from './utils/fetchApiJson';
+export { fetchApiValue } from './utils/fetchApiValue';
 // APY
 export { getTimedApy } from './apy/getTimedApy';
 // Points

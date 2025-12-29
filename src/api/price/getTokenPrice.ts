@@ -1,3 +1,5 @@
+import { fetchApiJson } from "@/api/utils/fetchApiJson";
+
 const TOKEN_TO_COINGECKO_ID: Record<string, string> = {
   'WETH': 'ethereum',
   'ETH': 'ethereum',
@@ -32,6 +34,12 @@ const TOKEN_TO_COINGECKO_ID: Record<string, string> = {
   'WSTETH': 'wrapped-steth',
 };
 
+interface CoinGeckoPriceResponse {
+  [coingeckoId: string]: {
+    usd: number;
+  };
+}
+
 export async function getTokenPrice(
   tokenSymbol: string | null
 ) : Promise<number | null> {
@@ -40,21 +48,20 @@ export async function getTokenPrice(
   }
 
   const coingeckoId = TOKEN_TO_COINGECKO_ID[tokenSymbol.toUpperCase()];
+
   if (!coingeckoId) {
     console.warn(`Token symbol "${tokenSymbol}" not found in CoinGecko mapping`);
     return null;
   }
 
   try {
-    const response = await fetch(
-      `https://api.coingecko.com/api/v3/simple/price?ids=${coingeckoId}&vs_currencies=usd`
-    );
-    
-    if (!response.ok) {
-      throw new Error(`CoinGecko API error: ${response.status}`);
-    }
+    const data = await fetchApiJson<CoinGeckoPriceResponse>({
+      apiUrls: { coingecko: 'https://api.coingecko.com/api/v3' },
+      chainId: 'coingecko', // just key, chainId not play any role here
+      path: `/simple/price?ids=${coingeckoId}&vs_currencies=usd`,
+    });
 
-    const data = await response.json();
+    if (!data) return null;
     const price = data[coingeckoId]?.usd;
     
     if (typeof price !== 'number') {

@@ -14,7 +14,7 @@ export async function submitTermsSignature(
   chainId: string | null
 ): Promise<TermsSubmitSignatureResponse | null> {
   try {
-    const apiUrl = TERMS_API_URLS[chainId || DEFAULT_CHAIN_ID_STRING] || TERMS_API_URLS[DEFAULT_CHAIN_ID_STRING];
+    const apiUrl = TERMS_API_URLS[chainId || DEFAULT_CHAIN_ID_STRING];
 
     const response = await fetchWithTimeout(`${apiUrl}/terms-of-use/${address}`, {
       method: 'POST',
@@ -30,7 +30,11 @@ export async function submitTermsSignature(
 
     const data: TermsSubmitSignatureResponse = await response.json();
 
-    if (typeof data.success !== 'boolean' || typeof data.message !== 'string' || typeof data.signed_at !== 'string') {
+    if (
+      typeof data.success !== 'boolean' ||
+      typeof data.message !== 'string' ||
+      typeof data.signed_at !== 'string'
+    ) {
       throw new Error(`Server returned invalid data: ${JSON.stringify(data)}`);
     };
 

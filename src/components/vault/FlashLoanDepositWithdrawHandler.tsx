@@ -125,7 +125,6 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   useEffect(() => {
     setInputValue('');
     setIsMaxWithdraw(false);
-    setInputMoreThanMax(false);
     setMaxAmount('');
 
     setEstimatedShares(null);

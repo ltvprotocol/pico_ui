@@ -4,14 +4,13 @@ import { useAppContext, useVaultContext } from '@/contexts';
 import {
   isUserRejected,
   isWstETHAddress,
-  allowOnlyNumbers,
   minBigInt,
   clampToPositive,
   formatTokenSymbol,
   formatUsdValue,
   wrapEthToWstEth,
   calculateEthWrapForFlashLoan,
-  limitDecimals
+  processInput
 } from '@/utils';
 import { PreviewBox, NumberDisplay, TransitionLoader } from '@/components/ui';
 import { useAdaptiveInterval, useFlashLoanPreview, useMaxAmountUsd } from '@/hooks';
@@ -519,10 +518,9 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   };
 
   const handleInputChange = (value: string) => {
-    const numbersOnly = allowOnlyNumbers(value);
-    const limited = limitDecimals(numbersOnly);
+    const { formattedValue } = processInput(value);
 
-    setInputValue(limited);
+    setInputValue(formattedValue);
 
     setError(null);
     setSuccess(null);

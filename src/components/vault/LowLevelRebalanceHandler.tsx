@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { formatUnits, parseUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
-import { isUserRejected, allowOnlyNumbers, formatTokenSymbol, limitDecimals } from '@/utils';
+import { isUserRejected, formatTokenSymbol, processInput } from '@/utils';
 import { NumberDisplay, PreviewBox, TransitionLoader } from '@/components/ui';
 import { TokenType } from '@/types/actions';
 
@@ -397,28 +397,15 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
   };
 
   const handleInputChange = (value: string) => {
-    const numbersOnly = allowOnlyNumbers(value); // Only allow positive numbers
-    const limited = limitDecimals(numbersOnly);
-    
-    setInputValue(limited);
+    const { formattedValue, parsedValue } = processInput(value, decimals);
 
-    if (!limited || limited === '' || limited === '.') {
+    setInputValue(formattedValue);
+
+    if (parsedValue === null) {
       setAmount(null);
-      return;
-    }
-
-    try {
-      const numValue = parseFloat(limited);
-      if (isNaN(numValue)) {
-        setAmount(null);
-        return;
-      }
-
-      const parsed = parseUnits(limited, decimals);
+    } else {
       const sign = getAmountSign();
-      setAmount(parsed * sign);
-    } catch (err) {
-      setAmount(null);
+      setAmount(parsedValue * sign);
     }
   };
 

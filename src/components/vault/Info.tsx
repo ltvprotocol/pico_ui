@@ -76,7 +76,7 @@ export default function Info() {
   }, [isMainnet, address, publicProvider]);
 
   const pointsRateDisplay = useMemo(() => {
-    if (!pointsRate) return null;
+    if (pointsRate === null) return null;
     // Base rate is what comes from API
     // If NFT holder: Boosted rate (~42% boost)
     if (hasNft) {
@@ -126,7 +126,7 @@ export default function Info() {
 
   // Calculate USD value
   const usdValue = useMemo(() => {
-    if (!isMainnet || !tokenPrice || !totalAssets) {
+    if (!isMainnet || tokenPrice === null || !totalAssets || totalAssets === '0') {
       return null;
     }
     const totalAssetsNum = parseFloat(totalAssets);
@@ -138,7 +138,7 @@ export default function Info() {
 
   // Calculate TVL USD value
   const tvlUsdValue = useMemo(() => {
-    if (!isMainnet || !collateralTokenPrice || !tvl) {
+    if (!isMainnet || collateralTokenPrice === null || !tvl || tvl === '0') {
       return null;
     }
     const tvlNum = parseFloat(tvl);
@@ -176,7 +176,7 @@ export default function Info() {
 
   // Calculate position USD value
   const positionUsdValue = useMemo(() => {
-    if (!isMainnet || !tokenPrice || !positionInBorrowTokens) {
+    if (!isMainnet || tokenPrice === null || !positionInBorrowTokens || positionInBorrowTokens === '0') {
       return null;
     }
     const positionNum = parseFloat(positionInBorrowTokens);
@@ -234,7 +234,7 @@ export default function Info() {
               </div>
               {positionInBorrowTokens && (
                 <div className="text-gray-700 text-xs mt-0.5">
-                  <TransitionLoader isLoading={!tokenPrice}>
+                  <TransitionLoader isLoading={tokenPrice === null}>
                     {formatUsdValue(positionUsdValue)}
                   </TransitionLoader>
                 </div>
@@ -299,7 +299,7 @@ export default function Info() {
             <div className="w-full flex justify-between items-start text-sm mb-2">
               <div className="font-medium text-gray-700">Points rate:</div>
               <div className="min-w-[60px] text-right">
-                <TransitionLoader isLoading={!pointsRate}>
+                <TransitionLoader isLoading={pointsRate === null}>
                   {pointsRateDisplay}
                 </TransitionLoader>
               </div>
@@ -326,7 +326,7 @@ export default function Info() {
               </div>
               {isMainnet && (
                 <div className="text-gray-700 text-xs mt-0.5">
-                  <TransitionLoader isLoading={!collateralTokenPrice}>
+                  <TransitionLoader isLoading={collateralTokenPrice === null}>
                     {formatUsdValue(tvlUsdValue)}
                   </TransitionLoader>
                 </div>
@@ -353,7 +353,7 @@ export default function Info() {
             </div>
             {isMainnet && (
               <div className="text-gray-700 text-xs mt-0.5">
-                <TransitionLoader isLoading={!tokenPrice}>
+                <TransitionLoader isLoading={tokenPrice === null}>
                   {formatUsdValue(usdValue)}
                 </TransitionLoader>
               </div>

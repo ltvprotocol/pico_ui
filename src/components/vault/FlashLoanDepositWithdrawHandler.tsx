@@ -59,6 +59,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   const [minWithdraw, setMinWithdraw] = useState('');
   const [minTooBig, setMinDisablesAction] = useState(false);
   const [inputMoreThanMax, setInputMoreThanMax] = useState(false);
+  const [showWarning, setShowWarning] = useState(false);
 
   const { address, provider, signer, publicProvider } = useAppContext();
 
@@ -126,6 +127,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     setUseEthWrapToWSTETH(true);
     setEthToWrapValue('');
     setPreviewedWstEthAmount(null);
+    setShowWarning(false);
   }, [actionType]);
 
   useEffect(() => {
@@ -220,6 +222,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   const calculateShares = async () => {
     if (!inputValue || !vaultLens) {
       setEstimatedShares(null);
+      setShowWarning(false);
       return;
     }
 
@@ -253,9 +256,13 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
           amount: inputAmount,
           helper: flashLoanRedeemHelper,
           vaultLens
-        })
+        });
 
-        if (!shares) return;
+        if (!shares) {
+          setShowWarning(true);
+          setEstimatedShares(null);
+          return;
+        }
 
         shares = applyFlashLoanDepositWithdrawSlippage(shares);
         setEstimatedShares(shares);
@@ -524,6 +531,8 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   };
 
   const handleInputChange = (value: string) => {
+    setShowWarning(false);
+
     const cleanedValue = allowOnlyNumbers(value);
     setInputValue(cleanedValue);
 
@@ -654,13 +663,16 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
         )}
 
         {/* Preview Error */}
-        {!!estimatedShares && (isErrorLoadingPreview || invalidRebalanceMode) && (
+        {!!estimatedShares && isErrorLoadingPreview && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            <span>
-              {invalidRebalanceMode
-                ? "Flash loan rebalance is currently unavailable for this amount."
-                : "Error loading preview. Amount might be too high or low."}
-            </span>
+            <span>Error loading preview. Amount might be too high or low.</span>
+          </div>
+        )}
+
+        {/* Warning */}
+        {(showWarning || invalidRebalanceMode) && (
+          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-sm">
+            {`Not available to ${actionType} this amount right now, try again later`}
           </div>
         )}
 

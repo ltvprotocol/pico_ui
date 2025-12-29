@@ -119,13 +119,29 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
 
   useEffect(() => {
     setInputValue('');
+    setIsMaxWithdraw(false);
+    setInputMoreThanMax(false);
+    setMaxAmount('');
+    setMinDeposit('');
+    setMinWithdraw('');
+    setMinDisablesAction(false);
+
     setEstimatedShares(null);
+    setPreviewedWstEthAmount(null);
+    setEthToWrapValue('');
+
+    setHasInsufficientBalance(false);
+
+    setLoading(false);
+    setIsApproving(false);
+    setIsWrapping(false);
+
     setError(null);
     setApprovalError(null);
     setSuccess(null);
+
+    // Something very ugly here, should be rewrited in future
     setUseEthWrapToWSTETH(true);
-    setEthToWrapValue('');
-    setPreviewedWstEthAmount(null);
   }, [actionType]);
 
   useEffect(() => {

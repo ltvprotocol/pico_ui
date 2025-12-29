@@ -116,12 +116,25 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
   useEffect(() => {
     setInputValue('');
     setSharesToProcess(null);
+    setMaxAmount('');
+    setMinMint('');
+    setMinRedeem('');
+    setMinDisablesAction(false);
+
+    setPreviewedWstEthAmount(null);
+    setEthToWrapValue('');
+    setEffectiveCollateralBalance('');
+    setUseEthWrapToWSTETH(true);
+
+    setHasInsufficientBalance(false);
+
+    setLoading(false);
+    setIsApproving(false);
+    setIsWrapping(false);
+
     setError(null);
     setApprovalError(null);
     setSuccess(null);
-    setUseEthWrapToWSTETH(true);
-    setEthToWrapValue('');
-    setPreviewedWstEthAmount(null);
   }, [helperType]);
 
   const applyRedeemSlippage = (amount: bigint) => {

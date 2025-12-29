@@ -117,9 +117,6 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     setInputValue('');
     setSharesToProcess(null);
     setMaxAmount('');
-    setMinMint('');
-    setMinRedeem('');
-    setMinDisablesAction(false);
 
     setPreviewedWstEthAmount(null);
     setEthToWrapValue('');

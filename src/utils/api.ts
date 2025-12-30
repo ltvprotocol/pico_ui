@@ -1,4 +1,4 @@
-import { API_URLS, APY_API_URLS, TERMS_API_URLS } from '@/config';
+import { POINTS_API_URLS, APY_API_URLS, TERMS_API_URLS } from '@/config';
 import { DEFAULT_CHAIN_ID_STRING } from '@/constants';
 
 export interface ApyData {
@@ -99,7 +99,7 @@ export async function fetchApy(
 
 export async function fetchPointsRate(vaultAddress: string, chainId: string | null): Promise<number | null> {
   try {
-    const apiUrl = API_URLS[chainId || DEFAULT_CHAIN_ID_STRING];
+    const apiUrl = POINTS_API_URLS[chainId || DEFAULT_CHAIN_ID_STRING];
     const response = await fetchWithTimeout(`${apiUrl}/points-rate/${vaultAddress}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch points rate: ${response.status}`);
@@ -170,7 +170,7 @@ export async function submitTermsOfUseSignature(
 export async function fetchIsLiquidityProvider(address: string, chainId: string | null): Promise<boolean | null> {
   try {
     // Both Mainnet and Sepolia use the same API URL configuration for now
-    const apiUrl = API_URLS[chainId || DEFAULT_CHAIN_ID_STRING];
+    const apiUrl = POINTS_API_URLS[chainId || DEFAULT_CHAIN_ID_STRING];
     const response = await fetchWithTimeout(`${apiUrl}/is-liquidity-provider/${address}`);
     if (!response.ok) {
       throw new Error(`Failed to check liquidity provider status: ${response.status}`);
@@ -185,7 +185,7 @@ export async function fetchIsLiquidityProvider(address: string, chainId: string 
 
 export async function fetchUserPoints(address: string, chainId: string | null): Promise<number | null> {
   try {
-    const apiUrl = API_URLS[chainId || DEFAULT_CHAIN_ID_STRING];
+    const apiUrl = POINTS_API_URLS[chainId || DEFAULT_CHAIN_ID_STRING];
     const response = await fetchWithTimeout(`${apiUrl}/points/${address}`);
     if (!response.ok) {
       if (response.status === 404) {

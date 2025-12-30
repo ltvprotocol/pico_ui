@@ -437,6 +437,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
 
       await tx.wait();
 
+      await loadMinAvailable(); // first reload mins
       await Promise.all([refreshBalances(), refreshVaultLimits()]);
 
       setInputValue('');

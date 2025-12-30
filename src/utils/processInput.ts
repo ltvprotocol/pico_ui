@@ -12,7 +12,7 @@ export function processInput(
   decimals: number = 18
 ) : ProcessedInput {
   const numbersOnly = allowOnlyNumbers(value);
-  const limited = limitDecimals(numbersOnly);
+  const limited = limitDecimals(numbersOnly, decimals);
 
   const result: ProcessedInput = {
     formattedValue: limited,

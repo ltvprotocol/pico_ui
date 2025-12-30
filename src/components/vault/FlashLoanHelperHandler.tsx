@@ -10,7 +10,8 @@ import {
   formatTokenSymbol,
   formatUsdValue,
   wrapEthToWstEth,
-  calculateEthWrapForFlashLoan
+  calculateEthWrapForFlashLoan,
+  applyGasSlippage
 } from '@/utils';
 import { PreviewBox, NumberDisplay, TransitionLoader } from '@/components/ui';
 import { useAdaptiveInterval, useFlashLoanPreview, useMaxAmountUsd } from '@/hooks';

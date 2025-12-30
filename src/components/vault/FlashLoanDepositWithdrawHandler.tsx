@@ -14,7 +14,14 @@ import {
   applyGasSlippage
 } from '@/utils';
 import { PreviewBox, NumberDisplay, TransitionLoader } from '@/components/ui';
-import { useAdaptiveInterval, useFlashLoanPreview, useMaxAmountUsd } from '@/hooks';
+import {
+  useAdaptiveInterval,
+  useFlashLoanPreview,
+  useMaxAmountUsd,
+  useIsAmountMoreThanMax,
+  useIsMinMoreThanMax,
+  useIsAmountLessThanMin
+} from '@/hooks';
 import { GAS_RESERVE_WEI } from '@/constants';
 import { findSharesForEthWithdraw } from '@/utils/findSharesForAmount';
 import { maxBigInt } from '@/utils';
@@ -57,8 +64,6 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   const [isMaxWithdraw, setIsMaxWithdraw] = useState(false);
   const [minDeposit, setMinDeposit] = useState('');
   const [minWithdraw, setMinWithdraw] = useState('');
-  const [minTooBig, setMinDisablesAction] = useState(false);
-  const [inputMoreThanMax, setInputMoreThanMax] = useState(false);
 
   const { address, provider, signer, publicProvider } = useAppContext();
 
@@ -120,7 +125,6 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   useEffect(() => {
     setInputValue('');
     setIsMaxWithdraw(false);
-    setInputMoreThanMax(false);
     setMaxAmount('');
 
     setEstimatedShares(null);
@@ -141,11 +145,27 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     setUseEthWrapToWSTETH(true);
   }, [actionType]);
 
-  useEffect(() => {
-    if (!inputValue || !maxAmount) return;
-    const isMoreThanMax = parseEther(inputValue) > parseEther(maxAmount);
-    setInputMoreThanMax(isMoreThanMax);
-  }, [inputValue, maxAmount])
+  const isInputMoreThanMax = useIsAmountMoreThanMax({
+    amount: inputValue,
+    max: maxAmount,
+    decimals: 18 // 100% sure for ETH and WETH
+  });
+
+  const isMinMoreThanMax = useIsMinMoreThanMax({
+    maxAmount,
+    minDeposit,
+    minWithdraw,
+    actionType,
+    decimals: 18 // 100% sure for ETH and WETH
+  });
+
+  const isAmountLessThanMin = useIsAmountLessThanMin({
+    amount: inputValue,
+    minDeposit,
+    minWithdraw,
+    actionType,
+    decimals: 18 // 100% sure for ETH and WETH
+  });
 
   const applyRedeemSlippage = (amount: bigint) => {
     return amount * BigInt(REDEEM_SLIPPAGE_DIVIDEND) / BigInt(REDEEM_SLIPPAGE_DIVIDER);
@@ -206,29 +226,6 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     multiplier: 2,
     enabled: !!vaultLens && !!publicProvider
   });
-
-  useEffect(() => {
-    if (!maxAmount || !minDeposit || !minWithdraw) return;
-
-    const rawMaxAmount = parseEther(maxAmount);
-    const rawMinDeposit = parseEther(minDeposit);
-    const rawMinWithdraw = parseEther(minWithdraw);
-
-    if (actionType === 'deposit') {
-      if (rawMinDeposit > rawMaxAmount) {
-        setMinDisablesAction(true);
-      } else {
-        setMinDisablesAction(false);
-      }
-    } else {
-      if (rawMinWithdraw > rawMaxAmount) {
-        setMinDisablesAction(true);
-      } else {
-        setMinDisablesAction(false);
-      }
-    }
-
-  }, [actionType, minDeposit, minWithdraw, maxAmount]);
 
   const calculateShares = async () => {
     if (!inputValue || !vaultLens) {
@@ -699,8 +696,9 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
             hasInsufficientBalance ||
             isErrorLoadingPreview ||
             invalidRebalanceMode ||
-            minTooBig ||
-            inputMoreThanMax
+            isInputMoreThanMax ||
+            isMinMoreThanMax ||
+            isAmountLessThanMin
           }
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >

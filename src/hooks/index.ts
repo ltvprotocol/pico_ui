@@ -4,3 +4,6 @@ export { useFlashLoanPreview } from './useFlashLoanPreview';
 export { useVaultApy } from './useVaultApy';
 export { useVaultPointsRate } from './useVaultPointsRate';
 export { useMaxAmountUsd } from './useMaxAmountUsd';
+export { useIsAmountMoreThanMax } from './useIsAmountMoreThanMax';
+export { useIsMinMoreThanMax } from './useIsMinMoreThanMax';
+export { useIsAmountLessThanMin } from './useIsAmountLessThanMin';

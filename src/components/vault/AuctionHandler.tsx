@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { formatUnits, parseUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
-import { isUserRejected, allowOnlyNumbers, formatTokenSymbol, applyGasSlippage } from '@/utils';
+import { isUserRejected, formatTokenSymbol, processInput, applyGasSlippage } from '@/utils';
 import { NumberDisplay, PreviewBox, TransitionLoader } from '@/components/ui';
 
 interface AuctionHandlerProps {
@@ -281,28 +281,14 @@ export default function AuctionHandler({ futureBorrowAssets, futureCollateralAss
     }
   };
 
-
   const handleInputChange = (value: string) => {
-    const cleanedValue = allowOnlyNumbers(value);
-    setInputValue(cleanedValue);
-    
-    if (!cleanedValue || cleanedValue === '' || cleanedValue === '.') {
-      setAmount(null);
-      return;
-    }
+    const { formattedValue, parsedValue } = processInput(value, decimals);
 
-    try {
-      const numValue = parseFloat(cleanedValue);
-      if (isNaN(numValue) || numValue <= 0) {
-        setAmount(null);
-        return;
-      }
+    setInputValue(formattedValue);
+    setAmount(parsedValue);
 
-      const parsed = parseUnits(cleanedValue, decimals);
-      setAmount(parsed);
-    } catch (err) {
-      setAmount(null);
-    }
+    setError(null);
+    setSuccess(null);
   };
 
   return (

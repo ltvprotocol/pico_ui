@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { formatUnits, parseUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
-import { isUserRejected, allowOnlyNumbers, formatTokenSymbol } from '@/utils';
+import { isUserRejected, allowOnlyNumbers, formatTokenSymbol, applyGasSlippage } from '@/utils';
 import { NumberDisplay, PreviewBox, TransitionLoader } from '@/components/ui';
 
 interface AuctionHandlerProps {
@@ -220,7 +220,7 @@ export default function AuctionHandler({ futureBorrowAssets, futureCollateralAss
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!vault || !address || !amount) return;
+    if (!vault || !vaultLens || !address || !amount) return;
 
     setLoading(true);
     setError(null);
@@ -233,9 +233,11 @@ export default function AuctionHandler({ futureBorrowAssets, futureCollateralAss
       let tx;
 
       if (auctionType === 'provide_borrow') {
-        tx = await vault.executeAuctionCollateral(amount);
+        const estimatedGas = await vaultLens.executeAuctionCollateral.estimateGas(amount);
+        tx = await vault.executeAuctionCollateral(amount, {gasLimit: applyGasSlippage(estimatedGas)});
       } else if (auctionType === 'provide_collateral') {
-        tx = await vault.executeAuctionBorrow(-amount);
+        const estimatedGas = await vaultLens.executeAuctionBorrow.estimateGas(-amount);
+        tx = await vault.executeAuctionBorrow(-amount, {gasLimit: applyGasSlippage(estimatedGas)});
       } else {
         throw new Error('Invalid auction type');
       }

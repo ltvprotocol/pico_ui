@@ -3,16 +3,17 @@ import { parseUnits, parseEther, formatUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
 import {
   isUserRejected,
-  allowOnlyNumbers,
   isWstETHAddress,
-  wrapEthToWstEth,
-  calculateEthWrapForFlashLoan,
+  allowOnlyNumbers,
   minBigInt,
+  clampToPositive,
   formatTokenSymbol,
-  clampToPositive
+  formatUsdValue,
+  wrapEthToWstEth,
+  calculateEthWrapForFlashLoan
 } from '@/utils';
 import { PreviewBox, NumberDisplay, TransitionLoader } from '@/components/ui';
-import { useAdaptiveInterval, useFlashLoanPreview } from '@/hooks';
+import { useAdaptiveInterval, useFlashLoanPreview, useMaxAmountUsd } from '@/hooks';
 import { GAS_RESERVE_WEI } from '@/constants';
 import { maxBigInt } from '@/utils';
 import { ERC20__factory } from '@/typechain-types';
@@ -77,6 +78,8 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     ethBalance,
     refreshBalances,
     refreshVaultLimits,
+    borrowTokenDecimals,
+    borrowTokenPrice: tokenPrice,
   } = useVaultContext();
 
   const helper = helperType === 'mint' ? flashLoanMintHelper : flashLoanRedeemHelper;
@@ -101,15 +104,34 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     sharesDecimals,
   });
 
+  const maxAmountUsd = useMaxAmountUsd({
+    needConvertFromShares: true,
+    maxAmount,
+    tokenPrice,
+    vaultLens,
+    sharesDecimals,
+    borrowTokenDecimals,
+  });
+
   useEffect(() => {
     setInputValue('');
     setSharesToProcess(null);
+    setMaxAmount('');
+
+    setPreviewedWstEthAmount(null);
+    setEthToWrapValue('');
+    setEffectiveCollateralBalance('');
+    setUseEthWrapToWSTETH(true);
+
+    setHasInsufficientBalance(false);
+
+    setLoading(false);
+    setIsApproving(false);
+    setIsWrapping(false);
+
     setError(null);
     setApprovalError(null);
     setSuccess(null);
-    setUseEthWrapToWSTETH(true);
-    setEthToWrapValue('');
-    setPreviewedWstEthAmount(null);
   }, [helperType]);
 
   const applyRedeemSlippage = (amount: bigint) => {
@@ -401,11 +423,16 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
 
       let tx;
       if (helperType === 'mint') {
-        // @ts-expect-error - helper is FlashLoanMintHelper when helperType is 'mint'
-        tx = await helper.mintSharesWithFlashLoanCollateral(sharesToProcess);
+        // @ts-expect-error - helper is FlashLoanMintHelper
+        const estimatedGas = await helper.mintSharesWithFlashLoanCollateral.estimateGas(sharesToProcess);
+        // @ts-expect-error - helper is FlashLoanMintHelper
+        tx = await helper.mintSharesWithFlashLoanCollateral(sharesToProcess, {gasLimit: applyGasSlippage(estimatedGas)});
       } else {
-        // @ts-expect-error - helper is FlashLoanRedeemHelper when helperType is 'redeem'
-        tx = await helper.redeemSharesWithCurveAndFlashLoanBorrow(sharesToProcess, applyRedeemSlippage(previewData.amount));
+        const amountOut = applyRedeemSlippage(previewData!.amount);
+        // @ts-expect-error - helper is FlashLoanRedeemHelper
+        const estimatedGas = await helper.redeemSharesWithCurveAndFlashLoanBorrow.estimateGas(sharesToProcess, amountOut);
+        // @ts-expect-error - helper is FlashLoanRedeemHelper
+        tx = await helper.redeemSharesWithCurveAndFlashLoanBorrow(sharesToProcess, amountOut, {gasLimit: applyGasSlippage(estimatedGas)});
       }
 
       await tx.wait();
@@ -514,6 +541,11 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
           <span>Max Available:</span>
           <TransitionLoader isLoading={!maxAmount}>
             <NumberDisplay value={maxAmount} />{' '}{sharesSymbol}
+          </TransitionLoader>
+          <TransitionLoader isLoading={maxAmountUsd === null}>
+            <div className="ml-2">
+              ({formatUsdValue(maxAmountUsd)})
+            </div>
           </TransitionLoader>
         </div>
 

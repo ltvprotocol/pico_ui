@@ -374,9 +374,8 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
       if (isUserRejected(err)) {
         setApprovalError('Approval canceled by user.');
       } else {
-        const tokenName = helperType === 'mint' ? 'collateral token' : 'leveraged tokens';
-        setApprovalError(`Failed to approve ${tokenName}.`);
-        console.error(`Failed to approve ${tokenName}:`, err);
+        setApprovalError(`Failed to approve.`);
+        console.error(`Failed to approve.`, err);
       }
       throw err;
     } finally {

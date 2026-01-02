@@ -1,4 +1,4 @@
-import { POINTS_API_URLS, APY_API_URLS, TERMS_API_URLS } from '@/config';
+import { POINTS_API_URLS, APY_API_URLS, TERMS_API_URLS, NFT_API_URLS } from '@/config';
 import { DEFAULT_CHAIN_ID_STRING } from '@/constants';
 
 export interface ApyData {
@@ -23,6 +23,11 @@ export interface TermsOfUseSignResponse {
   success: boolean;
   message: string;
   signed_at: string;
+}
+
+export interface IsWhitelistedResponse {
+  detail?: string;
+  isWhitelisted?: boolean;
 }
 
 async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout = 5000) {
@@ -201,6 +206,45 @@ export async function fetchUserPoints(address: string, chainId: string | null): 
     return data && typeof data.points === 'number' ? data.points : 0;
   } catch (error) {
     console.error('Error fetching user points:', error);
+    return null;
+  }
+}
+
+export async function isAddressWhitelistedToMint(
+  addressToCheck: string,
+  chainId: string | null
+): Promise<boolean | null> {
+  try {
+    const apiUrl = NFT_API_URLS[chainId || DEFAULT_CHAIN_ID_STRING];
+
+    if (!apiUrl) {
+      throw new Error(`No API URL found for chainId: ${chainId}`);
+    }
+
+    const response = await fetchWithTimeout(
+      `${apiUrl}/whitelist/${addressToCheck}`
+    );
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return false;
+      }
+      throw new Error(`Failed to fetch whitelist status: ${response.status}`);
+    }
+
+    const data: IsWhitelistedResponse = await response.json();
+
+    if (typeof data.isWhitelisted === 'boolean') {
+      return data.isWhitelisted;
+    }
+
+    if (data.detail === 'Address not found') {
+      return false;
+    }
+
+    throw new Error(`Unexpected response format: ${JSON.stringify(data)}`);
+  } catch (err) {
+    console.error('Error fetching whitelist status:', err);
     return null;
   }
 }

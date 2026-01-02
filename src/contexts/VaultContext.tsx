@@ -1,5 +1,5 @@
 import { createContext, ReactNode, useContext, useEffect, useState, useCallback, useRef } from 'react'
-import { formatUnits, formatEther, parseUnits, ZeroAddress, parseEther } from 'ethers'
+import { formatUnits, formatEther, parseUnits, ZeroAddress, parseEther, Contract } from 'ethers'
 import { useAppContext } from '@/contexts/AppContext';
 import {
   Vault, Vault__factory,
@@ -10,7 +10,7 @@ import {
   WhitelistRegistry__factory
 } from '@/typechain-types';
 import { ltvToLeverage, getLendingProtocolAddress, isVaultExists, isUserRejected, loadTVL, minBigInt, clampToPositive } from '@/utils';
-import { ApyData } from '@/utils/api';
+import { ApyData, isAddressWhitelistedToMint } from '@/utils/api';
 import { isWETHAddress, GAS_RESERVE_WEI, SEPOLIA_CHAIN_ID_STRING, SEPOLIA_MORPHO_MARKET_ID, CONNECTOR_ADDRESSES } from '@/constants';
 import { useAdaptiveInterval, useVaultApy, useVaultPointsRate } from '@/hooks';
 import { loadGhostLtv, loadAaveLtv, loadMorphoLtv, fetchTokenPrice } from '@/utils';
@@ -120,6 +120,10 @@ interface VaultContextType {
   isRefreshingBalances: boolean;
   borrowTokenPrice: number | null;
   collateralTokenPrice: number | null;
+  // NFT
+  hasNft: boolean;
+  isWhitelistedToMintNft: boolean;
+  nftTotalSupply: number;
 };
 
 interface Params {
@@ -212,6 +216,11 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   const [isRefreshingBalances, setIsRefreshingBalances] = useState<boolean>(false);
   const [borrowTokenPrice, setBorrowTokenPrice] = useState<number | null>(null);
   const [collateralTokenPrice, setCollateralTokenPrice] = useState<number | null>(null);
+
+  // NFT State
+  const [hasNft, setHasNft] = useState<boolean>(false);
+  const [isWhitelistedToMintNft, setIsWhitelistedToMintNft] = useState<boolean>(false);
+  const [nftTotalSupply, setNftTotalSupply] = useState<number>(0);
 
   const { publicProvider, signer, isConnected, address, currentNetwork, isMainnet } = useAppContext();
 
@@ -741,6 +750,40 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
     }
   }, [address, currentNetwork, vaultAddress, params.hasSignature, lastCheckedAddressForSignature]);
 
+  // NFT Logic
+  useEffect(() => {
+    if (!isMainnet || !address || !publicProvider) {
+      setHasNft(false);
+      setIsWhitelistedToMintNft(false);
+      setNftTotalSupply(0);
+      return;
+    }
+
+    const loadNftData = async () => {
+      try {
+        const nftAddress = "0xF478F017cfe92AaF83b2963A073FaBf5A5cD0244";
+        const nftContract = new Contract(nftAddress, [
+          "function balanceOf(address) view returns (uint256)",
+          "function totalSupply() view returns (uint256)"
+        ], publicProvider);
+
+        const [balance, totalSupply, whitelistStatus] = await Promise.all([
+          nftContract.balanceOf(address),
+          nftContract.totalSupply(),
+          isAddressWhitelistedToMint(address, currentNetwork)
+        ]);
+
+        setHasNft(balance > 0n);
+        setNftTotalSupply(Number(totalSupply));
+        setIsWhitelistedToMintNft(whitelistStatus || false);
+      } catch (error) {
+        console.error('Error loading NFT data:', error);
+      }
+    };
+
+    loadNftData();
+  }, [isMainnet, address, publicProvider, currentNetwork]);
+
   // Use initial params only once, then always check
   useEffect(() => {
     if (!hasUsedInitialWhitelistParams && params.isWhitelisted !== null && isWhitelistActivated !== null) {
@@ -1010,7 +1053,10 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         refreshVaultLimits: loadVaultLimits,
         isRefreshingBalances,
         borrowTokenPrice,
-        collateralTokenPrice
+        collateralTokenPrice,
+        hasNft,
+        isWhitelistedToMintNft,
+        nftTotalSupply
       }}
     >
       {children}

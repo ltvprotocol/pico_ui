@@ -12,6 +12,7 @@ import FlashLoanHelper from '@/components/vault/FlashLoanHelper';
 import Auction from '@/components/vault/Auction';
 import VaultNotFound from '@/components/vault/VaultNotFound';
 import WhitelistBanner from '@/components/vault/WhitelistBanner';
+import NftMintBanner from '@/components/vault/NftMintBanner';
 import FlashLoanDepositWithdraw from '@/components/vault/FlashLoanDepositWithdraw';
 import FlashLoanDepositWithdrawForm from '@/components/vault/FlashLoanDepositWithdrawForm';
 import ActionsDropdown from '@/components/vault/ActionsDropdown';
@@ -50,6 +51,7 @@ function VaultContent() {
     <>
       <VaultHeader />
       <WhitelistBanner />
+      <NftMintBanner />
       <div className="flex flex-col [@media(min-width:768px)]:flex-row gap-4 mb-4">
         <div className="flex-1">
           <div className={isUIDisabled ? 'opacity-50 pointer-events-none' : ''}>

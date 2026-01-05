@@ -114,11 +114,14 @@ export default function Info() {
     if (!Number.isFinite(value)) return '0';
 
     const human = value / 10 ** decimals;
+    const factor = 10 ** fractionDigits;
+
+    const floored = Math.floor(human * factor) / factor;
 
     return new Intl.NumberFormat('en-US', {
       minimumFractionDigits: fractionDigits,
       maximumFractionDigits: fractionDigits,
-    }).format(human);
+    }).format(floored);
   }
 
   const [positionInBorrowTokens, setPositionInBorrowTokens] = useState<string | null>(null);

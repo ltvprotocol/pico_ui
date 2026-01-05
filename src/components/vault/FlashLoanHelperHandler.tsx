@@ -83,7 +83,6 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     borrowTokenPrice: tokenPrice,
   } = useVaultContext();
 
-  const helper = helperType === 'mint' ? flashLoanMintHelper : flashLoanRedeemHelper;
   const helperAddress = helperType === 'mint' ? flashLoanMintHelperAddress : flashLoanRedeemHelperAddress;
 
   // Check if this is a wstETH vault that supports ETH input
@@ -99,7 +98,8 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
   } = useFlashLoanPreview({
     sharesToProcess,
     helperType,
-    helper,
+    mintHelper: flashLoanMintHelper,
+    redeemHelper: flashLoanRedeemHelper,
     collateralTokenDecimals,
     sharesBalance,
     sharesDecimals,
@@ -388,7 +388,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!helper || !address || !sharesToProcess || sharesToProcess <= 0n) return;
+    if (!address || !sharesToProcess || sharesToProcess <= 0n) return;
 
     setLoading(true);
     setError(null);
@@ -424,16 +424,16 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
 
       let tx;
       if (helperType === 'mint') {
-        // @ts-expect-error - helper is FlashLoanMintHelper
-        const estimatedGas = await helper.mintSharesWithFlashLoanCollateral.estimateGas(sharesToProcess);
-        // @ts-expect-error - helper is FlashLoanMintHelper
-        tx = await helper.mintSharesWithFlashLoanCollateral(sharesToProcess, {gasLimit: applyGasSlippage(estimatedGas)});
+        if (!flashLoanMintHelper) return;
+
+        const estimatedGas = await flashLoanMintHelper.mintSharesWithFlashLoanCollateral.estimateGas(sharesToProcess);
+        tx = await flashLoanMintHelper.mintSharesWithFlashLoanCollateral(sharesToProcess, {gasLimit: applyGasSlippage(estimatedGas)});
       } else {
+        if (!flashLoanRedeemHelper) return;
+
         const amountOut = applyRedeemSlippage(previewData!.amount);
-        // @ts-expect-error - helper is FlashLoanRedeemHelper
-        const estimatedGas = await helper.redeemSharesWithCurveAndFlashLoanBorrow.estimateGas(sharesToProcess, amountOut);
-        // @ts-expect-error - helper is FlashLoanRedeemHelper
-        tx = await helper.redeemSharesWithCurveAndFlashLoanBorrow(sharesToProcess, amountOut, {gasLimit: applyGasSlippage(estimatedGas)});
+        const estimatedGas = await flashLoanRedeemHelper.redeemSharesWithCurveAndFlashLoanBorrow.estimateGas(sharesToProcess, amountOut);
+        tx = await flashLoanRedeemHelper.redeemSharesWithCurveAndFlashLoanBorrow(sharesToProcess, amountOut, {gasLimit: applyGasSlippage(estimatedGas)});
       }
 
       await tx.wait();

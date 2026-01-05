@@ -19,7 +19,8 @@ interface PreviewData {
 interface UseFlashLoanPreviewParams {
   sharesToProcess: bigint | null;
   helperType: HelperType;
-  helper: FlashLoanMintHelper | FlashLoanRedeemHelper | null;
+  mintHelper: FlashLoanMintHelper | null;
+  redeemHelper: FlashLoanRedeemHelper | null;
   collateralTokenDecimals: bigint;
   sharesBalance: string;
   sharesDecimals: bigint;
@@ -37,19 +38,22 @@ interface UseFlashLoanPreviewReturn {
 export const useFlashLoanPreview = ({
   sharesToProcess,
   helperType,
-  helper,
+  mintHelper,
+  redeemHelper,
   sharesBalance,
 }: UseFlashLoanPreviewParams): UseFlashLoanPreviewReturn => {
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [isErrorLoadingPreview, setIsErrorLoadingPreview] = useState(false);
   const [invalidRebalanceMode, setInvalidRebalanceMode] = useState(false);
   const [previewData, setPreviewData] = useState<PreviewData | null>(null);
-  // const [hasInsufficientBalance, setHasInsufficientBalance] = useState(false);
 
   const loadPreview = async (shares: bigint | null) => {
-    if (!helper || shares === null || shares <= 0n) {
+    if (
+      shares === null || shares <= 0n ||
+      helperType === 'mint' && !mintHelper ||
+      helperType === 'redeem' && !redeemHelper
+    ) {
       setPreviewData(null);
-      // setHasInsufficientBalance(false);
       return;
     }
     
@@ -60,14 +64,11 @@ export const useFlashLoanPreview = ({
     try {
       let amount: bigint;
       if (helperType === 'mint') {
-        console.log(shares);
         // returns collateral required
-        // @ts-expect-error - helper is FlashLoanMintHelper when helperType is 'mint'
-        amount = await helper.previewMintSharesWithFlashLoanCollateral(shares);
+        amount = await mintHelper!.previewMintSharesWithFlashLoanCollateral(shares);
       } else {
         // returns borrow tokens to receive
-        // @ts-expect-error - helper is FlashLoanRedeemHelper when helperType is 'redeem'
-        amount = await helper.previewRedeemSharesWithCurveAndFlashLoanBorrow(shares);
+        amount = await redeemHelper!.previewRedeemSharesWithCurveAndFlashLoanBorrow(shares);
       }
       amount = reduceByPrecisionBuffer(amount);
       setPreviewData({ amount });

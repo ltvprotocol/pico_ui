@@ -344,7 +344,7 @@ export default function VaultBlock({ address }: VaultBlockProps) {
   }, [address, currentNetwork]);
 
   const formattedDeposits = useMemo(() => {
-    if (!dynamicData.deposits) return null;
+    if (dynamicData.deposits === null) return null;
     return formatUnits(dynamicData.deposits, vaultDecimals.borrowTokenDecimals);
   }, [dynamicData.deposits, vaultDecimals.borrowTokenDecimals]);
 
@@ -437,7 +437,7 @@ export default function VaultBlock({ address }: VaultBlockProps) {
             isLoading={isLoadingPointsRate}
             isFailedToLoad={pointsRateLoadFailed}
           >
-            {pointsRate ? `~${pointsRate} per 1 token / day` : ''}
+            {pointsRate !== null ? `~${pointsRate} per 1 token / day` : 'No Points'}
           </TransitionLoader>
         </div>
       </div>

@@ -27,7 +27,7 @@ export default function AuctionHandler({ futureBorrowAssets, futureCollateralAss
     const receive: { amount: bigint; tokenType: 'borrow' | 'collateral' }[] = [];
     const provide: { amount: bigint; tokenType: 'borrow' | 'collateral' }[] = [];
 
-    if (!amount || !previewData) {
+    if ((amount === null || amount === 0n) || !previewData) {
       return { receive, provide };
     }
 
@@ -183,7 +183,7 @@ export default function AuctionHandler({ futureBorrowAssets, futureCollateralAss
   }, [amount, auctionType]);
 
   const checkAndApproveRequiredAssets = async () => {
-    if (!address || !vaultAddress || !amount) {
+    if (!address || !vaultAddress || amount === null || amount === 0n) {
       return;
     }
 

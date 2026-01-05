@@ -259,7 +259,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
 
   useEffect(() => {
     // Reset state if input is empty or invalid
-    if (!sharesToProcess || sharesToProcess <= 0n) {
+    if (sharesToProcess === null || sharesToProcess <= 0n) {
       setPreviewedWstEthAmount(null);
       setEthToWrapValue('');
       setHasInsufficientBalance(false);
@@ -388,7 +388,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!helper || !address || !sharesToProcess || sharesToProcess <= 0n) return;
+    if (!helper || !address || sharesToProcess === null || sharesToProcess <= 0n) return;
 
     setLoading(true);
     setError(null);
@@ -579,7 +579,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
         )}
 
         {/* Preview Section */}
-        {!!sharesToProcess && sharesToProcess > 0n && previewData && !isErrorLoadingPreview && (
+        {sharesToProcess !== null && sharesToProcess > 0n && previewData && !isErrorLoadingPreview && (
           <PreviewBox
             receive={receive}
             provide={provide}
@@ -589,7 +589,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
         )}
 
         {/* Preview Error */}
-        {!!sharesToProcess && (isErrorLoadingPreview || invalidRebalanceMode) && (
+        {sharesToProcess !== null && (isErrorLoadingPreview || invalidRebalanceMode) && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
             <div className="flex items-center space-x-2">
               <svg
@@ -615,7 +615,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
         )}
 
         {/* Balance warning */}
-        {hasInsufficientBalance && !!sharesToProcess && sharesToProcess > 0n && (
+        {hasInsufficientBalance && sharesToProcess !== null && sharesToProcess > 0n && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
             <div className="flex items-center space-x-2">
               <svg
@@ -643,7 +643,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
           type="submit"
           disabled={
             loading ||
-            !sharesToProcess ||
+            sharesToProcess === null ||
             sharesToProcess <= 0n ||
             sharesToProcess > parseUnits(maxAmount, sharesDecimals) ||
             isApproving ||

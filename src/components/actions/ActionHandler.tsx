@@ -259,7 +259,7 @@ export default function ActionHandler({ actionType, tokenType }: ActionHandlerPr
       if (isMaxSelected && (actionType === 'redeem' || actionType === 'withdraw')) {
         const maxBeforeTx = await refetchMaxBeforeTx();
 
-        if (!maxBeforeTx) {
+        if (maxBeforeTx === undefined) {
           setError('Error refetching max amount before tx.');
           console.error('Error refetching max amount before tx.');
           return;

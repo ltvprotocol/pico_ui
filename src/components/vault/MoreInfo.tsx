@@ -153,7 +153,7 @@ export default function MoreInfo() {
               ].map((info, index) => (
                 <div key={index} className='flex'>
                   <div className="mr-2 min-w-[60px] text-right">
-                    <TransitionLoader isLoading={!info[0] || info[0] === '0'}>
+                    <TransitionLoader isLoading={!info[0]}>
                       <NumberDisplay value={info[0] as string} />
                     </TransitionLoader>
                   </div>
@@ -175,7 +175,7 @@ export default function MoreInfo() {
               ].map((info, index) => (
                 <div key={index} className='flex'>
                   <div className="mr-2 min-w-[60px] text-right">
-                    <TransitionLoader isLoading={!info[0] || info[0] === '0'}>
+                    <TransitionLoader isLoading={!info[0]}>
                       <NumberDisplay value={info[0] as string} />
                     </TransitionLoader>
                   </div>
@@ -208,7 +208,7 @@ export default function MoreInfo() {
               ].map((info, index) => (
                 <div key={index} className='flex'>
                   <div className="mr-2 min-w-[60px] text-right">
-                    <TransitionLoader isLoading={!info[0] || info[0] === '0'}>
+                    <TransitionLoader isLoading={!info[0]}>
                       <NumberDisplay value={info[0] as string} />
                     </TransitionLoader>
                   </div>
@@ -239,7 +239,7 @@ export default function MoreInfo() {
               ].map((info, index) => (
                 <div key={index} className='flex'>
                   <div className="mr-2 min-w-[60px] text-right">
-                    <TransitionLoader isLoading={!info[0] || info[0] === '0'}>
+                    <TransitionLoader isLoading={!info[0]}>
                       <NumberDisplay value={info[0] as string} />
                     </TransitionLoader>
                   </div>

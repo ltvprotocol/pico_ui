@@ -57,11 +57,7 @@ export default function Info() {
         ]);
 
         setIsLp(lpStatus || false);
-
-        // As per requirements: if LP, don't show points (handled in render), otherwise fetch/show points
-        if (!lpStatus) {
-          setUserPoints(points);
-        }
+        setUserPoints(points);
 
         // NFT Check
         if (publicProvider) {
@@ -118,11 +114,14 @@ export default function Info() {
     if (!Number.isFinite(value)) return '0';
 
     const human = value / 10 ** decimals;
+    const factor = 10 ** fractionDigits;
+
+    const floored = Math.floor(human * factor) / factor;
 
     return new Intl.NumberFormat('en-US', {
       minimumFractionDigits: fractionDigits,
       maximumFractionDigits: fractionDigits,
-    }).format(human);
+    }).format(floored);
   }
 
   const [positionInBorrowTokens, setPositionInBorrowTokens] = useState<string | null>(null);
@@ -130,7 +129,7 @@ export default function Info() {
 
   // Calculate USD value
   const usdValue = useMemo(() => {
-    if (!isMainnet || !tokenPrice || !totalAssets || totalAssets === '0') {
+    if (!isMainnet || !tokenPrice || !totalAssets) {
       return null;
     }
     const totalAssetsNum = parseFloat(totalAssets);
@@ -142,7 +141,7 @@ export default function Info() {
 
   // Calculate TVL USD value
   const tvlUsdValue = useMemo(() => {
-    if (!isMainnet || !collateralTokenPrice || !tvl || tvl === '0') {
+    if (!isMainnet || !collateralTokenPrice || !tvl) {
       return null;
     }
     const tvlNum = parseFloat(tvl);
@@ -154,7 +153,7 @@ export default function Info() {
 
   // Load position in borrow tokens (mainnet only)
   useEffect(() => {
-    if (!isMainnet || !vaultLens || !sharesBalance || sharesBalance === '0' || !borrowTokenDecimals || !sharesDecimals) {
+    if (!isMainnet || !vaultLens || !sharesBalance || !borrowTokenDecimals || !sharesDecimals) {
       setPositionInBorrowTokens(null);
       setIsLoadingPosition(false);
       return;
@@ -180,7 +179,7 @@ export default function Info() {
 
   // Calculate position USD value
   const positionUsdValue = useMemo(() => {
-    if (!isMainnet || !tokenPrice || !positionInBorrowTokens || positionInBorrowTokens === '0') {
+    if (!isMainnet || !tokenPrice || !positionInBorrowTokens) {
       return null;
     }
     const positionNum = parseFloat(positionInBorrowTokens);
@@ -203,7 +202,7 @@ export default function Info() {
                   {isRefreshingBalances ? (
                     <span className="text-gray-500 italic">Loading...</span>
                   ) :
-                    <TransitionLoader isLoading={!sharesBalance || sharesBalance === '0'}>
+                    <TransitionLoader isLoading={!sharesBalance}>
                       <NumberDisplay value={sharesBalance} />
                     </TransitionLoader>
                   }
@@ -250,7 +249,7 @@ export default function Info() {
                 {isRefreshingBalances ? (
                   <span className="text-gray-500 italic">Loading...</span>
                 ) :
-                  <TransitionLoader isLoading={!sharesBalance || sharesBalance === '0'}>
+                  <TransitionLoader isLoading={!sharesBalance}>
                     <NumberDisplay value={sharesBalance} />
                   </TransitionLoader>
                 }
@@ -287,14 +286,19 @@ export default function Info() {
             <div className="min-w-[60px] text-right">
               <TransitionLoader isLoading={isLoadingPointsData}>
                 {isLp ? (
-                  <span className="text-gray-900">private LP</span>
+                  <span className="text-gray-900">
+                    {`private LP ${(userPoints !== null && userPoints > 0) ? 
+                      `+ ${formatPointsApprox(userPoints)} Points` : ''}`}
+                  </span>
                 ) : (
-                  <span className="text-gray-900">{userPoints !== null ? `${formatPointsApprox(userPoints)} Points` : '0 Points'}</span>
+                  <span className="text-gray-900">
+                    {userPoints !== null ? `${formatPointsApprox(userPoints)} Points` : '0 Points'}
+                  </span>
                 )}
               </TransitionLoader>
             </div>
           </div>
-          {!isLp && (
+          {(!isLp || (userPoints !== null && userPoints > 0)) && (
             <div className="w-full flex justify-between items-start text-sm mb-2">
               <div className="font-medium text-gray-700">Points rate:</div>
               <div className="min-w-[60px] text-right">
@@ -313,7 +317,7 @@ export default function Info() {
             <div className="flex flex-col items-end">
               <div className="flex">
                 <div className="mr-2 min-w-[60px] text-right">
-                  <TransitionLoader isLoading={!tvl || tvl === '0'}>
+                  <TransitionLoader isLoading={!tvl}>
                     <NumberDisplay value={tvl} />
                   </TransitionLoader>
                 </div>
@@ -340,7 +344,7 @@ export default function Info() {
           <div className="flex flex-col items-end">
             <div className="flex">
               <div className="mr-2 min-w-[60px] text-right">
-                <TransitionLoader isLoading={!totalAssets || totalAssets === '0'}>
+                <TransitionLoader isLoading={!totalAssets}>
                   <NumberDisplay value={totalAssets} />
                 </TransitionLoader>
               </div>

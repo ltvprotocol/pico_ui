@@ -21,4 +21,3 @@ export { formatTokenSymbol } from './formatTokenSymbol';
 export { formatApy, ApyPeriod } from './formatApy';
 export { formatUsdValue } from './formatUsdValue';
 export { applyGasSlippage } from './applyGasSlippage';
-export * from './api';

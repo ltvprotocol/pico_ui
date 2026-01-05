@@ -10,7 +10,7 @@ import {
   WhitelistRegistry__factory
 } from '@/typechain-types';
 import { ltvToLeverage, getLendingProtocolAddress, isVaultExists, isUserRejected, loadTVL, minBigInt, clampToPositive } from '@/utils';
-import { ApyData } from '@/utils/api';
+import { ApyData } from '@/api/apy/getTimedApy';
 import { isWETHAddress, GAS_RESERVE_WEI, SEPOLIA_CHAIN_ID_STRING, SEPOLIA_MORPHO_MARKET_ID, CONNECTOR_ADDRESSES } from '@/constants';
 import { useAdaptiveInterval, useVaultApy, useVaultPointsRate } from '@/hooks';
 import { loadGhostLtv, loadAaveLtv, loadMorphoLtv, fetchTokenPrice } from '@/utils';

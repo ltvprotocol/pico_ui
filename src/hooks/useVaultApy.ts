@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
-import { fetchApy } from '@/utils';
-import { ApyData } from '@/utils/api';
+import { ApyData } from '@/api/apy/getTimedApy';
+import { getTimedApy } from '@/api';
 
 export function useVaultApy() {
   const [apy, setApy] = useState<ApyData | null>(null);
@@ -17,7 +17,7 @@ export function useVaultApy() {
     try {
       setIsLoadingApy(true);
       setApyLoadFailed(false);
-      const result = await fetchApy(addr, network);
+      const result = await getTimedApy(addr, network);
       setApy(result);
       setApyLoadFailed(result === null);
     } catch (err) {

@@ -678,7 +678,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
         )}
 
         {/* Preview Error */}
-        {!!estimatedShares && isErrorLoadingPreview && (
+        {!!estimatedShares && isErrorLoadingPreview && !invalidRebalanceMode && !showWarning && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
             <span>Error loading preview. Amount might be too high or low.</span>
           </div>

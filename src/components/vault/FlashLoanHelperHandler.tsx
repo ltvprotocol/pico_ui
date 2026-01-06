@@ -10,7 +10,8 @@ import {
   formatTokenSymbol,
   formatUsdValue,
   wrapEthToWstEth,
-  calculateEthWrapForFlashLoan
+  calculateEthWrapForFlashLoan,
+  applyGasSlippage
 } from '@/utils';
 import { PreviewBox, NumberDisplay, TransitionLoader } from '@/components/ui';
 import {
@@ -594,7 +595,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
         )}
 
         {/* Preview Error */}
-        {!!sharesToProcess && (isErrorLoadingPreview || invalidRebalanceMode) && (
+        {(!!sharesToProcess && isErrorLoadingPreview && !invalidRebalanceMode) && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
             <div className="flex items-center space-x-2">
               <svg
@@ -610,12 +611,15 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
                   d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
                 />
               </svg>
-              <span>
-                {invalidRebalanceMode
-                  ? "Flash loan rebalance is currently unavailable for this amount."
-                  : "Error loading preview."}
-              </span>
+              <span>Error loading preview.</span>
             </div>
+          </div>
+        )}
+
+        {/* Warning */}
+        {invalidRebalanceMode && (
+          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-sm">
+            {`Not available to ${helperType} this amount right now, try again later`}
           </div>
         )}
 

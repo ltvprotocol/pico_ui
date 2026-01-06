@@ -4,13 +4,13 @@ import { useAppContext, useVaultContext } from '@/contexts';
 import {
   isUserRejected,
   isWstETHAddress,
-  allowOnlyNumbers,
   minBigInt,
   clampToPositive,
   formatTokenSymbol,
   formatUsdValue,
   wrapEthToWstEth,
   calculateEthWrapForFlashLoan,
+  processInput,
   applyGasSlippage
 } from '@/utils';
 import { PreviewBox, NumberDisplay, TransitionLoader } from '@/components/ui';
@@ -473,30 +473,15 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
   };
 
   const handleInputChange = (value: string) => {
-    const cleanedValue = allowOnlyNumbers(value);
-    setInputValue(cleanedValue);
+    const { formattedValue, parsedValue } = processInput(value, Number(sharesDecimals));
+
+    setInputValue(formattedValue);
 
     setError(null);
     setSuccess(null);
     setApprovalError(null);
 
-    if (!cleanedValue || cleanedValue === '' || cleanedValue === '.') {
-      setSharesToProcess(null);
-      return;
-    }
-
-    try {
-      const numValue = parseFloat(cleanedValue);
-      if (isNaN(numValue)) {
-        setSharesToProcess(null);
-        return;
-      }
-
-      const parsed = parseUnits(cleanedValue, Number(sharesDecimals));
-      setSharesToProcess(parsed);
-    } catch {
-      setSharesToProcess(null);
-    }
+    setSharesToProcess(parsedValue);
   };
 
   const handleSetMax = () => {

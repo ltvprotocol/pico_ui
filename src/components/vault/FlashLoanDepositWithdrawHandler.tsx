@@ -514,6 +514,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
       await tx.wait();
 
       await Promise.all([refreshBalances(), refreshVaultLimits()]);
+      await loadMinAvailable(); // load min after all to make sure it was updated
 
       setInputValue('');
       setEstimatedShares(null);

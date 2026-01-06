@@ -443,8 +443,9 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
       }
 
       await tx.wait();
-
+      
       await Promise.all([refreshBalances(), refreshVaultLimits()]);
+      await loadMinAvailable(); // load min after all to make sure it was updated
 
       setInputValue('');
       setSharesToProcess(null);

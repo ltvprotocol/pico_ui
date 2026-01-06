@@ -8,7 +8,7 @@ export default function VaultHeader() {
 
   return (
     <div className="w-full flex flex-col justify-between w-full mb-4">
-      <Link className="block mb-2 text-gray-700 transition-colors hover:underline hover:text-gray-700" to="/">{"< Vaults"}</Link>
+      <Link className="block mb-2 text-gray-700 transition-colors hover:underline hover:text-gray-700 w-fit" to="/">{"< Vaults"}</Link>
       <div className="flex items-center">
         <div className="text-xl font-medium mr-2">{formatTokenSymbol(collateralTokenSymbol)}/{formatTokenSymbol(borrowTokenSymbol)}</div>
         {maxLeverage && <div className="text-xl font-normal mr-2">{`x${maxLeverage}`}</div>}

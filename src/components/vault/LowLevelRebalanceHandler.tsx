@@ -4,6 +4,7 @@ import { useAppContext, useVaultContext } from '@/contexts';
 import { isUserRejected, formatTokenSymbol, processInput, applyGasSlippage } from '@/utils';
 import { NumberDisplay, PreviewBox, TransitionLoader, ErrorMessage, SuccessMessage } from '@/components/ui';
 import { TokenType } from '@/types/actions';
+import { refreshTokenHolders } from '@/utils/api';
 
 type ActionType = 'mint' | 'burn' | 'provide' | 'receive';
 
@@ -32,7 +33,7 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
   const [isApproving, setIsApproving] = useState(false);
   const [approvalError, setApprovalError] = useState<string | null>(null);
 
-  const { address } = useAppContext();
+  const { address, currentNetwork } = useAppContext();
 
   const {
     vault,
@@ -259,6 +260,7 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
       }
 
       await tx.wait();
+      refreshTokenHolders(currentNetwork);
 
       await Promise.all([
         refreshBalances(),

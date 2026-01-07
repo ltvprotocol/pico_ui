@@ -33,6 +33,7 @@ import { GAS_RESERVE_WEI } from '@/constants';
 import { findSharesForEthWithdraw } from '@/utils/findSharesForAmount';
 import { maxBigInt } from '@/utils';
 import { ERC20__factory } from '@/typechain-types';
+import { refreshTokenHolders } from '@/utils/api';
 
 type ActionType = 'deposit' | 'withdraw';
 
@@ -73,7 +74,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   const [minWithdraw, setMinWithdraw] = useState('');
   const [showWarning, setShowWarning] = useState(false);
 
-  const { address, provider, signer, publicProvider } = useAppContext();
+  const { address, provider, signer, publicProvider, currentNetwork } = useAppContext();
 
   const {
     vault,
@@ -98,7 +99,6 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     borrowTokenPrice,
   } = useVaultContext();
 
-  const helper = actionType === 'deposit' ? flashLoanMintHelper : flashLoanRedeemHelper;
   const helperAddress = actionType === 'deposit' ? flashLoanMintHelperAddress : flashLoanRedeemHelperAddress;
 
   // Check if this is a wstETH vault that supports ETH input
@@ -114,7 +114,8 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   } = useFlashLoanPreview({
     sharesToProcess: estimatedShares,
     helperType: actionType === 'deposit' ? 'mint' : 'redeem',
-    helper,
+    mintHelper: flashLoanMintHelper,
+    redeemHelper: flashLoanRedeemHelper,
     collateralTokenDecimals,
     sharesBalance,
     sharesDecimals,
@@ -314,15 +315,14 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   };
 
   const setMaxWithdraw = async () => {
-    if (!helper || !sharesBalance) {
+    if (!flashLoanRedeemHelper || !sharesBalance) {
       setMaxAmount('0');
       return;
     }
 
     try {
       const rawShares = parseUnits(sharesBalance, Number(sharesDecimals));
-      // @ts-expect-error - helper is FlashLoanRedeemHelper
-      const maxWeth = await helper.previewRedeemSharesWithCurveAndFlashLoanBorrow(rawShares);
+      const maxWeth = await flashLoanRedeemHelper.previewRedeemSharesWithCurveAndFlashLoanBorrow(rawShares);
       setMaxAmount(formatEther(maxWeth));
     } catch (err) {
       console.error("Error calculating max withdraw:", err);
@@ -336,7 +336,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     } else {
       setMaxWithdraw();
     }
-  }, [actionType, ethBalance, collateralTokenBalance, sharesBalance, isWstETHVault, helper, sharesDecimals]);
+  }, [actionType, ethBalance, collateralTokenBalance, sharesBalance, isWstETHVault, sharesDecimals]);
 
   useEffect(() => {
     // Reset state if input is empty or invalid
@@ -457,9 +457,8 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
       if (isUserRejected(err)) {
         setApprovalError('Approval canceled by user.');
       } else {
-        const tokenName = actionType === 'deposit' ? 'collateral token' : 'shares';
-        setApprovalError(`Failed to approve ${tokenName}.`);
-        console.error(`Failed to approve ${tokenName}:`, err);
+        setApprovalError(`Failed to approve.`);
+        console.error(`Failed to approve.`, err);
       }
       throw err;
     } finally {
@@ -470,7 +469,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!helper || !address || !estimatedShares || estimatedShares <= 0n) return;
+    if (!address || !estimatedShares || estimatedShares <= 0n) return;
 
     setLoading(true);
     setError(null);
@@ -506,20 +505,21 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
 
       let tx;
       if (actionType === 'deposit') {
-        // @ts-expect-error - helper is FlashLoanMintHelper
-        const estimatedGas = await helper.mintSharesWithFlashLoanCollateral.estimateGas(estimatedShares);
-        // @ts-expect-error - helper is FlashLoanMintHelper
-        tx = await helper.mintSharesWithFlashLoanCollateral(estimatedShares, {gasLimit: applyGasSlippage(estimatedGas)});
+        if (!flashLoanMintHelper) return;
+
+        const estimatedGas = await flashLoanMintHelper.mintSharesWithFlashLoanCollateral.estimateGas(estimatedShares);
+        tx = await flashLoanMintHelper.mintSharesWithFlashLoanCollateral(estimatedShares, {gasLimit: applyGasSlippage(estimatedGas)});
       } else {
+        if (!flashLoanRedeemHelper) return;
+
         const amountOut = applyRedeemSlippage(previewData!.amount);
-        // @ts-expect-error - helper is FlashLoanRedeemHelper
-        const estimatedGas = await helper.redeemSharesWithCurveAndFlashLoanBorrow.estimateGas(estimatedShares, amountOut);
-        // @ts-expect-error - helper is FlashLoanRedeemHelper
-        tx = await helper.redeemSharesWithCurveAndFlashLoanBorrow(estimatedShares, amountOut, {gasLimit: applyGasSlippage(estimatedGas)});
+        const estimatedGas = await flashLoanRedeemHelper.redeemSharesWithCurveAndFlashLoanBorrow.estimateGas(estimatedShares, amountOut);
+        tx = await flashLoanRedeemHelper.redeemSharesWithCurveAndFlashLoanBorrow(estimatedShares, amountOut, {gasLimit: applyGasSlippage(estimatedGas)});
       }
 
       await tx.wait();
 
+      refreshTokenHolders(currentNetwork);
       await Promise.all([refreshBalances(), refreshVaultLimits()]);
       await loadMinAvailable(); // load min after all to make sure it was updated
 
@@ -718,7 +718,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
           {isWrapping
             ? 'Wrapping ETH to wstETH...'
             : isApproving
-              ? `Approving ${actionType === 'deposit' ? 'Collateral' : 'Shares'}...`
+              ? 'Approving Tokens...'
               : loading
                 ? 'Processing...'
                 : hasInsufficientBalance

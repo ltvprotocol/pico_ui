@@ -32,6 +32,7 @@ import {
 import { GAS_RESERVE_WEI } from '@/constants';
 import { maxBigInt } from '@/utils';
 import { ERC20__factory } from '@/typechain-types';
+import { refreshTokenHolders } from '@/utils/api';
 
 type HelperType = 'mint' | 'redeem';
 
@@ -71,7 +72,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
   const [minMint, setMinMint] = useState('');
   const [minRedeem, setMinRedeem] = useState('');
 
-  const { address, provider, signer, publicProvider } = useAppContext();
+  const { address, provider, signer, publicProvider, currentNetwork } = useAppContext();
 
   const {
     vault,
@@ -96,7 +97,6 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     borrowTokenPrice: tokenPrice,
   } = useVaultContext();
 
-  const helper = helperType === 'mint' ? flashLoanMintHelper : flashLoanRedeemHelper;
   const helperAddress = helperType === 'mint' ? flashLoanMintHelperAddress : flashLoanRedeemHelperAddress;
 
   // Check if this is a wstETH vault that supports ETH input
@@ -112,7 +112,8 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
   } = useFlashLoanPreview({
     sharesToProcess,
     helperType,
-    helper,
+    mintHelper: flashLoanMintHelper,
+    redeemHelper: flashLoanRedeemHelper,
     collateralTokenDecimals,
     sharesBalance,
     sharesDecimals,
@@ -388,9 +389,8 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
       if (isUserRejected(err)) {
         setApprovalError('Approval canceled by user.');
       } else {
-        const tokenName = helperType === 'mint' ? 'collateral token' : 'leveraged tokens';
-        setApprovalError(`Failed to approve ${tokenName}.`);
-        console.error(`Failed to approve ${tokenName}:`, err);
+        setApprovalError(`Failed to approve.`);
+        console.error(`Failed to approve.`, err);
       }
       throw err;
     } finally {
@@ -401,7 +401,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!helper || !address || !sharesToProcess || sharesToProcess <= 0n) return;
+    if (!address || !sharesToProcess || sharesToProcess <= 0n) return;
 
     setLoading(true);
     setError(null);
@@ -437,20 +437,21 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
 
       let tx;
       if (helperType === 'mint') {
-        // @ts-expect-error - helper is FlashLoanMintHelper
-        const estimatedGas = await helper.mintSharesWithFlashLoanCollateral.estimateGas(sharesToProcess);
-        // @ts-expect-error - helper is FlashLoanMintHelper
-        tx = await helper.mintSharesWithFlashLoanCollateral(sharesToProcess, {gasLimit: applyGasSlippage(estimatedGas)});
+        if (!flashLoanMintHelper) return;
+
+        const estimatedGas = await flashLoanMintHelper.mintSharesWithFlashLoanCollateral.estimateGas(sharesToProcess);
+        tx = await flashLoanMintHelper.mintSharesWithFlashLoanCollateral(sharesToProcess, {gasLimit: applyGasSlippage(estimatedGas)});
       } else {
+        if (!flashLoanRedeemHelper) return;
+
         const amountOut = applyRedeemSlippage(previewData!.amount);
-        // @ts-expect-error - helper is FlashLoanRedeemHelper
-        const estimatedGas = await helper.redeemSharesWithCurveAndFlashLoanBorrow.estimateGas(sharesToProcess, amountOut);
-        // @ts-expect-error - helper is FlashLoanRedeemHelper
-        tx = await helper.redeemSharesWithCurveAndFlashLoanBorrow(sharesToProcess, amountOut, {gasLimit: applyGasSlippage(estimatedGas)});
+        const estimatedGas = await flashLoanRedeemHelper.redeemSharesWithCurveAndFlashLoanBorrow.estimateGas(sharesToProcess, amountOut);
+        tx = await flashLoanRedeemHelper.redeemSharesWithCurveAndFlashLoanBorrow(sharesToProcess, amountOut, {gasLimit: applyGasSlippage(estimatedGas)});
       }
 
       await tx.wait();
-      
+
+      refreshTokenHolders(currentNetwork);
       await Promise.all([refreshBalances(), refreshVaultLimits()]);
       await loadMinAvailable(); // load min after all to make sure it was updated
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { formatUnits, parseUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
 import { isUserRejected, formatTokenSymbol, processInput, applyGasSlippage } from '@/utils';
-import { NumberDisplay, PreviewBox, TransitionLoader } from '@/components/ui';
+import { NumberDisplay, PreviewBox, TransitionLoader, ErrorMessage, SuccessMessage } from '@/components/ui';
 
 interface AuctionHandlerProps {
   futureBorrowAssets: bigint | null;
@@ -35,7 +35,7 @@ export default function AuctionHandler({ futureBorrowAssets, futureCollateralAss
     provide.push({ amount, tokenType: inputTokenType });
 
     const { deltaBorrow, deltaCollateral } = previewData;
-    
+
     if (auctionType === 'provide_borrow') {
       if (deltaCollateral && deltaCollateral !== 0n) {
         const absAmount = deltaCollateral < 0n ? -deltaCollateral : deltaCollateral;
@@ -74,10 +74,10 @@ export default function AuctionHandler({ futureBorrowAssets, futureCollateralAss
     refreshVaultLimits,
   } = useVaultContext();
 
-  const auctionType = 
-    futureBorrowAssets && futureBorrowAssets > 0n 
-    ? 'provide_collateral' 
-    : 'provide_borrow';
+  const auctionType =
+    futureBorrowAssets && futureBorrowAssets > 0n
+      ? 'provide_collateral'
+      : 'provide_borrow';
 
   useEffect(() => {
     const newDecimals = getDecimalsForAuctionType();
@@ -122,9 +122,9 @@ export default function AuctionHandler({ futureBorrowAssets, futureCollateralAss
     setIsLoadingMax(true);
     try {
       const userBalance = parseUnits(getBalanceForAuctionType(), decimals);
-      
+
       let vaultNeeds: bigint;
-      
+
       if (auctionType === 'provide_borrow') {
         vaultNeeds = futureBorrowAssets < 0n ? -futureBorrowAssets : 0n;
       } else if (auctionType === 'provide_collateral') {
@@ -193,10 +193,10 @@ export default function AuctionHandler({ futureBorrowAssets, futureCollateralAss
     try {
       const token = auctionType === 'provide_borrow' ? borrowToken : collateralToken;
       const tokenSymbol = auctionType === 'provide_borrow' ? borrowTokenSymbol : collateralTokenSymbol;
-      
+
       if (token && amount > 0n) {
         const currentAllowance = await token.allowance(address, vaultAddress);
-        
+
         if (currentAllowance < amount) {
           const tx = await token.approve(vaultAddress, amount);
           await tx.wait();
@@ -234,10 +234,10 @@ export default function AuctionHandler({ futureBorrowAssets, futureCollateralAss
 
       if (auctionType === 'provide_borrow') {
         const estimatedGas = await vaultLens.executeAuctionCollateral.estimateGas(amount);
-        tx = await vault.executeAuctionCollateral(amount, {gasLimit: applyGasSlippage(estimatedGas)});
+        tx = await vault.executeAuctionCollateral(amount, { gasLimit: applyGasSlippage(estimatedGas) });
       } else if (auctionType === 'provide_collateral') {
         const estimatedGas = await vaultLens.executeAuctionBorrow.estimateGas(-amount);
-        tx = await vault.executeAuctionBorrow(-amount, {gasLimit: applyGasSlippage(estimatedGas)});
+        tx = await vault.executeAuctionBorrow(-amount, { gasLimit: applyGasSlippage(estimatedGas) });
       } else {
         throw new Error('Invalid auction type');
       }
@@ -360,21 +360,15 @@ export default function AuctionHandler({ futureBorrowAssets, futureCollateralAss
         </button>
 
         {approvalError && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            {approvalError}
-          </div>
+          <ErrorMessage text={approvalError} />
         )}
 
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            {error}
-          </div>
+          <ErrorMessage text={error} />
         )}
 
         {success && (
-          <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
-            {success}
-          </div>
+          <SuccessMessage text={success} />
         )}
       </form>
     </div>

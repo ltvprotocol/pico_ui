@@ -1,6 +1,6 @@
 import React from 'react';
 import { allowOnlyNumbers, isButtonDisabled, formatForInput, formatTokenSymbol } from '@/utils';
-import { NumberDisplay, SymbolWithTooltip } from '@/components/ui';
+import { NumberDisplay, SymbolWithTooltip, ErrorMessage, SuccessMessage} from '@/components/ui';
 
 type ActionFormProps = {
   actionName: string;
@@ -216,14 +216,10 @@ export const ActionForm: React.FC<ActionFormProps> = ({
         {isLoading ? 'Processing...' : `${actionName}`}
       </button>
       {error && (
-        <div className="text-sm text-red-600">
-          {error}
-        </div>
+        <ErrorMessage text={error} />
       )}
       {success && (
-        <div className="text-sm text-green-600">
-          {success}
-        </div>
+        <SuccessMessage text={success} />
       )}
     </form>
   )

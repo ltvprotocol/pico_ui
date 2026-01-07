@@ -13,7 +13,14 @@ import {
   processInput,
   applyGasSlippage
 } from '@/utils';
-import { PreviewBox, NumberDisplay, TransitionLoader } from '@/components/ui';
+import {
+  PreviewBox,
+  NumberDisplay,
+  TransitionLoader,
+  ErrorMessage,
+  WarningMessage,
+  SuccessMessage
+} from '@/components/ui';
 import {
   useAdaptiveInterval,
   useFlashLoanPreview,
@@ -570,69 +577,28 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
           </>
         )}
 
-        {/* Preview Section */}
-        {!!sharesToProcess && sharesToProcess > 0n && previewData && !isErrorLoadingPreview && (
+        { sharesToProcess !== null && sharesToProcess > 0n &&
+          previewData && !isErrorLoadingPreview &&
+          !invalidRebalanceMode && !hasInsufficientBalance ? (
           <PreviewBox
             receive={receive}
             provide={provide}
             isLoading={isLoadingPreview}
             title="Transaction Preview"
           />
-        )}
-
-        {/* Preview Error */}
-        {(!!sharesToProcess && isErrorLoadingPreview && !invalidRebalanceMode) && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            <div className="flex items-center space-x-2">
-              <svg
-                className="w-4 h-4 text-red-600 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                />
-              </svg>
-              <span>Error loading preview.</span>
-            </div>
-          </div>
-        )}
-
-        {/* Warning */}
-        {invalidRebalanceMode && (
-          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-sm">
-            {`Not available to ${helperType} this amount right now, try again later`}
-          </div>
-        )}
-
-        {/* Balance warning */}
-        {hasInsufficientBalance && !!sharesToProcess && sharesToProcess > 0n && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            <div className="flex items-center space-x-2">
-              <svg
-                className="w-4 h-4 text-red-600 flex-shrink-0"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                />
-              </svg>
-              <span>
-                Insufficient {userBalanceToken} balance. You have{' '}
-                <NumberDisplay value={userBalance} /> {userBalanceToken}.
-              </span>
-            </div>
-          </div>
-        )}
+        ) : isErrorLoadingPreview && !invalidRebalanceMode ? (
+          <ErrorMessage text="Error loading preview." />
+        ) : hasInsufficientBalance ? (
+          <ErrorMessage
+            text={`Insufficient ${userBalanceToken} balance. You have ${userBalance} ${userBalanceToken}.`}
+          />
+        ) : invalidRebalanceMode ? (
+          <WarningMessage
+            text={`Not available to ${helperType} this amount right now, try again later`}
+          />
+        ) : 
+          null
+        }
 
         <button
           type="submit"
@@ -662,21 +628,15 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
         </button>
 
         {approvalError && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            {approvalError}
-          </div>
+          <ErrorMessage text={approvalError} />
         )}
 
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            {error}
-          </div>
+          <ErrorMessage text={error} />
         )}
 
         {success && (
-          <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
-            {success}
-          </div>
+          <SuccessMessage text={success} />
         )}
       </form>
 

@@ -13,7 +13,14 @@ import {
   processInput,
   applyGasSlippage
 } from '@/utils';
-import { PreviewBox, NumberDisplay, TransitionLoader } from '@/components/ui';
+import {
+  PreviewBox,
+  NumberDisplay,
+  TransitionLoader,
+  ErrorMessage,
+  SuccessMessage,
+  WarningMessage
+} from '@/components/ui';
 import {
   useAdaptiveInterval,
   useFlashLoanPreview,
@@ -665,38 +672,28 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
           </>
         )}
 
-        {/* Preview Section */}
-        {!!estimatedShares && estimatedShares > 0n && previewData && !isErrorLoadingPreview && (
+        { estimatedShares !== null && estimatedShares > 0n &&
+          previewData && !isErrorLoadingPreview &&
+          !invalidRebalanceMode && !hasInsufficientBalance && !showWarning ? (
           <PreviewBox
             receive={receive}
             provide={provide}
             isLoading={isLoadingPreview}
             title="Transaction Preview"
           />
-        )}
-
-        {/* Preview Error */}
-        {!!estimatedShares && isErrorLoadingPreview && !invalidRebalanceMode && !showWarning && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            <span>Error loading preview. Amount might be too high or low.</span>
-          </div>
-        )}
-
-        {/* Warning */}
-        {(showWarning || invalidRebalanceMode) && (
-          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800 text-sm">
-            {`Not available to ${actionType} this amount right now, try again later`}
-          </div>
-        )}
-
-        {/* Balance warning */}
-        {hasInsufficientBalance && !!estimatedShares && estimatedShares > 0n && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            <span>
-              Insufficient balance.
-            </span>
-          </div>
-        )}
+        ) : isErrorLoadingPreview && !invalidRebalanceMode && !showWarning ? (
+          <ErrorMessage text="Error loading preview." />
+        ) : hasInsufficientBalance && !showWarning ? (
+          <ErrorMessage
+            text={`Insufficient balance.`}
+          />
+        ) : invalidRebalanceMode || showWarning? (
+          <WarningMessage
+            text={`Not available to ${actionType} this amount right now, try again later`}
+          />
+        ) :
+          null
+        }
 
         <button
           type="submit"
@@ -727,21 +724,15 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
         </button>
 
         {approvalError && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            {approvalError}
-          </div>
+          <ErrorMessage text={approvalError} />
         )}
 
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            {error}
-          </div>
+          <ErrorMessage text={error} />
         )}
 
         {success && (
-          <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
-            {success}
-          </div>
+          <SuccessMessage text={success} />
         )}
       </form>
     </div>

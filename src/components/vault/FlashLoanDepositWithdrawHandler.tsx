@@ -672,33 +672,36 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
           </>
         )}
 
-        { estimatedShares !== null && estimatedShares > 0n &&
-          previewData && !isErrorLoadingPreview &&
-          !invalidRebalanceMode && !hasInsufficientBalance && !showWarning ? (
+        {!inputValue ? null :
+          isInputMoreThanMax ? 
+        (
+          <WarningMessage
+            text="Entered amount higher than max"
+          />
+        ) : isAmountLessThanMin || invalidRebalanceMode || showWarning ? (
+          <WarningMessage
+            text={`Not available to ${actionType} this amount right now, try again later`}
+          />
+        ) : hasInsufficientBalance ? (
+          <ErrorMessage
+            text={`Insufficient balance.`}
+          />
+        ) : isErrorLoadingPreview ? (
+          <ErrorMessage text="Error loading preview." />
+        ) : estimatedShares !== null && estimatedShares > 0n && previewData ? (
           <PreviewBox
             receive={receive}
             provide={provide}
             isLoading={isLoadingPreview}
             title="Transaction Preview"
           />
-        ) : isErrorLoadingPreview && !invalidRebalanceMode && !showWarning ? (
-          <ErrorMessage text="Error loading preview." />
-        ) : hasInsufficientBalance && !showWarning ? (
-          <ErrorMessage
-            text={`Insufficient balance.`}
-          />
-        ) : invalidRebalanceMode || showWarning? (
-          <WarningMessage
-            text={`Not available to ${actionType} this amount right now, try again later`}
-          />
-        ) :
-          null
-        }
+        ) : null}
 
         <button
           type="submit"
           disabled={
             loading ||
+            !inputValue ||
             !estimatedShares ||
             estimatedShares <= 0n ||
             isApproving ||

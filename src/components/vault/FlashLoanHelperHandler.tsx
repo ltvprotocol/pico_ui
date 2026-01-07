@@ -577,28 +577,28 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
           </>
         )}
 
-        { sharesToProcess !== null && sharesToProcess > 0n &&
-          previewData && !isErrorLoadingPreview &&
-          !invalidRebalanceMode && !hasInsufficientBalance ? (
+        {!inputValue ? null : isInputMoreThanMax ? (
+          <WarningMessage
+            text="Entered amount higher than max"
+          />
+        ) : isAmountLessThanMin || invalidRebalanceMode ? (
+          <WarningMessage
+            text={`Not available to ${helperType} this amount right now, try again later`}
+          />
+        ) : hasInsufficientBalance ? (
+          <ErrorMessage
+            text={`Insufficient ${userBalanceToken} balance. You have ${userBalance} ${userBalanceToken}.`}
+          />
+        ) : isErrorLoadingPreview ? (
+          <ErrorMessage text="Error loading preview." />
+        ) : sharesToProcess !== null && sharesToProcess > 0n && previewData ? (
           <PreviewBox
             receive={receive}
             provide={provide}
             isLoading={isLoadingPreview}
             title="Transaction Preview"
           />
-        ) : isErrorLoadingPreview && !invalidRebalanceMode ? (
-          <ErrorMessage text="Error loading preview." />
-        ) : hasInsufficientBalance ? (
-          <ErrorMessage
-            text={`Insufficient ${userBalanceToken} balance. You have ${userBalance} ${userBalanceToken}.`}
-          />
-        ) : invalidRebalanceMode ? (
-          <WarningMessage
-            text={`Not available to ${helperType} this amount right now, try again later`}
-          />
-        ) : 
-          null
-        }
+        ) : null}
 
         <button
           type="submit"
@@ -606,6 +606,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
             loading ||
             isApproving ||
             isWrapping ||
+            !inputValue ||
             !sharesToProcess ||
             hasInsufficientBalance ||
             isErrorLoadingPreview ||

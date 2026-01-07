@@ -7,6 +7,7 @@ import { isWETHAddress } from '@/constants';
 import { WETH } from '@/typechain-types';
 import { ActionType, TokenType } from '@/types/actions';
 import { useActionPreview } from '@/hooks';
+import { refreshTokenHolders } from '@/utils/api';
 
 interface SafeActionConfig {
   needsApproval: boolean;
@@ -266,6 +267,7 @@ export default function SafeActionHandler({ actionType, tokenType }: SafeActionH
       }
 
       await tx?.wait();
+      refreshTokenHolders(currentNetwork);
     }
   };
 

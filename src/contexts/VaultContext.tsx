@@ -10,7 +10,7 @@ import {
   WhitelistRegistry__factory
 } from '@/typechain-types';
 import { ltvToLeverage, getLendingProtocolAddress, isVaultExists, isUserRejected, loadTVL, minBigInt, clampToPositive } from '@/utils';
-import { ApyData, isAddressWhitelistedToMint } from '@/utils/api';
+import { ApyData, isAddressWhitelistedToMint, refreshTokenHolders } from '@/utils/api';
 import { isWETHAddress, GAS_RESERVE_WEI, SEPOLIA_CHAIN_ID_STRING, SEPOLIA_MORPHO_MARKET_ID, CONNECTOR_ADDRESSES } from '@/constants';
 import { useAdaptiveInterval, useVaultApy, useVaultPointsRate } from '@/hooks';
 import { loadGhostLtv, loadAaveLtv, loadMorphoLtv, fetchTokenPrice } from '@/utils';
@@ -783,6 +783,19 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
 
     loadNftData();
   }, [isMainnet, address, publicProvider, currentNetwork]);
+
+  const hasRefreshedRef = useRef(false);
+
+  useEffect(() => {
+    if (!isMainnet || !sharesBalance) return;
+    if (hasRefreshedRef.current) return;
+
+    const shares = parseFloat(sharesBalance);
+    if (shares > 0) {
+      refreshTokenHolders(currentNetwork);
+      hasRefreshedRef.current = true;
+    }
+  }, [isMainnet, sharesBalance, currentNetwork]);
 
   // Use initial params only once, then always check
   useEffect(() => {

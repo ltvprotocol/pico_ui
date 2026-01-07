@@ -4,6 +4,7 @@ import { useAppContext, useVaultContext } from '@/contexts';
 import { isUserRejected, allowOnlyNumbers, formatTokenSymbol, applyGasSlippage } from '@/utils';
 import { NumberDisplay, PreviewBox, TransitionLoader } from '@/components/ui';
 import { TokenType } from '@/types/actions';
+import { refreshTokenHolders } from '@/utils/api';
 
 type ActionType = 'mint' | 'burn' | 'provide' | 'receive';
 
@@ -32,7 +33,7 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
   const [isApproving, setIsApproving] = useState(false);
   const [approvalError, setApprovalError] = useState<string | null>(null);
 
-  const { address } = useAppContext();
+  const { address, currentNetwork } = useAppContext();
 
   const {
     vault,
@@ -229,7 +230,7 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
 
       if (rebalanceType === 'shares') {
         const estimatedGas = await vaultLens.executeLowLevelRebalanceShares.estimateGas(amount);
-        tx = await vault.executeLowLevelRebalanceShares(amount, { gasLimit: applyGasSlippage(estimatedGas)});
+        tx = await vault.executeLowLevelRebalanceShares(amount, { gasLimit: applyGasSlippage(estimatedGas) });
       } else if (rebalanceType === 'borrow') {
         const preview = await vaultLens.previewLowLevelRebalanceBorrow(amount);
         const deltaShares = preview?.[1] as bigint | undefined;
@@ -242,7 +243,7 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
 
         const isSharesPositiveHint = deltaShares >= 0n;
         const estimatedGas = await vaultLens.executeLowLevelRebalanceBorrowHint.estimateGas(amount, isSharesPositiveHint);
-        tx = await vault.executeLowLevelRebalanceBorrowHint(amount, isSharesPositiveHint, { gasLimit: applyGasSlippage(estimatedGas)});
+        tx = await vault.executeLowLevelRebalanceBorrowHint(amount, isSharesPositiveHint, { gasLimit: applyGasSlippage(estimatedGas) });
       } else {
         const preview = await vaultLens.previewLowLevelRebalanceCollateral(amount);
         const deltaShares = preview?.[1] as bigint | undefined;
@@ -259,6 +260,7 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
       }
 
       await tx.wait();
+      refreshTokenHolders(currentNetwork);
 
       await Promise.all([
         refreshBalances(),

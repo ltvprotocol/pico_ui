@@ -18,6 +18,7 @@ import { useAdaptiveInterval, useFlashLoanPreview, useMaxAmountUsd } from '@/hoo
 import { GAS_RESERVE_WEI } from '@/constants';
 import { maxBigInt } from '@/utils';
 import { ERC20__factory } from '@/typechain-types';
+import { refreshTokenHolders } from '@/utils/api';
 
 type HelperType = 'mint' | 'redeem';
 
@@ -58,7 +59,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
   const [minRedeem, setMinRedeem] = useState('');
   const [minTooBig, setMinDisablesAction] = useState(false);
 
-  const { address, provider, signer, publicProvider } = useAppContext();
+  const { address, provider, signer, publicProvider, currentNetwork } = useAppContext();
 
   const {
     vault,
@@ -436,6 +437,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
       }
 
       await tx.wait();
+      refreshTokenHolders(currentNetwork);
 
       await Promise.all([refreshBalances(), refreshVaultLimits()]);
 

@@ -7,6 +7,7 @@ import { isWETHAddress } from '@/constants';
 import { WETH } from '@/typechain-types';
 import { ActionType, TokenType } from '@/types/actions';
 import { useActionPreview } from '@/hooks';
+import { refreshTokenHolders } from '@/utils/api';
 
 interface ActionConfig {
   needsApproval: boolean;
@@ -191,6 +192,7 @@ export default function ActionHandler({ actionType, tokenType }: ActionHandlerPr
     }
 
     await tx?.wait();
+    refreshTokenHolders(currentNetwork);
   };
 
   const refetchMaxBeforeTx = async (): Promise<bigint | undefined> => {

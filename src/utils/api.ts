@@ -248,3 +248,15 @@ export async function isAddressWhitelistedToMint(
     return null;
   }
 }
+
+export function refreshTokenHolders(chainId: string | null): void {
+  try {
+    const apiUrl = NFT_API_URLS[chainId || DEFAULT_CHAIN_ID_STRING];
+    if (!apiUrl) return;
+
+    fetch(`${apiUrl}/refresh-token-holders`, { method: 'POST' })
+      .catch(() => { }); // Silently ignore errors
+  } catch {
+    // Silently ignore errors
+  }
+}

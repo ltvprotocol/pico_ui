@@ -19,6 +19,7 @@ import { GAS_RESERVE_WEI } from '@/constants';
 import { findSharesForEthWithdraw } from '@/utils/findSharesForAmount';
 import { maxBigInt } from '@/utils';
 import { ERC20__factory } from '@/typechain-types';
+import { refreshTokenHolders } from '@/utils/api';
 
 type ActionType = 'deposit' | 'withdraw';
 
@@ -60,7 +61,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   const [minTooBig, setMinDisablesAction] = useState(false);
   const [inputMoreThanMax, setInputMoreThanMax] = useState(false);
 
-  const { address, provider, signer, publicProvider } = useAppContext();
+  const { address, provider, signer, publicProvider, currentNetwork } = useAppContext();
 
   const {
     vault,
@@ -507,6 +508,9 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
       }
 
       await tx.wait();
+
+      // Notify backend about token holder change
+      refreshTokenHolders(currentNetwork);
 
       await Promise.all([refreshBalances(), refreshVaultLimits()]);
 

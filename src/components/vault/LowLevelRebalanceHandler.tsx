@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { formatUnits, parseUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
-import { isUserRejected, allowOnlyNumbers, formatTokenSymbol, applyGasSlippage } from '@/utils';
-import { NumberDisplay, PreviewBox, TransitionLoader } from '@/components/ui';
+import { isUserRejected, formatTokenSymbol, processInput, applyGasSlippage } from '@/utils';
+import { NumberDisplay, PreviewBox, TransitionLoader, ErrorMessage, SuccessMessage } from '@/components/ui';
 import { TokenType } from '@/types/actions';
 import { refreshTokenHolders } from '@/utils/api';
 
@@ -256,7 +256,7 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
 
         const isSharesPositiveHint = deltaShares >= 0n;
         const estimatedGas = await vaultLens.executeLowLevelRebalanceCollateralHint.estimateGas(amount, isSharesPositiveHint);
-        tx = await vault.executeLowLevelRebalanceCollateralHint(amount, isSharesPositiveHint, { gasLimit: applyGasSlippage(estimatedGas)});
+        tx = await vault.executeLowLevelRebalanceCollateralHint(amount, isSharesPositiveHint, { gasLimit: applyGasSlippage(estimatedGas) });
       }
 
       await tx.wait();
@@ -402,26 +402,15 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
   };
 
   const handleInputChange = (value: string) => {
-    const cleanedValue = allowOnlyNumbers(value); // Only allow positive numbers
-    setInputValue(cleanedValue);
+    const { formattedValue, parsedValue } = processInput(value, decimals);
 
-    if (!cleanedValue || cleanedValue === '' || cleanedValue === '.') {
+    setInputValue(formattedValue);
+
+    if (parsedValue === null) {
       setAmount(null);
-      return;
-    }
-
-    try {
-      const numValue = parseFloat(cleanedValue);
-      if (isNaN(numValue)) {
-        setAmount(null);
-        return;
-      }
-
-      const parsed = parseUnits(cleanedValue, decimals);
+    } else {
       const sign = getAmountSign();
-      setAmount(parsed * sign);
-    } catch (err) {
-      setAmount(null);
+      setAmount(parsedValue * sign);
     }
   };
 
@@ -495,21 +484,15 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
         </button>
 
         {approvalError && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            {approvalError}
-          </div>
+          <ErrorMessage text={approvalError} />
         )}
 
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            {error}
-          </div>
+          <ErrorMessage text={error} />
         )}
 
         {success && (
-          <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
-            {success}
-          </div>
+          <SuccessMessage text={success} />
         )}
       </form>
 

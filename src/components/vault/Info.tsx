@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { formatUnits, parseUnits, Contract } from 'ethers';
+import { formatUnits, parseUnits } from 'ethers';
 import { useVaultContext } from '@/contexts';
 import { useAppContext } from '@/contexts';
 import {
@@ -30,6 +30,7 @@ export default function Info() {
     isRefreshingBalances,
     borrowTokenPrice: tokenPrice,
     collateralTokenPrice,
+    hasNft
   } = useVaultContext();
 
   const { isMainnet, address, publicProvider } = useAppContext();
@@ -37,14 +38,12 @@ export default function Info() {
   // Points Logic
   const [userPoints, setUserPoints] = useState<number | null>(null);
   const [isLp, setIsLp] = useState<boolean>(false);
-  const [hasNft, setHasNft] = useState<boolean>(false);
   const [isLoadingPointsData, setIsLoadingPointsData] = useState<boolean>(false);
 
   useEffect(() => {
     if (!isMainnet || !address) {
       setUserPoints(null);
       setIsLp(false);
-      setHasNft(false);
       return;
     }
 
@@ -58,13 +57,6 @@ export default function Info() {
 
         setIsLp(lpStatus || false);
         setUserPoints(points);
-
-        // NFT Check
-        if (publicProvider) {
-          const contract = new Contract("0xF478F017cfe92AaF83b2963A073FaBf5A5cD0244", ["function balanceOf(address) view returns (uint256)"], publicProvider);
-          const balance = await contract.balanceOf(address);
-          setHasNft(balance > 0n);
-        }
       } catch (error) {
         console.error('Error loading points data:', error);
       } finally {

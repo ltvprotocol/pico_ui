@@ -14,3 +14,8 @@ export const TERMS_API_URLS: Record<string, string> = {
   [SEPOLIA_CHAIN_ID_STRING]: "https://api-terms-of-use.ltv.finance",
   [MAINNET_CHAIN_ID_STRING]: "https://api-terms-of-use.ltv.finance"
 };
+
+export const NFT_API_URLS: Record<string, string> = {
+  [SEPOLIA_CHAIN_ID_STRING]: "",
+  [MAINNET_CHAIN_ID_STRING]: "https://api42.ltv.finance"
+};

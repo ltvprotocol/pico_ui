@@ -40,8 +40,8 @@ export const wrapEthToWstEth = async (
   signer: ContractRunner | null,
   ethAmount: bigint,
   userAddress: string,
-  setSuccess: React.Dispatch<React.SetStateAction<string | null>>,
-  setError: React.Dispatch<React.SetStateAction<string | null>>
+  setSuccess: React.Dispatch<React.SetStateAction<string>>,
+  setError: React.Dispatch<React.SetStateAction<string>>
 ): Promise<WstETHWrapResult | null> => {
   
   if (!provider || !signer) {
@@ -56,7 +56,7 @@ export const wrapEthToWstEth = async (
     return null;
   }
 
-  setError(null);
+  setError('');
 
   try {
     // Create contract instances

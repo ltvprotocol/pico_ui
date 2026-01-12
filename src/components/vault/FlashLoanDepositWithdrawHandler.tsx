@@ -2,24 +2,36 @@ import React, { useState, useEffect } from 'react';
 import { parseUnits, parseEther, formatUnits, formatEther } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
 import {
-  isUserRejected,
   isWstETHAddress,
-  allowOnlyNumbers,
   minBigInt,
   clampToPositive,
   formatTokenSymbol,
   formatUsdValue,
   wrapEthToWstEth,
   calculateEthWrapForFlashLoan,
-  applyGasSlippage
+  processInput
 } from '@/utils';
-import { PreviewBox, NumberDisplay, TransitionLoader } from '@/components/ui';
-import { useAdaptiveInterval, useFlashLoanPreview, useMaxAmountUsd } from '@/hooks';
+import {
+  PreviewBox,
+  NumberDisplay,
+  TransitionLoader,
+  ErrorMessage,
+  SuccessMessage,
+  WarningMessage
+} from '@/components/ui';
+import {
+  useAdaptiveInterval,
+  useFlashLoanPreview,
+  useMaxAmountUsd,
+  useIsAmountMoreThanMax,
+  useIsMinMoreThanMax,
+  useIsAmountLessThanMin,
+  useFlashLoanAction
+} from '@/hooks';
 import { GAS_RESERVE_WEI } from '@/constants';
 import { findSharesForEthWithdraw } from '@/utils/findSharesForAmount';
 import { maxBigInt } from '@/utils';
 import { ERC20__factory } from '@/typechain-types';
-import { refreshTokenHolders } from '@/utils/api';
 
 type ActionType = 'deposit' | 'withdraw';
 
@@ -30,10 +42,6 @@ interface FlashLoanDepositWithdrawHandlerProps {
 const GAS_RESERVE_MULTIPLIER = 3n;
 const GAS_RESERVE = GAS_RESERVE_WEI * GAS_RESERVE_MULTIPLIER;
 
-// fixed slippage for redeem, 0.1%
-const REDEEM_SLIPPAGE_DIVIDEND = 999;
-const REDEEM_SLIPPAGE_DIVIDER = 1000;
-
 const MINT_SLIPPAGE_DIVIDEND = 1000001;
 const MINT_SLIPPAGE_DIVIDER = 1000000;
 
@@ -43,11 +51,8 @@ const FLASH_LOAN_DEPOSIT_WITHDRAW_PRECISION_DIVIDER = 100000;
 export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoanDepositWithdrawHandlerProps) {
   const [inputValue, setInputValue] = useState('');
   const [estimatedShares, setEstimatedShares] = useState<bigint | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [isApproving, setIsApproving] = useState(false);
-  const [approvalError, setApprovalError] = useState<string | null>(null);
+  const [wrapError, setWrapError] = useState<string>('');
+  const [wrapSuccess, setWrapSuccess] = useState<string>('');
   const [hasInsufficientBalance, setHasInsufficientBalance] = useState(false);
 
   const [useEthWrapToWSTETH, setUseEthWrapToWSTETH] = useState(true);
@@ -58,13 +63,11 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   const [isMaxWithdraw, setIsMaxWithdraw] = useState(false);
   const [minDeposit, setMinDeposit] = useState('');
   const [minWithdraw, setMinWithdraw] = useState('');
-  const [minTooBig, setMinDisablesAction] = useState(false);
-  const [inputMoreThanMax, setInputMoreThanMax] = useState(false);
+  const [showWarning, setShowWarning] = useState(false);
 
   const { address, provider, signer, publicProvider, currentNetwork } = useAppContext();
 
   const {
-    vault,
     vaultLens,
     vaultAddress,
     flashLoanMintHelper,
@@ -73,7 +76,6 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     flashLoanRedeemHelperAddress,
     collateralToken,
     collateralTokenAddress,
-    sharesSymbol,
     sharesDecimals,
     sharesBalance,
     collateralTokenSymbol,
@@ -81,9 +83,9 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     collateralTokenBalance,
     ethBalance,
     refreshBalances,
-    refreshVaultLimits,
     borrowTokenSymbol,
-    borrowTokenPrice,
+    sharesSymbol,
+    borrowTokenPrice
   } = useVaultContext();
 
   const helperAddress = actionType === 'deposit' ? flashLoanMintHelperAddress : flashLoanRedeemHelperAddress;
@@ -121,7 +123,6 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   useEffect(() => {
     setInputValue('');
     setIsMaxWithdraw(false);
-    setInputMoreThanMax(false);
     setMaxAmount('');
 
     setEstimatedShares(null);
@@ -130,27 +131,38 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
 
     setHasInsufficientBalance(false);
 
-    setLoading(false);
-    setIsApproving(false);
     setIsWrapping(false);
 
-    setError(null);
-    setApprovalError(null);
-    setSuccess(null);
+    setWrapError('');
+    setWrapSuccess('');
 
     // Something very ugly here, should be rewrited in future
     setUseEthWrapToWSTETH(true);
+
+    setShowWarning(false);
   }, [actionType]);
 
-  useEffect(() => {
-    if (!inputValue || !maxAmount) return;
-    const isMoreThanMax = parseEther(inputValue) > parseEther(maxAmount);
-    setInputMoreThanMax(isMoreThanMax);
-  }, [inputValue, maxAmount])
+  const isInputMoreThanMax = useIsAmountMoreThanMax({
+    amount: inputValue,
+    max: maxAmount,
+    decimals: 18 // 100% sure for ETH and WETH
+  });
 
-  const applyRedeemSlippage = (amount: bigint) => {
-    return amount * BigInt(REDEEM_SLIPPAGE_DIVIDEND) / BigInt(REDEEM_SLIPPAGE_DIVIDER);
-  }
+  const isMinMoreThanMax = useIsMinMoreThanMax({
+    maxAmount,
+    minDeposit,
+    minWithdraw,
+    actionType,
+    decimals: 18 // 100% sure for ETH and WETH
+  });
+
+  const isAmountLessThanMin = useIsAmountLessThanMin({
+    amount: inputValue,
+    minDeposit,
+    minWithdraw,
+    actionType,
+    decimals: 18 // 100% sure for ETH and WETH
+  });
 
   const applyMintSlippage = (amount: bigint) => {
     return amount * BigInt(MINT_SLIPPAGE_DIVIDEND) / BigInt(MINT_SLIPPAGE_DIVIDER);
@@ -208,32 +220,10 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     enabled: !!vaultLens && !!publicProvider
   });
 
-  useEffect(() => {
-    if (!maxAmount || !minDeposit || !minWithdraw) return;
-
-    const rawMaxAmount = parseEther(maxAmount);
-    const rawMinDeposit = parseEther(minDeposit);
-    const rawMinWithdraw = parseEther(minWithdraw);
-
-    if (actionType === 'deposit') {
-      if (rawMinDeposit > rawMaxAmount) {
-        setMinDisablesAction(true);
-      } else {
-        setMinDisablesAction(false);
-      }
-    } else {
-      if (rawMinWithdraw > rawMaxAmount) {
-        setMinDisablesAction(true);
-      } else {
-        setMinDisablesAction(false);
-      }
-    }
-
-  }, [actionType, minDeposit, minWithdraw, maxAmount]);
-
   const calculateShares = async () => {
     if (!inputValue || !vaultLens) {
       setEstimatedShares(null);
+      setShowWarning(false);
       return;
     }
 
@@ -267,9 +257,13 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
           amount: inputAmount,
           helper: flashLoanRedeemHelper,
           vaultLens
-        })
+        });
 
-        if (!shares) return;
+        if (!shares) {
+          setShowWarning(true);
+          setEstimatedShares(null);
+          return;
+        }
 
         shares = applyFlashLoanDepositWithdrawSlippage(shares);
         setEstimatedShares(shares);
@@ -328,7 +322,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
 
   useEffect(() => {
     // Reset state if input is empty or invalid
-    if (!estimatedShares || estimatedShares <= 0n) {
+    if (!inputValue || !estimatedShares || estimatedShares <= 0n) {
       setPreviewedWstEthAmount(null);
       setEthToWrapValue('');
       setHasInsufficientBalance(false);
@@ -342,6 +336,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     }
 
     if (actionType === 'withdraw') {
+      if (flashLoan.loading) return; // not calculate when processing to prevent wrong warnings
       const userSharesBalance = parseUnits(sharesBalance, Number(sharesDecimals));
       setHasInsufficientBalance(userSharesBalance < estimatedShares);
       return;
@@ -410,143 +405,73 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     provider
   ]);
 
-  const checkAndApproveToken = async () => {
-    if (!previewData || !address || !helperAddress || !estimatedShares) {
-      return;
+  const flashLoan = useFlashLoanAction({
+    mode: actionType,
+    currentNetwork: currentNetwork ?? '',
+    userAddress: address ?? undefined,
+    helperAddress: helperAddress ?? undefined,
+    previewAmount: previewData?.amount,
+    sharesAmount: estimatedShares ?? undefined,
+    refreshMins: loadMinAvailable
+  });
+
+  useEffect(() => {
+    if (flashLoan.success) {
+      setWrapSuccess('');
     }
-
-    setIsApproving(true);
-    setApprovalError(null);
-
-    try {
-      if (actionType === 'deposit') {
-        if (!collateralToken) return;
-        const currentAllowance = await collateralToken.allowance(address, helperAddress);
-        if (currentAllowance < previewData.amount) {
-          const tx = await collateralToken.approve(helperAddress, previewData.amount);
-          await tx.wait();
-          setSuccess(`Successfully approved ${collateralTokenSymbol}.`);
-        } else {
-          setSuccess(`Already approved ${collateralTokenSymbol}.`);
-        }
-      } else {
-        if (!vault) return;
-
-        const sharesAllowance = await vault.allowance(address, helperAddress);
-        if (sharesAllowance < estimatedShares) {
-          const tx = await vault.approve(helperAddress, estimatedShares);
-          await tx.wait();
-          setSuccess(`Successfully approved ${sharesSymbol}.`);
-        } else {
-          setSuccess(`Already approved ${sharesSymbol}.`);
-        }
-      }
-    } catch (err) {
-      if (isUserRejected(err)) {
-        setApprovalError('Approval canceled by user.');
-      } else {
-        setApprovalError(`Failed to approve.`);
-        console.error(`Failed to approve.`, err);
-      }
-      throw err;
-    } finally {
-      setIsApproving(false);
-    }
-  };
+  }, [flashLoan.success]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!address || !estimatedShares || estimatedShares <= 0n) return;
 
-    setLoading(true);
-    setError(null);
-    setSuccess(null);
-    setApprovalError(null);
+    setWrapError('');
+    setWrapSuccess('');
 
-    try {
-      // If using ETH input for wstETH vault, wrap ETH to wstETH first
-      if (useEthWrapToWSTETH && isWstETHVault && ethToWrapValue && provider && signer) {
-        setIsWrapping(true);
-        const ethAmount = parseEther(ethToWrapValue);
+    // If using ETH input for wstETH vault, wrap ETH to wstETH first
+    if (useEthWrapToWSTETH && isWstETHVault && ethToWrapValue && provider && signer) {
+      setIsWrapping(true);
+      const ethAmount = parseEther(ethToWrapValue);
 
-        const wrapResult = await wrapEthToWstEth(
-          provider,
-          signer,
-          ethAmount,
-          address,
-          setSuccess,
-          setError
-        );
+      const wrapResult = await wrapEthToWstEth(
+        provider,
+        signer,
+        ethAmount,
+        address,
+        setWrapSuccess,
+        setWrapError
+      );
 
-        setIsWrapping(false);
-
-        if (!wrapResult) {
-          return; // Error already set by wrapEthToWstEth
-        }
-
-        // Refresh balances to get updated wstETH balance
-        await refreshBalances();
+      if (!wrapResult) {
+        return; // Error already set by wrapEthToWstEth
       }
 
-      await checkAndApproveToken();
+      // Refresh balances to get updated wstETH balance
+      await refreshBalances();
 
-      let tx;
-      if (actionType === 'deposit') {
-        if (!flashLoanMintHelper) return;
+      setIsWrapping(false);
+    }
 
-        const estimatedGas = await flashLoanMintHelper.mintSharesWithFlashLoanCollateral.estimateGas(estimatedShares);
-        tx = await flashLoanMintHelper.mintSharesWithFlashLoanCollateral(estimatedShares, {gasLimit: applyGasSlippage(estimatedGas)});
-      } else {
-        if (!flashLoanRedeemHelper) return;
+    const success = await flashLoan.execute();
 
-        const amountOut = applyRedeemSlippage(previewData!.amount);
-        const estimatedGas = await flashLoanRedeemHelper.redeemSharesWithCurveAndFlashLoanBorrow.estimateGas(estimatedShares, amountOut);
-        tx = await flashLoanRedeemHelper.redeemSharesWithCurveAndFlashLoanBorrow(estimatedShares, amountOut, {gasLimit: applyGasSlippage(estimatedGas)});
-      }
-
-      await tx.wait();
-
-      // Notify backend about token holder change
-      refreshTokenHolders(currentNetwork);
-
-      await Promise.all([refreshBalances(), refreshVaultLimits()]);
-
+    if (success) {
       setInputValue('');
       setEstimatedShares(null);
       setEthToWrapValue('');
-      setSuccess(`Successfully ${actionType === 'deposit' ? 'deposited' : 'withdrawn'} with flash loan!`);
-    } catch (err: unknown) {
-      if (isUserRejected(err)) {
-        setError('Transaction canceled by user.');
-      } else {
-        // Check if it's a contract revert without error data
-        const isGenericRevert = (err as any)?.data === '0x' || (err as any)?.data === null || (err as any)?.reason === 'require(false)';
-
-        if (isGenericRevert) {
-          setError(
-            `Contract execution failed. Please try a smaller amount or contact support.`
-          );
-        } else {
-          setError(`Failed to ${actionType} with flash loan`);
-        }
-        console.error(`Failed to ${actionType} with flash loan:`, err);
-      }
-    } finally {
-      setLoading(false);
-      setIsWrapping(false);
     }
   };
 
   const handleInputChange = (value: string) => {
+    setShowWarning(false);
     setIsMaxWithdraw(false);
-    
-    const cleanedValue = allowOnlyNumbers(value);
-    setInputValue(cleanedValue);
+    const { formattedValue } = processInput(value);
 
-    setError(null);
-    setSuccess(null);
-    setApprovalError(null);
+    setInputValue(formattedValue);
+    flashLoan.reset();
+
+    setWrapError('');
+    setWrapSuccess('');
   };
 
   const handleSetMax = () => {
@@ -565,6 +490,9 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     setIsMaxWithdraw(false);
   };
 
+  const userBalance = actionType === 'deposit' ? collateralTokenBalance : sharesBalance;
+  const userBalanceToken = actionType === 'deposit' ? formatTokenSymbol(collateralTokenSymbol) : sharesSymbol;
+
   return (
     <div>
       <form onSubmit={handleSubmit} className="space-y-3">
@@ -582,14 +510,14 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
               autoComplete="off"
               className="block w-full pr-24 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
               placeholder="0.0"
-              disabled={loading}
+              disabled={flashLoan.loading}
             />
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
               <button
                 type="button"
                 onClick={handleSetMax}
                 className="bg-transparent text-sm text-indigo-600 hover:text-indigo-500 mr-2"
-                disabled={loading || !maxAmount}
+                disabled={flashLoan.loading || !maxAmount}
               >
                 MAX
               </button>
@@ -603,7 +531,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
                 type="button"
                 onClick={() => handlePercentage(BigInt(percentage))}
                 className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 disabled:opacity-50"
-                disabled={loading || !maxAmount}
+                disabled={flashLoan.loading || !maxAmount}
               >
                 {percentage}%
               </button>
@@ -660,79 +588,86 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
           </>
         )}
 
-        {/* Preview Section */}
-        {!!estimatedShares && estimatedShares > 0n && previewData && !isErrorLoadingPreview && (
-          <PreviewBox
-            receive={receive}
-            provide={provide}
-            isLoading={isLoadingPreview}
-            title="Transaction Preview"
-          />
-        )}
-
-        {/* Preview Error */}
-        {!!estimatedShares && (isErrorLoadingPreview || invalidRebalanceMode) && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            <span>
-              {invalidRebalanceMode
-                ? "Flash loan rebalance is currently unavailable for this amount."
-                : "Error loading preview. Amount might be too high or low."}
-            </span>
-          </div>
-        )}
-
-        {/* Balance warning */}
-        {hasInsufficientBalance && !!estimatedShares && estimatedShares > 0n && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            <span>
-              Insufficient balance.
-            </span>
-          </div>
-        )}
+        {!inputValue ? null :
+          isInputMoreThanMax && !flashLoan.loading ?
+            (
+              <WarningMessage
+                text="Entered amount higher than max"
+              />
+            ) : (isAmountLessThanMin || invalidRebalanceMode || showWarning) && !flashLoan.loading ? (
+              <WarningMessage
+                text={`Not available to ${actionType} this amount right now, try again later`}
+              />
+            ) : hasInsufficientBalance && !flashLoan.loading && !isWrapping ? (
+              <ErrorMessage
+                text={`Insufficient ${userBalanceToken} balance. You have ${userBalance} ${userBalanceToken}.`}
+              />
+            ) : isErrorLoadingPreview ? (
+              <ErrorMessage text="Error loading preview." />
+            ) : estimatedShares !== null && estimatedShares > 0n && previewData && !!inputValue ? (
+              <PreviewBox
+                receive={receive}
+                provide={provide}
+                isLoading={isLoadingPreview}
+                title="Transaction Preview"
+              />
+            ) : null}
 
         <button
           type="submit"
           disabled={
-            loading ||
+            flashLoan.loading ||
+            !inputValue ||
             !estimatedShares ||
             estimatedShares <= 0n ||
-            isApproving ||
+            flashLoan.isApproving ||
             isWrapping ||
             hasInsufficientBalance ||
             isErrorLoadingPreview ||
             invalidRebalanceMode ||
-            minTooBig ||
-            inputMoreThanMax
+            isInputMoreThanMax ||
+            isMinMoreThanMax ||
+            isAmountLessThanMin
           }
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isWrapping
             ? 'Wrapping ETH to wstETH...'
-            : isApproving
+            : flashLoan.isApproving
               ? 'Approving Tokens...'
-              : loading
+              : flashLoan.loading
                 ? 'Processing...'
                 : hasInsufficientBalance
                   ? 'Insufficient Balance'
                   : `${actionType === 'deposit' ? 'Deposit' : 'Withdraw'}`}
         </button>
-
-        {approvalError && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            {approvalError}
-          </div>
+        {/*
+          Error messages - priority:
+          1. flashLoan.approvalError
+          2. flashLoan.error
+          3. wrapError
+        */}
+        {(flashLoan.approvalError || flashLoan.error || wrapError) && (
+          <ErrorMessage
+            text={
+              flashLoan.approvalError
+                ? flashLoan.approvalError
+                : flashLoan.error
+                  ? flashLoan.error
+                  : wrapError
+            }
+          />
         )}
-
-        {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-            {error}
-          </div>
-        )}
-
-        {success && (
-          <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
-            {success}
-          </div>
+        {/*
+          Success messages - show only if there are no errors
+          Priority:
+          1. wrapSuccess
+          2. flashLoan.success
+        */}
+        {!(flashLoan.approvalError || flashLoan.error || wrapError) && (wrapSuccess || flashLoan.success) && (
+          <SuccessMessage
+            text={flashLoan.success ? flashLoan.success : wrapSuccess}
+          />
         )}
       </form>
     </div>

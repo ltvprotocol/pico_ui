@@ -20,5 +20,7 @@ export { maxBigInt } from './maxBigInt';
 export { formatTokenSymbol } from './formatTokenSymbol';
 export { formatApy, ApyPeriod } from './formatApy';
 export { formatUsdValue } from './formatUsdValue';
+export { limitDecimals } from './limitDecimals';
+export { processInput } from './processInput';
 export { applyGasSlippage } from './applyGasSlippage';
 export * from './api';

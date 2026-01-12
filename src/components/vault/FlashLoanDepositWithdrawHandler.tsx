@@ -589,7 +589,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
         )}
 
         {!inputValue ? null :
-          isInputMoreThanMax && !flashLoan.loading ?
+          isInputMoreThanMax && !flashLoan.loading && !isWrapping ?
             (
               <WarningMessage
                 text="Entered amount higher than max"

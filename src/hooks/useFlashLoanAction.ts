@@ -3,7 +3,6 @@ import { isUserRejected } from '@/utils';
 import { useVaultContext } from '@/contexts';
 import { applyGasSlippage } from '@/utils';
 import { refreshTokenHolders } from '@/utils';
-import { useDarkMode } from 'usehooks-ts';
 
 type FlashLoanMode = 'mint' | 'redeem' | 'deposit' | 'withdraw';
 

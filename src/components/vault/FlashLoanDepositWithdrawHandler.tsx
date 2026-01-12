@@ -594,11 +594,11 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
               <WarningMessage
                 text="Entered amount higher than max"
               />
-            ) : isAmountLessThanMin || invalidRebalanceMode || showWarning ? (
+            ) : (isAmountLessThanMin || invalidRebalanceMode || showWarning) && !flashLoan.loading ? (
               <WarningMessage
                 text={`Not available to ${actionType} this amount right now, try again later`}
               />
-            ) : hasInsufficientBalance ? (
+            ) : hasInsufficientBalance && !flashLoan.loading && !isWrapping ? (
               <ErrorMessage
                 text={`Insufficient ${userBalanceToken} balance. You have ${userBalance} ${userBalanceToken}.`}
               />

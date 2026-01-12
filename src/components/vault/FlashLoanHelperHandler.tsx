@@ -490,15 +490,15 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
           </>
         )}
 
-        {!inputValue ? null : isInputMoreThanMax ? (
+        {!inputValue ? null : isInputMoreThanMax && !flashLoan.loading ? (
           <WarningMessage
             text="Entered amount higher than max"
           />
-        ) : isAmountLessThanMin || invalidRebalanceMode ? (
+        ) : (isAmountLessThanMin || invalidRebalanceMode) && !flashLoan.loading ? (
           <WarningMessage
             text={`Not available to ${helperType} this amount right now, try again later`}
           />
-        ) : hasInsufficientBalance ? (
+        ) : hasInsufficientBalance && !flashLoan.loading && !isWrapping ? (
           <ErrorMessage
             text={`Insufficient ${userBalanceToken} balance. You have ${userBalance} ${userBalanceToken}.`}
           />

@@ -7,3 +7,4 @@ export { TransitionLoader } from "./TransitionLoader";
 export { Tooltip } from "./Tooltip";
 export { SymbolWithTooltip } from "./SymbolWithTooltip";
 export { Address } from "./Address";
+export * from "./messages";

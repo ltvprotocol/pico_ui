@@ -84,6 +84,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     ethBalance,
     refreshBalances,
     borrowTokenSymbol,
+    sharesSymbol,
     borrowTokenPrice
   } = useVaultContext();
 
@@ -489,6 +490,9 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     setIsMaxWithdraw(false);
   };
 
+  const userBalance = actionType === 'deposit' ? collateralTokenBalance : sharesBalance;
+  const userBalanceToken = actionType === 'deposit' ? formatTokenSymbol(collateralTokenSymbol) : sharesSymbol;
+
   return (
     <div>
       <form onSubmit={handleSubmit} className="space-y-3">
@@ -596,7 +600,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
               />
             ) : hasInsufficientBalance ? (
               <ErrorMessage
-                text={`Insufficient balance.`}
+                text={`Insufficient ${userBalanceToken} balance. You have ${userBalance} ${userBalanceToken}.`}
               />
             ) : isErrorLoadingPreview ? (
               <ErrorMessage text="Error loading preview." />

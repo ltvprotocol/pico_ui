@@ -443,14 +443,14 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
         setWrapError
       );
 
+      setIsWrapping(false);
+
       if (!wrapResult) {
         return; // Error already set by wrapEthToWstEth
       }
 
       // Refresh balances to get updated wstETH balance
       await refreshBalances();
-
-      setIsWrapping(false);
     }
 
     const success = await flashLoan.execute();
@@ -589,7 +589,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
         )}
 
         {!inputValue ? null :
-          isInputMoreThanMax && !flashLoan.loading ?
+          isInputMoreThanMax && !flashLoan.loading && !isWrapping ?
             (
               <WarningMessage
                 text="Entered amount higher than max"

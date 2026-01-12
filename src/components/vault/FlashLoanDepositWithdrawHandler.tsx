@@ -406,7 +406,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   ]);
 
   const flashLoan = useFlashLoanAction({
-    mode: actionType === 'deposit' ? 'mint' : 'redeem',
+    mode: actionType,
     currentNetwork: currentNetwork ?? '',
     userAddress: address ?? undefined,
     helperAddress: helperAddress ?? undefined,

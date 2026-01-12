@@ -4,7 +4,7 @@ import { useVaultContext } from '@/contexts';
 import { applyGasSlippage } from '@/utils';
 import { refreshTokenHolders } from '@/utils';
 
-type FlashLoanMode = 'mint' | 'redeem';
+type FlashLoanMode = 'mint' | 'redeem' | 'deposit' | 'withdraw';
 
 // fixed slippage for redeem, 0.1%
 const REDEEM_SLIPPAGE_DIVIDEND = 999n;
@@ -62,7 +62,7 @@ export function useFlashLoanAction({
     setApprovalError('');
 
     try {
-      if (mode === 'mint') {
+      if (mode === 'mint' || mode === 'deposit') {
         if (!collateralToken || !collateralTokenLens) return;
 
         const allowance = await collateralTokenLens.allowance(userAddress, helperAddress);
@@ -74,7 +74,7 @@ export function useFlashLoanAction({
         } else {
           setSuccess('Already approved token.');
         }
-      } else { // mint
+      } else { // redeem || withdraw
         if (!vault || !vaultLens) return;
 
         const allowance = await vaultLens.allowance(userAddress, helperAddress);

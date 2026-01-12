@@ -342,6 +342,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     userAddress: address ?? undefined,
     helperAddress: helperAddress ?? undefined,
     previewAmount: previewData?.amount,
+    sharesAmount: sharesToProcess ?? undefined,
     refreshMins: loadMinAvailable
   });
 

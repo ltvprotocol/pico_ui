@@ -3,6 +3,7 @@ import { isUserRejected } from '@/utils';
 import { useVaultContext } from '@/contexts';
 import { applyGasSlippage } from '@/utils';
 import { refreshTokenHolders } from '@/utils';
+import { useDarkMode } from 'usehooks-ts';
 
 type FlashLoanMode = 'mint' | 'redeem' | 'deposit' | 'withdraw';
 
@@ -112,7 +113,7 @@ export function useFlashLoanAction({
 
       let tx;
 
-      if (mode === 'mint') {
+      if (mode === 'mint' || mode === 'deposit') {
         if (!flashLoanMintHelper) return false;
 
         const estimatedGas = await flashLoanMintHelper.mintSharesWithFlashLoanCollateral.estimateGas(sharesAmount);
@@ -140,7 +141,7 @@ export function useFlashLoanAction({
 
       await refreshMins();
 
-      setSuccess(`Successfully ${mode === 'mint' ? 'minted' : 'redeemed'} with flash loan!`);
+      setSuccess(`Successfully ${mode !== 'withdraw' ? `${mode}ed` : 'withdrawn'} with flash loan!`);
       return true;
     } catch (err) {
       if (isUserRejected(err)) {

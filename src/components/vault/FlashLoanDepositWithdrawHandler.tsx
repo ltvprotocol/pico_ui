@@ -37,6 +37,7 @@ type ActionType = 'deposit' | 'withdraw';
 
 interface FlashLoanDepositWithdrawHandlerProps {
   actionType: ActionType;
+  setIsProcessing: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const GAS_RESERVE_MULTIPLIER = 3n;
@@ -48,7 +49,10 @@ const MINT_SLIPPAGE_DIVIDER = 1000000;
 const FLASH_LOAN_DEPOSIT_WITHDRAW_PRECISION_DIVIDEND = 99999;
 const FLASH_LOAN_DEPOSIT_WITHDRAW_PRECISION_DIVIDER = 100000;
 
-export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoanDepositWithdrawHandlerProps) {
+export default function FlashLoanDepositWithdrawHandler({
+  actionType,
+  setIsProcessing
+}: FlashLoanDepositWithdrawHandlerProps) {
   const [inputValue, setInputValue] = useState('');
   const [estimatedShares, setEstimatedShares] = useState<bigint | null>(null);
   const [wrapError, setWrapError] = useState<string>('');
@@ -428,6 +432,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
 
     setWrapError('');
     setWrapSuccess('');
+    setIsProcessing(true);
 
     // If using ETH input for wstETH vault, wrap ETH to wstETH first
     if (useEthWrapToWSTETH && isWstETHVault && ethToWrapValue && provider && signer) {
@@ -446,6 +451,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
       setIsWrapping(false);
 
       if (!wrapResult) {
+        setIsProcessing(false);
         return; // Error already set by wrapEthToWstEth
       }
 
@@ -454,6 +460,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
     }
 
     const success = await flashLoan.execute();
+    setIsProcessing(false);
 
     if (success) {
       setInputValue('');

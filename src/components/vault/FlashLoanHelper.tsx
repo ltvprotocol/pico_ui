@@ -24,6 +24,7 @@ export default function FlashLoanHelper() {
 
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<HelperType>(availableTabs[0]?.value || 'mint');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   if (availableTabs.length === 0) {
     return null;
@@ -54,10 +55,18 @@ export default function FlashLoanHelper() {
       >
         {availableTabs.length > 1 && (
           <div className="mb-3">
-            <Tabs activeTab={activeTab} setActiveTab={setActiveTab} tabs={availableTabs} />
+            <Tabs
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              tabs={availableTabs}
+              isProcessing={isProcessing}
+            />
           </div>
         )}
-        <FlashLoanHelperHandler helperType={activeTab} />
+        <FlashLoanHelperHandler
+          helperType={activeTab}
+          setIsProcessing={setIsProcessing}
+        />
       </div>
     </div>
   );

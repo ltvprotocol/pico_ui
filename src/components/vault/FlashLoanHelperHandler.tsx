@@ -9,7 +9,8 @@ import {
   formatUsdValue,
   wrapEthToWstEth,
   calculateEthWrapForFlashLoan,
-  processInput
+  processInput,
+  isShowWrapPreview
 } from '@/utils';
 import {
   PreviewBox,
@@ -413,6 +414,17 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
   const userBalance = helperType === 'mint' ? effectiveCollateralBalance : sharesBalance;
   const userBalanceToken = helperType === 'mint' ? formatTokenSymbol(collateralTokenSymbol) : sharesSymbol;
 
+  const shouldShowWrapPreview  = isShowWrapPreview({
+    inputValue,
+    isInputMoreThanMax,
+    isAmountLessThanMin,
+    invalidRebalanceMode,
+    hasInsufficientBalance,
+    isErrorLoadingPreview,
+    isWrapping,
+    flashLoanLoading: flashLoan.loading
+  });
+
   return (
     <div>
       <form onSubmit={handleSubmit} className="space-y-3">
@@ -480,7 +492,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
                 <p className="mt-1 text-xs text-gray-500">
                   ETH will be wrapped to wstETH before the flash loan mint
                 </p>
-                {previewedWstEthAmount && ethToWrapValue && (
+                {previewedWstEthAmount && ethToWrapValue && shouldShowWrapPreview && (
                   <p className="mt-1 text-xs text-green-600">
                     → Will receive ~<NumberDisplay value={formatUnits(previewedWstEthAmount, collateralTokenDecimals)} /> wstETH from wrapping and use ~<NumberDisplay value={collateralTokenBalance} /> from balance
                   </p>

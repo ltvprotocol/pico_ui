@@ -125,9 +125,14 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     setPreviewedWstEthAmount(null);
     setEthToWrapValue('');
     setEffectiveCollateralBalance('');
-    setUseEthWrapToWSTETH(true);
 
     setHasInsufficientBalance(false);
+
+    if (helperType === 'redeem') {
+      setUseEthWrapToWSTETH(false);
+    } else {
+      setUseEthWrapToWSTETH(true);
+    }
 
     setWrapError('');
     setWrapSuccess('');

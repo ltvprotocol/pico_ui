@@ -9,7 +9,8 @@ import {
   formatUsdValue,
   wrapEthToWstEth,
   calculateEthWrapForFlashLoan,
-  processInput
+  processInput,
+  isShowWrapPreview
 } from '@/utils';
 import {
   PreviewBox,
@@ -493,6 +494,18 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   const userBalance = actionType === 'deposit' ? collateralTokenBalance : sharesBalance;
   const userBalanceToken = actionType === 'deposit' ? formatTokenSymbol(collateralTokenSymbol) : sharesSymbol;
 
+  const shouldShowWrapPreview  = isShowWrapPreview({
+    inputValue,
+    isInputMoreThanMax,
+    isAmountLessThanMin,
+    invalidRebalanceMode,
+    hasInsufficientBalance,
+    isErrorLoadingPreview,
+    showWarning,
+    isWrapping,
+    flashLoanLoading: flashLoan.loading
+  });
+
   return (
     <div>
       <form onSubmit={handleSubmit} className="space-y-3">
@@ -578,7 +591,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
                 <p className="mt-1 text-xs text-gray-500">
                   ETH will be automatically wrapped to wstETH
                 </p>
-                {previewedWstEthAmount && ethToWrapValue && (
+                {previewedWstEthAmount && ethToWrapValue && shouldShowWrapPreview && (
                   <p className="mt-1 text-xs text-green-600">
                     → Will wrap <NumberDisplay value={ethToWrapValue} /> ETH to ~<NumberDisplay value={formatUnits(previewedWstEthAmount, collateralTokenDecimals)} /> wstETH
                   </p>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useVaultContext } from '@/contexts';
+import { useVaultContext, useAppContext } from '@/contexts';
 
 export default function NftMintBanner() {
   const {
@@ -7,19 +7,24 @@ export default function NftMintBanner() {
     isWhitelistedToMintNft,
     nftTotalSupply
   } = useVaultContext();
+  const { address } = useAppContext();
 
   const [isDismissed, setIsDismissed] = useState(true);
 
   useEffect(() => {
-    const dismissed = localStorage.getItem('nft_mint_banner_closed');
+    if (!address) return;
+    const dismissed = localStorage.getItem(`nft_mint_banner_closed_${address.toLowerCase()}`);
     if (dismissed !== 'true') {
       setIsDismissed(false);
+    } else {
+      setIsDismissed(true);
     }
-  }, []);
+  }, [address]);
 
   const handleClose = () => {
+    if (!address) return;
     setIsDismissed(true);
-    localStorage.setItem('nft_mint_banner_closed', 'true');
+    localStorage.setItem(`nft_mint_banner_closed_${address.toLowerCase()}`, 'true');
   };
 
   const isVisible = !isDismissed && !hasNft && isWhitelistedToMintNft && nftTotalSupply < 1024;

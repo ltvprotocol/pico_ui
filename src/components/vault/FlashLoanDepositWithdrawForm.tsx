@@ -11,6 +11,7 @@ export default function FlashLoanDepositWithdrawForm() {
   ]
 
   const [activeTab, setActiveTab] = useState<ActionType>(tabs[0]?.value || 'deposit');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   return (
     <div className="relative rounded-lg bg-gray-50 mb-4">
@@ -19,10 +20,18 @@ export default function FlashLoanDepositWithdrawForm() {
       >
         {tabs.length > 1 && (
           <div className="mb-3">
-            <Tabs activeTab={activeTab} setActiveTab={setActiveTab} tabs={tabs} />
+            <Tabs
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              tabs={tabs}
+              isProcessing={isProcessing}
+            />
           </div>
         )}
-        <FlashLoanDepositWithdrawHandler actionType={activeTab} />
+        <FlashLoanDepositWithdrawHandler
+          actionType={activeTab}
+          setIsProcessing={setIsProcessing}
+        />
       </div>
     </div>
   );

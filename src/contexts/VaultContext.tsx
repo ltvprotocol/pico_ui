@@ -69,6 +69,8 @@ interface VaultContextType {
   // Flash loan helpers
   flashLoanMintHelper: FlashLoanMintHelper | null;
   flashLoanRedeemHelper: FlashLoanRedeemHelper | null;
+  flashLoanMintHelperLens: FlashLoanMintHelper | null;
+  flashLoanRedeemHelperLens: FlashLoanRedeemHelper | null;
   flashLoanMintHelperAddress: string | null;
   flashLoanRedeemHelperAddress: string | null;
   // Vault existence
@@ -162,6 +164,8 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   const [vaultLens, setVaultLens] = useState<Vault | null>(null);
   const [borrowTokenLens, setBorrowTokenLens] = useState<ERC20 | WETH | null>(null);
   const [collateralTokenLens, setCollateralTokenLens] = useState<ERC20 | WETH | null>(null);
+  const [flashLoanMintHelperLens, setFlashLoanMintHelperLens] = useState<FlashLoanMintHelper | null>(null);
+  const [flashLoanRedeemHelperLens, setFlashLoanRedeemHelperLens] = useState<FlashLoanRedeemHelper | null>(null);
   const [sharesDecimals, setSharesDecimals] = useState<bigint>(18n);
   const [borrowTokenDecimals, setBorrowTokenDecimals] = useState<bigint>(18n);
   const [collateralTokenDecimals, setCollateralTokenDecimals] = useState<bigint>(18n);
@@ -321,6 +325,19 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
           setFlashLoanRedeemHelper(null);
           setFlashLoanRedeemHelperAddress(null);
         }
+      }
+
+      // Initialize lens helpers (always, using publicProvider)
+      if (vaultConfig?.flashLoanMintHelperAddress && vaultConfig.flashLoanMintHelperAddress !== '') {
+        setFlashLoanMintHelperLens(FlashLoanMintHelper__factory.connect(vaultConfig.flashLoanMintHelperAddress, publicProvider));
+      } else {
+        setFlashLoanMintHelperLens(null);
+      }
+
+      if (vaultConfig?.flashLoanRedeemHelperAddress && vaultConfig.flashLoanRedeemHelperAddress !== '') {
+        setFlashLoanRedeemHelperLens(FlashLoanRedeemHelper__factory.connect(vaultConfig.flashLoanRedeemHelperAddress, publicProvider));
+      } else {
+        setFlashLoanRedeemHelperLens(null);
       }
 
       if (!vaultConfig?.sharesSymbol) {
@@ -1022,6 +1039,8 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         description,
         flashLoanMintHelper,
         flashLoanRedeemHelper,
+        flashLoanMintHelperLens,
+        flashLoanRedeemHelperLens,
         flashLoanMintHelperAddress,
         flashLoanRedeemHelperAddress,
         vaultExists,

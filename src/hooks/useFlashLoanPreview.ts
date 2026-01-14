@@ -19,8 +19,8 @@ interface PreviewData {
 interface UseFlashLoanPreviewParams {
   sharesToProcess: bigint | null;
   helperType: HelperType;
-  mintHelper: FlashLoanMintHelper | null;
-  redeemHelper: FlashLoanRedeemHelper | null;
+  mintHelperLens: FlashLoanMintHelper | null;
+  redeemHelperLens: FlashLoanRedeemHelper | null;
   collateralTokenDecimals: bigint;
   sharesBalance: string;
   sharesDecimals: bigint;
@@ -38,8 +38,8 @@ interface UseFlashLoanPreviewReturn {
 export const useFlashLoanPreview = ({
   sharesToProcess,
   helperType,
-  mintHelper,
-  redeemHelper,
+  mintHelperLens,
+  redeemHelperLens,
   sharesBalance,
 }: UseFlashLoanPreviewParams): UseFlashLoanPreviewReturn => {
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
@@ -50,13 +50,13 @@ export const useFlashLoanPreview = ({
   const loadPreview = async (shares: bigint | null) => {
     if (
       shares === null || shares <= 0n ||
-      helperType === 'mint' && !mintHelper ||
-      helperType === 'redeem' && !redeemHelper
+      helperType === 'mint' && !mintHelperLens ||
+      helperType === 'redeem' && !redeemHelperLens
     ) {
       setPreviewData(null);
       return;
     }
-    
+
     setIsErrorLoadingPreview(false);
     setInvalidRebalanceMode(false);
     setIsLoadingPreview(true);
@@ -65,10 +65,10 @@ export const useFlashLoanPreview = ({
       let amount: bigint;
       if (helperType === 'mint') {
         // returns collateral required
-        amount = await mintHelper!.previewMintSharesWithFlashLoanCollateral(shares);
+        amount = await mintHelperLens!.previewMintSharesWithFlashLoanCollateral(shares);
       } else {
         // returns borrow tokens to receive
-        amount = await redeemHelper!.previewRedeemSharesWithCurveAndFlashLoanBorrow(shares);
+        amount = await redeemHelperLens!.previewRedeemSharesWithCurveAndFlashLoanBorrow(shares);
       }
       amount = reduceByPrecisionBuffer(amount);
       setPreviewData({ amount });

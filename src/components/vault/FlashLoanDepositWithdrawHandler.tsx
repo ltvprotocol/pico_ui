@@ -70,8 +70,8 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   const {
     vaultLens,
     vaultAddress,
-    flashLoanMintHelper,
-    flashLoanRedeemHelper,
+    flashLoanMintHelperLens,
+    flashLoanRedeemHelperLens,
     flashLoanMintHelperAddress,
     flashLoanRedeemHelperAddress,
     collateralToken,
@@ -103,8 +103,8 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   } = useFlashLoanPreview({
     sharesToProcess: estimatedShares,
     helperType: actionType === 'deposit' ? 'mint' : 'redeem',
-    mintHelper: flashLoanMintHelper,
-    redeemHelper: flashLoanRedeemHelper,
+    mintHelperLens: flashLoanMintHelperLens,
+    redeemHelperLens: flashLoanRedeemHelperLens,
     collateralTokenDecimals,
     sharesBalance,
     sharesDecimals,
@@ -236,8 +236,6 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
       }
 
       if (actionType === 'deposit') {
-        if (!flashLoanMintHelper || !publicProvider) return;
-
         let shares = await vaultLens.convertToShares(inputAmount);
 
         if (!shares) return;
@@ -251,11 +249,11 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
           return;
         }
 
-        if (!flashLoanRedeemHelper) return;
+        if (!flashLoanRedeemHelperLens) return;
 
         let shares = await findSharesForEthWithdraw({
           amount: inputAmount,
-          helper: flashLoanRedeemHelper,
+          helper: flashLoanRedeemHelperLens,
           vaultLens
         });
 
@@ -279,7 +277,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   useEffect(() => {
     const timeoutId = setTimeout(calculateShares, 500);
     return () => clearTimeout(timeoutId);
-  }, [inputValue, actionType, vaultLens, flashLoanMintHelper, flashLoanRedeemHelper, publicProvider, isMaxWithdraw]);
+  }, [inputValue, actionType, vaultLens, flashLoanRedeemHelperLens, publicProvider, isMaxWithdraw]);
 
   const setMaxDeposit = async () => {
     if (!vaultLens) return;
@@ -297,14 +295,14 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
   };
 
   const setMaxWithdraw = async () => {
-    if (!flashLoanRedeemHelper || !sharesBalance) {
+    if (!flashLoanRedeemHelperLens || !sharesBalance) {
       setMaxAmount('0');
       return;
     }
 
     try {
       const rawShares = parseUnits(sharesBalance, Number(sharesDecimals));
-      const maxWeth = await flashLoanRedeemHelper.previewRedeemSharesWithCurveAndFlashLoanBorrow(rawShares);
+      const maxWeth = await flashLoanRedeemHelperLens.previewRedeemSharesWithCurveAndFlashLoanBorrow(rawShares);
       setMaxAmount(formatEther(maxWeth));
     } catch (err) {
       console.error("Error calculating max withdraw:", err);

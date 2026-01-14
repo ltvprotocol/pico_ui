@@ -68,8 +68,8 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
   const {
     vaultLens,
     vaultAddress,
-    flashLoanMintHelper,
-    flashLoanRedeemHelper,
+    flashLoanMintHelperLens,
+    flashLoanRedeemHelperLens,
     flashLoanMintHelperAddress,
     flashLoanRedeemHelperAddress,
     collateralToken,
@@ -101,8 +101,8 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
   } = useFlashLoanPreview({
     sharesToProcess,
     helperType,
-    mintHelper: flashLoanMintHelper,
-    redeemHelper: flashLoanRedeemHelper,
+    mintHelperLens: flashLoanMintHelperLens,
+    redeemHelperLens: flashLoanRedeemHelperLens,
     collateralTokenDecimals,
     sharesBalance,
     sharesDecimals,

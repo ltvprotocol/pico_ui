@@ -9,7 +9,8 @@ import {
   formatUsdValue,
   wrapEthToWstEth,
   calculateEthWrapForFlashLoan,
-  processInput
+  processInput,
+  isZeroOrNan
 } from '@/utils';
 import {
   PreviewBox,
@@ -141,6 +142,8 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
 
     setShowWarning(false);
   }, [actionType]);
+
+  const isInputZeroOrNaN = isZeroOrNan(inputValue);
 
   const isInputMoreThanMax = useIsAmountMoreThanMax({
     amount: inputValue,
@@ -588,7 +591,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
           </>
         )}
 
-        {!inputValue ? null :
+        {(!inputValue || isInputZeroOrNaN) ? null :
           isInputMoreThanMax && !flashLoan.loading && !isWrapping ?
             (
               <WarningMessage
@@ -627,6 +630,7 @@ export default function FlashLoanDepositWithdrawHandler({ actionType }: FlashLoa
             invalidRebalanceMode ||
             isInputMoreThanMax ||
             isMinMoreThanMax ||
+            isInputZeroOrNaN ||
             isAmountLessThanMin
           }
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"

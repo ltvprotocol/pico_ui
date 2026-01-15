@@ -23,4 +23,5 @@ export { formatUsdValue } from './formatUsdValue';
 export { limitDecimals } from './limitDecimals';
 export { processInput } from './processInput';
 export { applyGasSlippage } from './applyGasSlippage';
+export { isZeroOrNan } from './isZeroOrNan';
 export * from './api';

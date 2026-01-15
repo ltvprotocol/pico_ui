@@ -92,20 +92,18 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
   const isWstETHVault = helperType === 'mint' && collateralToken && isWstETHAddress(collateralTokenAddress || '');
 
   const {
-    isLoadingPreview,
+    hasLoadedPreviewOnce,
     previewData,
     receive,
     provide,
     isErrorLoadingPreview,
     invalidRebalanceMode
   } = useFlashLoanPreview({
-    sharesToProcess,
     helperType,
-    mintHelper: flashLoanMintHelper,
-    redeemHelper: flashLoanRedeemHelper,
-    collateralTokenDecimals,
+    sharesToProcess,
     sharesBalance,
-    sharesDecimals,
+    mintHelper: flashLoanMintHelper,
+    redeemHelper: flashLoanRedeemHelper
   });
 
   const maxAmountUsd = useMaxAmountUsd({
@@ -508,7 +506,6 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
           <PreviewBox
             receive={receive}
             provide={provide}
-            isLoading={isLoadingPreview}
             title="Transaction Preview"
           />
         ) : null}
@@ -526,7 +523,8 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
             invalidRebalanceMode ||
             isMinMoreThanMax ||
             isInputMoreThanMax ||
-            isAmountLessThanMin
+            isAmountLessThanMin ||
+            !hasLoadedPreviewOnce
           }
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >

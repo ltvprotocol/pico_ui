@@ -96,7 +96,7 @@ export default function ActionHandler({ actionType, tokenType }: ActionHandlerPr
   const displayTokenSymbol = config.usesShares ? sharesSymbol : formatTokenSymbol(tokenSymbol);
   const displayDecimals = config.usesShares ? sharesDecimals : tokenDecimals;
 
-  const { isLoadingPreview, previewData, receive, provide } = useActionPreview({
+  const { previewData, receive, provide } = useActionPreview({
     amount,
     actionType,
     tokenType,
@@ -314,7 +314,6 @@ export default function ActionHandler({ actionType, tokenType }: ActionHandlerPr
           <PreviewBox
             receive={receive}
             provide={provide}
-            isLoading={isLoadingPreview}
             title="Transaction Preview"
           />
         ) : undefined

@@ -15,7 +15,6 @@ export default function AuctionHandler({ futureBorrowAssets, futureCollateralAss
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [isLoadingMax, setIsLoadingMax] = useState(false);
 
   const [previewData, setPreviewData] = useState<{
@@ -148,8 +147,6 @@ export default function AuctionHandler({ futureBorrowAssets, futureCollateralAss
       return;
     }
 
-    setIsLoadingPreview(true);
-
     try {
       let result: bigint;
 
@@ -169,8 +166,6 @@ export default function AuctionHandler({ futureBorrowAssets, futureCollateralAss
     } catch (err) {
       console.error('Error loading preview:', err);
       setPreviewData(null);
-    } finally {
-      setIsLoadingPreview(false);
     }
   };
 
@@ -345,7 +340,6 @@ export default function AuctionHandler({ futureBorrowAssets, futureCollateralAss
             <PreviewBox
               receive={receive}
               provide={provide}
-              isLoading={isLoadingPreview}
               title="Auction Preview"
             />
           );

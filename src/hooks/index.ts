@@ -8,3 +8,4 @@ export { useIsAmountMoreThanMax } from './useIsAmountMoreThanMax';
 export { useIsMinMoreThanMax } from './useIsMinMoreThanMax';
 export { useIsAmountLessThanMin } from './useIsAmountLessThanMin';
 export { useFlashLoanAction } from './useFlashLoanAction';
+export { useHasEnoughEthForGas } from './useHasEnoughEthForGas';

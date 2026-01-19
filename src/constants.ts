@@ -23,6 +23,7 @@ export const SEPOLIA_MORPHO_MARKET_ID = '0xffd695adfd08031184633c49ce9296a58ddbd
 export const GAS_RESERVE_ETH = 0.002;
 export const GAS_RESERVE_ETH_STR = "0.002";
 export const GAS_RESERVE_WEI = parseEther(GAS_RESERVE_ETH_STR);
+export const MIN_ETH_FOR_GAS_ACTION = parseEther("0.00031"); // ~ 1$
 
 export const SEPOLIA_CHAIN_ID = 11155111n;
 export const SEPOLIA_CHAIN_ID_HEX = '0xaa36a7'; // 11155111 in hex

@@ -213,6 +213,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   const [whitelistError, setWhitelistError] = useState<string | null>(null);
   const [lastCheckedAddressForSignature, setLastCheckedAddressForSignature] = useState<string | null>(null);
   const [hasUsedInitialWhitelistParams, setHasUsedInitialWhitelistParams] = useState<boolean>(false);
+  const [hasUsedInitialSignatureParams, setHasUsedInitialSignatureParams] = useState<boolean>(false);
   const [isRefreshingBalances, setIsRefreshingBalances] = useState<boolean>(false);
   const [borrowTokenPrice, setBorrowTokenPrice] = useState<number | null>(null);
   const [collateralTokenPrice, setCollateralTokenPrice] = useState<number | null>(null);
@@ -695,9 +696,10 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
     }
 
     // If we have params and haven't checked any address yet, use params
-    if (!lastCheckedAddressForSignature && params.hasSignature !== undefined) {
+    if (!hasUsedInitialSignatureParams && params.hasSignature !== undefined) {
       setHasSignature(params.hasSignature);
       setLastCheckedAddressForSignature(address);
+      setHasUsedInitialSignatureParams(true);
 
       // If params say user has signature, load the signature data
       if (params.hasSignature) {
@@ -720,6 +722,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
 
     // If address changed or no params were provided, check signature
     if (address !== lastCheckedAddressForSignature) {
+      setHasUsedInitialSignatureParams(true);
       const networkSignatures = (signaturesConfig as any)[currentNetwork];
       const vaultSignatures = networkSignatures?.vaults?.[vaultAddress.toLowerCase()];
       const signaturesMap = vaultSignatures?.signatures;
@@ -748,7 +751,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
 
       setLastCheckedAddressForSignature(address);
     }
-  }, [address, currentNetwork, vaultAddress, params.hasSignature, lastCheckedAddressForSignature]);
+  }, [address, currentNetwork, vaultAddress, params.hasSignature, lastCheckedAddressForSignature, hasUsedInitialSignatureParams]);
 
   // NFT Logic
   useEffect(() => {

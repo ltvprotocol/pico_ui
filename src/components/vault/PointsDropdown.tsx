@@ -170,7 +170,7 @@ export default function PointsDropdown() {
                     <div className="text-sm text-gray-700">
                       <div className="mb-2"><strong>Mint 42 NFT</strong> to unlock your permanent 42% boost and early access to future leveraged vaults.</div>
                     </div>
-                    <a href="https://42.ltv.finance" target='_blank' rel='noreferrer' className="block w-full sm:w-fit text-white bg-[#2f2fd9] rounded-[10px] px-10 py-2.5 font-semibold text-base hover:opacity-90 transition-opacity">
+                    <a href="https://42.ltv.finance" target='_blank' rel='noreferrer' className="block w-full sm:w-fit text-white bg-indigo-500 hover:bg-indigo-400 hover:text-white transition-all rounded-[10px] px-10 py-2.5 font-semibold text-base">
                       Mint Now
                     </a>
                   </div>
@@ -243,7 +243,7 @@ export default function PointsDropdown() {
                   <div className="text-sm text-gray-500 leading-[1.4]">
                     <div className="mb-2"><strong>Mint 42 NFT</strong> to unlock your permanent 42% boost and early access to future leveraged vaults.</div>
                   </div>
-                  <a href="https://42.ltv.finance" target='_blank' rel='noreferrer' className="text-white bg-[#2f2fd9] rounded-[10px] px-10 py-2.5 font-semibold text-base hover:opacity-90 transition-opacity">
+                  <a href="https://42.ltv.finance" target='_blank' rel='noreferrer' className="text-white bg-indigo-500 hover:bg-indigo-400 hover:text-white transition-all rounded-[10px] px-10 py-2.5 font-semibold text-base">
                     Mint Now
                   </a>
                 </div>

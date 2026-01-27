@@ -84,11 +84,11 @@ export default function PointsDropdown() {
   const yourRate = boostedRate.toFixed(2);
 
   const dailyEarnings = useMemo(() => {
-    if (!sharesBalance) return '0.00';
+    if (!sharesBalance || !userPoints) return '0.00';
     const balance = parseFloat(sharesBalance);
     if (isNaN(balance)) return '0.00';
     return (balance * boostedRate).toFixed(2);
-  }, [sharesBalance, boostedRate]);
+  }, [sharesBalance, boostedRate, userPoints]);
 
   // Display Logic
   const displayedNfts = userNfts.slice(0, 3);

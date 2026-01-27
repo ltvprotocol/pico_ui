@@ -16,6 +16,8 @@ import NftMintBanner from '@/components/vault/NftMintBanner';
 import FlashLoanDepositWithdraw from '@/components/vault/FlashLoanDepositWithdraw';
 import FlashLoanDepositWithdrawForm from '@/components/vault/FlashLoanDepositWithdrawForm';
 import ActionsDropdown from '@/components/vault/ActionsDropdown';
+import VaultInfoDropdown from '@/components/vault/VaultInfoDropdown';
+import PointsDropdown from '@/components/vault/PointsDropdown';
 
 function VaultContent() {
   const {
@@ -69,6 +71,12 @@ function VaultContent() {
             </div>
           }
         </div>
+      </div>
+      <div className="mb-4">
+        <PointsDropdown />
+      </div>
+      <div className="mb-4">
+        <VaultInfoDropdown />
       </div>
       {hasFlashLoanHelper && (
         <>

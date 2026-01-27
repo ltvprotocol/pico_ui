@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useVaultContext, useAppContext } from '@/contexts';
-import { fetchUserPoints, fetchIsLiquidityProvider, getUser42Nfts } from '@/utils';
+import { fetchUserPoints, fetchIsLiquidityProvider, getUser42Nfts, formatPoints } from '@/utils';
 
 interface UserNft {
   id: string;
@@ -152,7 +152,7 @@ export default function PointsDropdown() {
               <div className="text-sm text-gray-500 mb-1">Your Points</div>
               <div className="text-[2.5rem] font-normal text-gray-900 mb-0.5 leading-none">
                 {!isLoadingData && (
-                  userPoints !== null ? new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(userPoints) : '0.00'
+                  userPoints !== null ? formatPoints(userPoints) : '0.00'
                 )}
               </div>
               <div className="text-[0.95rem] text-gray-500 mb-4">

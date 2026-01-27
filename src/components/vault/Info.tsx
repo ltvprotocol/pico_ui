@@ -8,7 +8,8 @@ import {
   formatTokenSymbol,
   formatApy,
   ApyPeriod,
-  formatUsdValue
+  formatUsdValue,
+  formatPoints
 } from '@/utils';
 import { NumberDisplay, TransitionLoader, SymbolWithTooltip } from '@/components/ui';
 
@@ -97,24 +98,6 @@ export default function Info() {
       );
     }
   }, [pointsRate, hasNft]);
-
-  function formatPointsApprox(
-    value: number,
-    decimals = 24,
-    fractionDigits = 2
-  ): string {
-    if (!Number.isFinite(value)) return '0';
-
-    const human = value / 10 ** decimals;
-    const factor = 10 ** fractionDigits;
-
-    const floored = Math.floor(human * factor) / factor;
-
-    return new Intl.NumberFormat('en-US', {
-      minimumFractionDigits: fractionDigits,
-      maximumFractionDigits: fractionDigits,
-    }).format(floored);
-  }
 
   const [positionInBorrowTokens, setPositionInBorrowTokens] = useState<string | null>(null);
   const [isLoadingPosition, setIsLoadingPosition] = useState<boolean>(false);
@@ -279,12 +262,12 @@ export default function Info() {
               <TransitionLoader isLoading={isLoadingPointsData}>
                 {isLp ? (
                   <span className="text-gray-900">
-                    {`private LP ${(userPoints !== null && userPoints > 0) ? 
-                      `+ ${formatPointsApprox(userPoints)} Points` : ''}`}
+                    {`private LP ${(userPoints !== null && userPoints > 0) ?
+                      `+ ${formatPoints(userPoints)} Points` : ''}`}
                   </span>
                 ) : (
                   <span className="text-gray-900">
-                    {userPoints !== null ? `${formatPointsApprox(userPoints)} Points` : '0 Points'}
+                    {userPoints !== null ? `${formatPoints(userPoints)} Points` : '0 Points'}
                   </span>
                 )}
               </TransitionLoader>

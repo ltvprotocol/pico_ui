@@ -11,6 +11,7 @@ export default function VaultInfoDropdown() {
     apyLoadFailed,
     tvl, // Leveraged TVL
     totalAssets, // Deposited TVL
+    maxTotalAssetsInUnderlying, // Max capacity
     collateralTokenPrice,
     borrowTokenPrice: tokenPrice,
     collateralTokenSymbol,
@@ -36,7 +37,6 @@ export default function VaultInfoDropdown() {
       const amount = parseFloat(tvl);
       const usd = amount * collateralTokenPrice;
       const collateralAmount = amount;
-      // Estimate borrow token amount equivalent: (amount * collPrice) / borrowPrice
       const borrowAmount = (amount * collateralTokenPrice) / tokenPrice;
 
       return {
@@ -65,7 +65,6 @@ export default function VaultInfoDropdown() {
       const amount = parseFloat(totalAssets);
       const usd = amount * tokenPrice;
       const borrowAmount = amount;
-      // Estimate collateral token amount equivalent: (amount * borrowPrice) / collPrice
       const collateralAmount = (amount * tokenPrice) / collateralTokenPrice;
 
       return {
@@ -87,6 +86,70 @@ export default function VaultInfoDropdown() {
       isReal: false
     };
   }, [isMainnet, totalAssets, tokenPrice, collateralTokenPrice, collateralTokenSymbol, borrowTokenSymbol]);
+
+  // Capacity Calculations
+  const capacityData = useMemo(() => {
+    if (isMainnet && totalAssets && maxTotalAssetsInUnderlying && tokenPrice && collateralTokenPrice) {
+      const deposited = parseFloat(totalAssets);
+      const max = parseFloat(maxTotalAssetsInUnderlying);
+
+      if (max <= 0) {
+        return {
+          percentage: 0,
+          depositedUsd: "0",
+          maxUsd: "0",
+          depositedBorrow: "0",
+          maxBorrow: "0",
+          depositedCollateral: "0",
+          maxCollateral: "0",
+          borrowSymbol: formatTokenSymbol(borrowTokenSymbol || 'ETH'),
+          collateralSymbol: formatTokenSymbol(collateralTokenSymbol || 'wstETH'),
+          isReal: true
+        };
+      }
+
+      const percentage = Math.min((deposited / max) * 100, 100);
+      const depositedUsd = deposited * tokenPrice;
+      const maxUsd = max * tokenPrice;
+      const depositedCollateral = (deposited * tokenPrice) / collateralTokenPrice;
+      const maxCollateral = (max * tokenPrice) / collateralTokenPrice;
+
+      let percentageDisplay: string;
+      if (percentage < 0.01 && percentage > 0) {
+        percentageDisplay = percentage.toFixed(6).replace(/\.?0+$/, '');
+      } else {
+        percentageDisplay = percentage.toFixed(2);
+      }
+
+      return {
+        percentage,
+        percentageDisplay,
+        depositedUsd: Math.floor(depositedUsd).toLocaleString('en-US'),
+        maxUsd: Math.floor(maxUsd).toLocaleString('en-US'),
+        depositedBorrow: Math.floor(deposited).toLocaleString('en-US'),
+        maxBorrow: Math.floor(max).toLocaleString('en-US'),
+        depositedCollateral: Math.floor(depositedCollateral).toLocaleString('en-US'),
+        maxCollateral: Math.floor(maxCollateral).toLocaleString('en-US'),
+        borrowSymbol: formatTokenSymbol(borrowTokenSymbol || 'ETH'),
+        collateralSymbol: formatTokenSymbol(collateralTokenSymbol || 'wstETH'),
+        isReal: true
+      };
+    }
+
+    return {
+      percentage: 0,
+      percentageDisplay: "0.00",
+      depositedUsd: "Loading...",
+      maxUsd: "Loading...",
+      depositedBorrow: "Loading...",
+      maxBorrow: "Loading...",
+      depositedCollateral: "Loading...",
+      maxCollateral: "Loading...",
+      borrowSymbol: "ETH",
+      collateralSymbol: "wstETH",
+      isReal: false
+    };
+  }, [isMainnet, totalAssets, maxTotalAssetsInUnderlying, tokenPrice, collateralTokenPrice, borrowTokenSymbol, collateralTokenSymbol]);
 
   return (
     <div className="relative rounded-lg bg-white mb-4 shadow-sm border border-gray-100">
@@ -192,23 +255,42 @@ export default function VaultInfoDropdown() {
         <div className="mb-6">
           <div className="text-[0.85rem] text-gray-900 mb-1 font-medium">What is vault capacity and how it works?</div>
           <p className="text-sm text-gray-700 block mb-2">
-            Vault capacity is the maximum amount of ETH that can be deposited into a specific vault, measured directly by the Deposited TVL. This limit is set in the underlying asset (ETH) and can be adjusted by the protocol to ensure optimal balance and security for the vault’s leveraged position.
+            Vault capacity is the maximum amount of ETH that can be deposited into a specific vault, measured directly by the Deposited TVL. This limit is set in the underlying asset (ETH) and can be adjusted by the protocol to ensure optimal balance and security for the vault's leveraged position.
           </p>
         </div>
         {/* Capacity Stats */}
         <div className="flex flex-col justify-between mb-8">
           <div className='flex flex-col md:flex-row-reverse justify-between md:items-end'>
-            <div className="text-lg text-gray-500 font-normal mb-4">Capacity: 82%</div>
+            <div className="text-lg text-gray-500 font-normal mb-4">
+              <TransitionLoader isLoading={isMainnet && !capacityData.isReal}>
+                Capacity: {capacityData.percentageDisplay}%
+              </TransitionLoader>
+            </div>
 
             <div className="text-left flex flex-col mb-4">
-              <div className="text-2xl md:text-3xl text-gray-900 font-normal">4,152,295 / 5,195,592 <span className="text-2xl text-gray-500 uppercase">$</span></div>
-              <div className="text-sm text-gray-500 mt-0.5">≈ 1,800 / 2,000 ETH</div>
-              <div className="text-sm text-gray-500 mt-0.5">≈ 2,650 / 3,120 wstETH</div>
+              <div className="text-2xl md:text-3xl text-gray-900 font-normal">
+                <TransitionLoader isLoading={isMainnet && !capacityData.isReal}>
+                  {capacityData.depositedUsd} / {capacityData.maxUsd} <span className="text-2xl text-gray-500 uppercase">$</span>
+                </TransitionLoader>
+              </div>
+              <div className="text-sm text-gray-500 mt-0.5">
+                <TransitionLoader isLoading={isMainnet && !capacityData.isReal}>
+                  ≈ {capacityData.depositedBorrow} / {capacityData.maxBorrow} {capacityData.borrowSymbol}
+                </TransitionLoader>
+              </div>
+              <div className="text-sm text-gray-500 mt-0.5">
+                <TransitionLoader isLoading={isMainnet && !capacityData.isReal}>
+                  ≈ {capacityData.depositedCollateral} / {capacityData.maxCollateral} {capacityData.collateralSymbol}
+                </TransitionLoader>
+              </div>
             </div>
           </div>
           <div className="flex flex-col flex-grow w-full">
             <div className="h-3 bg-gray-200 rounded-full w-full overflow-hidden">
-              <div className="h-full rounded-full bg-[#3434E3] w-[82%]"></div>
+              <div
+                className="h-full rounded-full bg-[#3434E3] transition-all duration-300"
+                style={{ width: `${capacityData.percentage}%` }}
+              ></div>
             </div>
           </div>
         </div>

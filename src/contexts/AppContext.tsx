@@ -93,20 +93,20 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
   const getNetworkFromUrl = useCallback(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const networkParam = urlParams.get('network');
-    
+
     if (!networkParam) {
       setUnrecognizedNetworkParam(false);
       return null;
     }
-    
+
     const recognizedNetwork = URL_PARAM_TO_CHAIN_ID[networkParam as keyof typeof URL_PARAM_TO_CHAIN_ID];
-    
+
     if (!recognizedNetwork) {
       console.warn(`Unrecognized network parameter: "${networkParam}".`);
       setUnrecognizedNetworkParam(true);
       return null;
     }
-    
+
     setUnrecognizedNetworkParam(false);
     return recognizedNetwork;
   }, []);
@@ -207,7 +207,7 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     const urlParam = Object.keys(URL_PARAM_TO_CHAIN_ID).find(
       key => URL_PARAM_TO_CHAIN_ID[key as keyof typeof URL_PARAM_TO_CHAIN_ID] === chainId
     );
-    
+
     if (urlParam) {
       const url = new URL(window.location.href);
       url.searchParams.set('network', urlParam);
@@ -242,13 +242,13 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const autoSwitchToUrlNetwork = async () => {
       if (!isConnected || !provider) return;
-      
+
       const urlNetwork = getNetworkFromUrl();
       if (!urlNetwork) return;
-      
+
       const currentChainId = chainId?.toString();
       if (currentChainId === urlNetwork) return;
-      
+
       try {
         await switchToNetwork(urlNetwork);
       } catch (error) {
@@ -273,7 +273,7 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem('connectedWallet');
   }, []);
 
-  const setupProviderConnection = async (eip1193Provider: Eip1193Provider) => {
+  const setupProviderConnection = useCallback(async (eip1193Provider: Eip1193Provider) => {
     if (!eip1193Provider) {
       disconnectWallet();
       return;
@@ -299,11 +299,24 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
       setChainId(newChainId);
       setRawProvider(eip1193Provider);
 
+      // Update URL to reflect the connected network
+      const networkConfig = (NETWORK_CONFIGS as any)[chainIdString];
+      if (networkConfig) {
+        const urlParam = Object.keys(URL_PARAM_TO_CHAIN_ID).find(
+          key => URL_PARAM_TO_CHAIN_ID[key as keyof typeof URL_PARAM_TO_CHAIN_ID] === chainIdString
+        );
+
+        if (urlParam) {
+          const url = new URL(window.location.href);
+          url.searchParams.set('network', urlParam);
+          window.history.pushState({}, '', url.toString());
+        }
+      }
+
       // Update publicProvider to match the wallet's network
       // Only do this if there's no URL network param, or if it matches
       const urlNetwork = getNetworkFromUrl();
       if (!urlNetwork || urlNetwork === chainIdString) {
-        const networkConfig = (NETWORK_CONFIGS as any)[chainIdString];
         if (networkConfig) {
           const newPublicProvider = new JsonRpcProvider(networkConfig.rpcUrls[0]);
           setPublicProvider(newPublicProvider);
@@ -314,7 +327,7 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
       console.error("Error in setupProviderConnection:", err);
       disconnectWallet();
     }
-  };
+  }, [disconnectWallet, getNetworkFromUrl]);
 
   const connectWallet = useCallback(async (wallet: DiscoveredWallet, expectedAddress?: string) => {
     setConnectingWalletId(wallet.info.uuid);
@@ -324,30 +337,15 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
       await wallet.provider.request({ method: 'eth_requestAccounts' });
       await setupProviderConnection(wallet.provider);
 
-      const tempProvider = new BrowserProvider(wallet.provider);
-      const tempSigner = await tempProvider.getSigner();
-      const currentAddress = await tempSigner.getAddress();
-      
+      // Get the current address from the wallet provider (no duplicate provider creation)
+      const accounts = await wallet.provider.request({ method: 'eth_accounts' }) as string[];
+      const currentAddress = accounts[0];
+
       if (expectedAddress && expectedAddress.toLowerCase() !== currentAddress.toLowerCase()) {
         console.warn(`Address mismatch: expected ${expectedAddress}, but provider returned ${currentAddress}. Update UI to reflect provider state.`);
       }
 
-      // Update URL to reflect the connected network
-      const network = await tempProvider.getNetwork();
-      const chainIdString = network.chainId.toString();
-      const networkConfig = (NETWORK_CONFIGS as any)[chainIdString];
-      if (networkConfig) {
-        const urlParam = Object.keys(URL_PARAM_TO_CHAIN_ID).find(
-          key => URL_PARAM_TO_CHAIN_ID[key as keyof typeof URL_PARAM_TO_CHAIN_ID] === chainIdString
-        );
-        
-        if (urlParam) {
-          const url = new URL(window.location.href);
-          url.searchParams.set('network', urlParam);
-          window.history.pushState({}, '', url.toString());
-        }
-      }
-
+      // URL is already updated by setupProviderConnection
       localStorage.setItem('connectedWallet', JSON.stringify({
         name: wallet.info.name,
         address: currentAddress
@@ -365,7 +363,7 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
 
       disconnectWallet();
     }
-  }, [disconnectWallet]);
+  }, [disconnectWallet, setupProviderConnection]);
 
   useEffect(() => {
     const reconnect = async () => {
@@ -413,20 +411,20 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     const eip1193Provider = rawProvider as unknown as {
       on: (event: string, listener: (...args: any[]) => void) => void;
       removeListener?: (event: string, listener: (...args: any[]) => void) => void;
-    }; 
+    };
 
-    if (eip1193Provider && typeof eip1193Provider.on === 'function') { 
+    if (eip1193Provider && typeof eip1193Provider.on === 'function') {
       const onAccountsChangedHandler = async (accounts: string[]) => {
         if (accounts.length > 0 && provider) {
-          const signer = await provider.getSigner();
-          const addr = await signer.getAddress();
-          setAddress(addr);
+          // setupProviderConnection will update the address atomically with all other state
           await setupProviderConnection(rawProvider);
 
           // Update local storage to keep it in sync with the actual connected address
           const saved = localStorage.getItem('connectedWallet');
           if (saved) {
             try {
+              const signer = await provider.getSigner();
+              const addr = await signer.getAddress();
               const parsed = JSON.parse(saved);
               localStorage.setItem('connectedWallet', JSON.stringify({
                 ...parsed,
@@ -453,7 +451,7 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
           const urlParam = Object.keys(URL_PARAM_TO_CHAIN_ID).find(
             key => URL_PARAM_TO_CHAIN_ID[key as keyof typeof URL_PARAM_TO_CHAIN_ID] === chainIdString
           );
-          
+
           if (urlParam) {
             const url = new URL(window.location.href);
             url.searchParams.set('network', urlParam);
@@ -546,7 +544,7 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       const signature = await signer.signMessage(termsText);
-      
+
       const result = await submitTermsOfUseSignature(address, signature, currentNetwork);
       if (result && result.success) {
         setIsTermsSigned(true);

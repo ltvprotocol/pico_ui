@@ -89,6 +89,7 @@ interface VaultContextType {
   vaultMaxMintCollateral: string;
   vaultMaxWithdrawCollateral: string;
   totalAssets: string;
+  maxTotalAssetsInUnderlying: string;
   tvl: string | null;
   // User max values
   maxDeposit: string;
@@ -185,6 +186,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   const [vaultMaxMintCollateral, setVaultMaxMintCollateral] = useState('');
   const [vaultMaxWithdrawCollateral, setVaultMaxWithdrawCollateral] = useState('');
   const [totalAssets, setTotalAssets] = useState('');
+  const [maxTotalAssetsInUnderlying, setMaxTotalAssetsInUnderlying] = useState('');
   const [tvl, setTvl] = useState<string | null>(null);
   const hasLoadedTvlOnce = useRef<boolean>(false);
 
@@ -402,7 +404,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
       const [
         rawVaultMaxDeposit, rawVaultMaxRedeem, rawVaultMaxMint, rawVaultMaxWithdraw,
         rawVaultMaxDepositCollateral, rawVaultMaxRedeemCollateral, rawVaultMaxMintCollateral, rawVaultMaxWithdrawCollateral,
-        rawMaxLowLevelRebalanceShares, rawTotalAssets
+        rawMaxLowLevelRebalanceShares, rawTotalAssets, rawMaxTotalAssetsInUnderlying
       ] = await Promise.all([
         vaultLens.maxDeposit(address),
         vaultLens.maxRedeem(address),
@@ -413,7 +415,8 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         vaultLens.maxMintCollateral(address),
         vaultLens.maxWithdrawCollateral(address),
         vaultLens.maxLowLevelRebalanceShares(),
-        vaultLens["totalAssets()"]()
+        vaultLens["totalAssets()"](),
+        vaultLens.maxTotalAssetsInUnderlying()
       ]);
 
       setVaultMaxDeposit(formatUnits(rawVaultMaxDeposit, borrowTokenDecimals));
@@ -426,6 +429,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
       setVaultMaxWithdrawCollateral(formatUnits(rawVaultMaxWithdrawCollateral, collateralTokenDecimals));
       setMaxLowLevelRebalanceShares(formatUnits(rawMaxLowLevelRebalanceShares, sharesDecimals));
       setTotalAssets(formatUnits(rawTotalAssets, borrowTokenDecimals));
+      setMaxTotalAssetsInUnderlying(formatUnits(rawMaxTotalAssetsInUnderlying, borrowTokenDecimals));
     } catch (err) {
       console.error('Error loading vault limits:', err);
     }
@@ -1039,6 +1043,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         vaultMaxMintCollateral,
         vaultMaxWithdrawCollateral,
         totalAssets,
+        maxTotalAssetsInUnderlying,
         tvl,
         maxDeposit,
         maxRedeem,

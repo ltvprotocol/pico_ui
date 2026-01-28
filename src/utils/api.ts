@@ -49,7 +49,7 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout 
 export async function fetchApy(
   vaultAddress: string,
   chainId: string | null
-) : Promise<ApyData | null> {
+): Promise<ApyData | null> {
   try {
     const apiUrl = APY_API_URLS[chainId || DEFAULT_CHAIN_ID_STRING];
 
@@ -74,7 +74,7 @@ export async function fetchApy(
     if (!data || typeof data !== 'object') {
       throw new Error(`Server returned non-object response: ${typeof data}`);
     }
-    
+
     const rawApy30d = data['30d_apy'];
     const rawApy7d = data['7d_apy'];
 
@@ -258,5 +258,78 @@ export function refreshTokenHolders(chainId: string | null): void {
       .catch(() => { }); // Silently ignore errors
   } catch {
     // Silently ignore errors
+  }
+}
+
+interface BlockscoutNftItem {
+  id: string;
+  token: {
+    address_hash: string;
+  };
+}
+
+interface BlockscoutNftResponse {
+  items: BlockscoutNftItem[];
+  next_page_params: any;
+}
+
+async function fetchNftsFromBlockscout(address: string): Promise<string[]> {
+  const BLOCKSCOUT_API_URL = `https://eth.blockscout.com/api/v2/addresses/${address}/nft?type=ERC-721`;
+  const CONTRACT_ADDRESS = '0xf478f017cfe92aaf83b2963a073fabf5a5cd0244'; // Lowercase for explicit check
+
+  try {
+    const response = await fetchWithTimeout(BLOCKSCOUT_API_URL, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Blockscout API error: ${response.status}`);
+    }
+
+    const result: BlockscoutNftResponse = await response.json();
+
+    if (!result.items || !Array.isArray(result.items)) {
+      return [];
+    }
+
+    return result.items
+      .filter((item) => item.token && item.token.address_hash && item.token.address_hash.toLowerCase() === CONTRACT_ADDRESS)
+      .map((item) => item.id);
+  } catch (err) {
+    console.error('Error fetching user NFTs from Blockscout:', err);
+    return [];
+  }
+}
+
+interface NftOwnersResponse {
+  owners: {
+    [address: string]: number[];
+  };
+}
+
+export async function getUser42Nfts(address: string): Promise<string[]> {
+  const apiUrl = POINTS_API_URLS[DEFAULT_CHAIN_ID_STRING];
+  const addressLower = address.toLowerCase();
+
+  try {
+    const response = await fetchWithTimeout(`${apiUrl}/nft-owners`);
+
+    if (!response.ok) {
+      throw new Error(`Primary API error: ${response.status}`);
+    }
+
+    const data: NftOwnersResponse = await response.json();
+    const ownerIds = data.owners[addressLower];
+
+    if (ownerIds && Array.isArray(ownerIds)) {
+      return ownerIds.map(id => id.toString());
+    }
+
+    return [];
+
+  } catch (err) {
+    console.warn('Primary NFT API failed, falling back to Blockscout:', err);
+    return fetchNftsFromBlockscout(address);
   }
 }

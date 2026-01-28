@@ -24,3 +24,5 @@ export { limitDecimals } from './limitDecimals';
 export { processInput } from './processInput';
 export { applyGasSlippage } from './applyGasSlippage';
 export * from './api';
+export { getUser42Nfts } from './api';
+export { formatPoints } from './formatPoints';

@@ -10,7 +10,7 @@ interface UserNft {
 export default function PointsDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const { isMainnet, address } = useAppContext();
-  const { sharesBalance, pointsRate } = useVaultContext();
+  const { sharesBalance, pointsRate, hasNft } = useVaultContext();
 
   const [userPoints, setUserPoints] = useState<number | null>(null);
   const [isLp, setIsLp] = useState<boolean>(false);
@@ -74,7 +74,9 @@ export default function PointsDropdown() {
   }, [isMainnet, address]);
 
   // Derived Values
-  const hasNft = userNfts.length > 0;
+  // hasNft comes from VaultContext (uses contract balanceOf) - source of truth for ownership
+  // hasNftIds means we successfully fetched the IDs from API
+  const hasNftIds = userNfts.length > 0;
   const boostMultiplier = hasNft ? '1.42x' : '1.0x';
   const boostDescription = hasNft ? '(42% boost with NFTs)' : '(mint 42 NFT for 42% boost)';
 
@@ -174,8 +176,8 @@ export default function PointsDropdown() {
                       Mint Now
                     </a>
                   </div>
-                ) : (
-                  // Has NFT(s) State
+                ) : hasNftIds ? (
+                  // Has NFT(s) with IDs State
                   <>
                     <div className={`flex ${userNfts.length > 1 ? '-space-x-12' : ''}`}>
                       {displayedNfts.map((nft, index) => {
@@ -213,6 +215,22 @@ export default function PointsDropdown() {
                       </div>
                     </div>
                   </>
+                ) : (
+                  // Has NFT but couldn't fetch IDs (fallback display)
+                  <>
+                    <div className="w-20 h-20 min-w-[5rem] rounded-lg flex justify-center items-center text-white font-semibold text-2xl border-2 border-white shadow-sm bg-black">
+                      42
+                    </div>
+
+                    <div className="mb-1">
+                      <div className="text-[0.85rem] mb-1">
+                        <div className='text-gray-900 font-medium'>You have 42 NFT</div>
+                      </div>
+                      <div className='text-sm text-gray-700 font-normal'>
+                        This NFT grants you a permanent 42% points boost and early access to all future leveraged vaults.
+                      </div>
+                    </div>
+                  </>
                 )
               )}
             </div>
@@ -247,8 +265,8 @@ export default function PointsDropdown() {
                     Mint Now
                   </a>
                 </div>
-              ) : (
-                // Has NFT(s) State
+              ) : hasNftIds ? (
+                // Has NFT(s) with IDs State
                 <>
                   <div className={`flex ${userNfts.length > 1 ? '-space-x-12' : ''}`}>
                     {displayedNfts.map((nft, index) => {
@@ -283,6 +301,22 @@ export default function PointsDropdown() {
                     </div>
                     <div className='text-sm text-gray-700 font-normal'>
                       This {userNfts.length > 1 ? 'NFTs grants' : 'NFT grants'} you a permanent 42% points boost and early access to all future leveraged vaults.
+                    </div>
+                  </div>
+                </>
+              ) : (
+                // Has NFT but couldn't fetch IDs (fallback display)
+                <>
+                  <div className="w-20 h-20 min-w-[5rem] rounded-lg flex justify-center items-center text-white font-semibold text-2xl border-2 border-white shadow-sm bg-black">
+                    42
+                  </div>
+
+                  <div className='mb-1'>
+                    <div className="text-[0.85rem] mb-1">
+                      <div className='text-gray-900 font-medium'>You have 42 NFT</div>
+                    </div>
+                    <div className='text-sm text-gray-700 font-normal'>
+                      This NFT grants you a permanent 42% points boost and early access to all future leveraged vaults.
                     </div>
                   </div>
                 </>

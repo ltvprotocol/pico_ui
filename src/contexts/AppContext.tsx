@@ -329,7 +329,7 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
       const currentAddress = await tempSigner.getAddress();
       
       if (expectedAddress && expectedAddress.toLowerCase() !== currentAddress.toLowerCase()) {
-        console.warn("Address mismatch, user selected another account");
+        console.warn(`Address mismatch: expected ${expectedAddress}, but provider returned ${currentAddress}. Update UI to reflect provider state.`);
       }
 
       // Update URL to reflect the connected network
@@ -422,6 +422,20 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
           const addr = await signer.getAddress();
           setAddress(addr);
           await setupProviderConnection(rawProvider);
+
+          // Update local storage to keep it in sync with the actual connected address
+          const saved = localStorage.getItem('connectedWallet');
+          if (saved) {
+            try {
+              const parsed = JSON.parse(saved);
+              localStorage.setItem('connectedWallet', JSON.stringify({
+                ...parsed,
+                address: addr
+              }));
+            } catch (err) {
+              console.error('Failed to update wallet in local storage', err);
+            }
+          }
         } else {
           disconnectWallet();
         }

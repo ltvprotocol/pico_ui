@@ -348,7 +348,7 @@ export default function Info() {
         <div className="font-medium text-gray-700 mb-2">Description</div>
         <p className="text-gray-700 max-w-[380px]">
           {isVaultDeleveraged
-            ? "Vault is deprecated"
+            ? "Vault is deprecated. Please withdraw your funds."
             : (description || "No description available for this vault.")}
         </p>
       </div>

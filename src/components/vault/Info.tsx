@@ -348,7 +348,7 @@ export default function Info() {
         <div className="font-medium text-gray-700 mb-2">Description</div>
         <p className="text-gray-700 max-w-[380px]">
           {isVaultDeleveraged
-            ? "Vault is deprecated. Please withdraw your funds."
+            ? "LTV Pilot Vault (wstETH/ETH on Aave v3) has been deprecated. The Deleverage & Withdraw function has been executed. Please withdraw your funds. Withdrawals are currently available exclusively in wstETH. Deposits have been disabled. The vault is currently being unwound and will distribute assets solely in wstETH."
             : (description || "No description available for this vault.")}
         </p>
       </div>

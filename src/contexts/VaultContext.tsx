@@ -127,6 +127,8 @@ interface VaultContextType {
   hasNft: boolean;
   isWhitelistedToMintNft: boolean;
   nftTotalSupply: number;
+  // Deleveraged state
+  isVaultDeleveraged: boolean | null;
 };
 
 interface Params {
@@ -225,6 +227,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   const [hasNft, setHasNft] = useState<boolean>(false);
   const [isWhitelistedToMintNft, setIsWhitelistedToMintNft] = useState<boolean>(false);
   const [nftTotalSupply, setNftTotalSupply] = useState<number>(0);
+  const [isVaultDeleveraged, setIsVaultDeleveraged] = useState<boolean | null>(null);
 
   const { publicProvider, signer, isConnected, address, currentNetwork, isMainnet } = useAppContext();
 
@@ -689,6 +692,17 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
     enabled: isMainnet && (!!borrowTokenSymbol || !!collateralTokenSymbol)
   });
 
+  const checkIsVaultDeleveraged = useCallback(async () => {
+    if (!vaultLens) return;
+    try {
+      const deleveraged = await vaultLens.isVaultDeleveraged();
+      setIsVaultDeleveraged(deleveraged);
+    } catch (err) {
+      console.error('Error checking vault deleveraged status:', err);
+      setIsVaultDeleveraged(null);
+    }
+  }, [vaultLens]);
+
   // Check whitelist activation status
   const checkWhitelistActivation = useCallback(async () => {
     if (!vaultLens || params.isWhitelistActivated !== null) {
@@ -883,6 +897,12 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   }, [address, currentNetwork, vaultLens, checkWhitelistActivation]);
 
   useEffect(() => {
+    if (vaultLens) {
+      checkIsVaultDeleveraged();
+    }
+  }, [vaultLens, checkIsVaultDeleveraged]);
+
+  useEffect(() => {
     checkWhitelistStatus();
   }, [address, currentNetwork, checkWhitelistStatus]);
 
@@ -1055,7 +1075,8 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         collateralTokenPrice,
         hasNft,
         isWhitelistedToMintNft,
-        nftTotalSupply
+        nftTotalSupply,
+        isVaultDeleveraged
       }}
     >
       {children}

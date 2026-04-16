@@ -23,7 +23,8 @@ function VaultContent() {
   const {
     vaultExists, vaultConfig,
     isWhitelistActivated, isWhitelisted,
-    flashLoanMintHelperAddress, flashLoanRedeemHelperAddress
+    flashLoanMintHelperAddress, flashLoanRedeemHelperAddress,
+    isVaultDeleveraged
   } = useVaultContext();
 
   const { unrecognizedNetworkParam, isTermsBlockingUI, isMainnet } = useAppContext();
@@ -46,6 +47,7 @@ function VaultContent() {
   // Block UI when terms status is unknown, not signed, or fetch failed
   const isUIDisabled = isWhitelistDisabled || isTermsBlockingUI;
   const isPartiallyDisabled = vaultConfig?.partiallyDisabled === true;
+  const isDeleveraged = isVaultDeleveraged === true;
 
   const partiallyDisabledMode = isUIDisabled || isPartiallyDisabled;
 
@@ -74,42 +76,46 @@ function VaultContent() {
       </div>
       {isMainnet &&
         <>
-          <div className={`mb-4 ${isUIDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
-            <PointsDropdown />
-          </div>
-          <div className={`mb-4 ${isUIDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
-            <VaultInfoDropdown />
-          </div>
+          {!isDeleveraged && (
+            <>
+              <div className={`mb-4 ${isUIDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
+                <PointsDropdown />
+              </div>
+              <div className={`mb-4 ${isUIDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
+                <VaultInfoDropdown />
+              </div>
+            </>
+          )}
         </>
       }
       {hasFlashLoanHelper && (
         <>
-          <div className={`mb-4 ${isUIDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
+          <div className={`mb-4 ${isUIDisabled || isDeleveraged ? 'opacity-50 pointer-events-none' : ''}`}>
             <FlashLoanDepositWithdraw />
           </div>
-          <div className={`mb-4 ${isUIDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
+          <div className={`mb-4 ${isUIDisabled || isDeleveraged ? 'opacity-50 pointer-events-none' : ''}`}>
             <FlashLoanHelper />
           </div>
         </>
       )}
       {isMainnet &&
         <>
-          <div className={`mb-4 ${isUIDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
+          <div className={`mb-4 ${isUIDisabled || isDeleveraged ? 'opacity-50 pointer-events-none' : ''}`}>
             <MoreInfo />
           </div>
-          <div className={`mb-4 ${partiallyDisabledMode ? 'opacity-50 pointer-events-none' : ''}`}>
+          <div className={`mb-4 ${partiallyDisabledMode || isDeleveraged ? 'opacity-50 pointer-events-none' : ''}`}>
             <ActionsDropdown />
           </div>
         </>
       }
-      <div className={`mb-4 ${partiallyDisabledMode ? 'opacity-50 pointer-events-none' : ''}`}>
+      <div className={`mb-4 ${partiallyDisabledMode || isDeleveraged ? 'opacity-50 pointer-events-none' : ''}`}>
         <LowLevelRebalance />
       </div>
-      <div className={`${partiallyDisabledMode ? 'opacity-50 pointer-events-none' : ''}`}>
+      <div className={`${partiallyDisabledMode || isDeleveraged ? 'opacity-50 pointer-events-none' : ''}`}>
         <Auction />
       </div>
       {!isMainnet &&
-        <div className={`mt-4 ${isUIDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
+        <div className={`mt-4 ${isUIDisabled || isDeleveraged ? 'opacity-50 pointer-events-none' : ''}`}>
           <MoreInfo />
         </div>
       }

@@ -11,7 +11,9 @@ import {
   calculateEthWrapForFlashLoan,
   processInput,
   isShowWrapPreview,
-  isZeroOrNan
+  isZeroOrNan,
+  isUserRejected,
+  applyGasSlippage
 } from '@/utils';
 import {
   PreviewBox,
@@ -71,10 +73,17 @@ export default function FlashLoanDepositWithdrawHandler({
   const [minWithdraw, setMinWithdraw] = useState('');
   const [showWarning, setShowWarning] = useState(false);
 
+  // Deprecated redeem state
+  const [deprecatedPreviewCollateral, setDeprecatedPreviewCollateral] = useState<bigint | null>(null);
+  const [deprecatedLoading, setDeprecatedLoading] = useState(false);
+  const [deprecatedError, setDeprecatedError] = useState<string>('');
+  const [deprecatedSuccess, setDeprecatedSuccess] = useState<string>('');
+
   const { address, provider, signer, publicProvider, currentNetwork } = useAppContext();
 
   const {
     vaultLens,
+    vault,
     vaultAddress,
     flashLoanMintHelperLens,
     flashLoanRedeemHelperLens,
@@ -89,9 +98,12 @@ export default function FlashLoanDepositWithdrawHandler({
     collateralTokenBalance,
     ethBalance,
     refreshBalances,
+    refreshVaultLimits,
     borrowTokenSymbol,
     sharesSymbol,
-    borrowTokenPrice
+    borrowTokenPrice,
+    isVaultDeleveraged,
+    vaultMaxRedeemCollateral
   } = useVaultContext();
 
   const helperAddress = actionType === 'deposit' ? flashLoanMintHelperAddress : flashLoanRedeemHelperAddress;
@@ -279,9 +291,46 @@ export default function FlashLoanDepositWithdrawHandler({
 
   // Calculate estimated shares based on input amount
   useEffect(() => {
+    if (isVaultDeleveraged) return;
     const timeoutId = setTimeout(calculateShares, 500);
     return () => clearTimeout(timeoutId);
-  }, [inputValue, actionType, vaultLens, flashLoanRedeemHelperLens, publicProvider, isMaxWithdraw]);
+  }, [inputValue, actionType, vaultLens, flashLoanRedeemHelperLens, publicProvider, isMaxWithdraw, isVaultDeleveraged]);
+
+  // Deprecated redeem preview
+  useEffect(() => {
+    if (!isVaultDeleveraged || !vaultLens) return;
+    if (isZeroOrNan(inputValue)) {
+      setDeprecatedPreviewCollateral(null);
+      return;
+    }
+    const timeoutId = setTimeout(async () => {
+      try {
+        const parsedShares = parseUnits(inputValue, Number(sharesDecimals));
+        if (parsedShares <= 0n) {
+          setDeprecatedPreviewCollateral(null);
+          return;
+        }
+        const collateral = await vaultLens.previewRedeemCollateral(parsedShares);
+        setDeprecatedPreviewCollateral(collateral);
+      } catch (err) {
+        console.error('Error previewing redeemCollateral:', err);
+        setDeprecatedPreviewCollateral(null);
+      }
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [inputValue, vaultLens, sharesDecimals, isVaultDeleveraged]);
+
+  // Deprecated redeem max amount
+  useEffect(() => {
+    if (!isVaultDeleveraged) return;
+    if (!sharesBalance || !vaultMaxRedeemCollateral) {
+      setMaxAmount('0');
+      return;
+    }
+    const userShares = parseUnits(sharesBalance, Number(sharesDecimals));
+    const vaultMax = parseUnits(vaultMaxRedeemCollateral, Number(sharesDecimals));
+    setMaxAmount(formatUnits(minBigInt(userShares, vaultMax), Number(sharesDecimals)));
+  }, [isVaultDeleveraged, sharesBalance, vaultMaxRedeemCollateral, sharesDecimals]);
 
   const setMaxDeposit = async () => {
     if (!vaultLens) return;
@@ -315,12 +364,13 @@ export default function FlashLoanDepositWithdrawHandler({
   };
 
   useEffect(() => {
+    if (isVaultDeleveraged) return;
     if (actionType === 'deposit') {
       setMaxDeposit();
     } else {
       setMaxWithdraw();
     }
-  }, [actionType, ethBalance, collateralTokenBalance, sharesBalance, isWstETHVault, sharesDecimals]);
+  }, [actionType, ethBalance, collateralTokenBalance, sharesBalance, isWstETHVault, sharesDecimals, isVaultDeleveraged]);
 
   useEffect(() => {
     // Reset state if input is empty or invalid
@@ -422,6 +472,41 @@ export default function FlashLoanDepositWithdrawHandler({
     }
   }, [flashLoan.success]);
 
+  const handleDeprecatedRedeem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!address || !vault || !vaultLens || isZeroOrNan(inputValue)) return;
+
+    setDeprecatedError('');
+    setDeprecatedSuccess('');
+    setDeprecatedLoading(true);
+    setIsProcessing(true);
+
+    try {
+      const parsedShares = parseUnits(inputValue, Number(sharesDecimals));
+      const estimatedGas = await vaultLens.redeemCollateral.estimateGas(parsedShares, address, address, { from: address });
+      const tx = await vault.redeemCollateral(parsedShares, address, address, {
+        gasLimit: applyGasSlippage(estimatedGas)
+      });
+      await tx.wait();
+
+      setDeprecatedSuccess('Redeem successful!');
+      setInputValue('');
+      setDeprecatedPreviewCollateral(null);
+      await refreshBalances();
+      await refreshVaultLimits();
+    } catch (err: any) {
+      console.error('Error in deprecated redeem:', err);
+      if (isUserRejected(err)) {
+        setDeprecatedError('Transaction rejected by user');
+      } else {
+        setDeprecatedError(err?.shortMessage || err?.message || 'Transaction failed');
+      }
+    } finally {
+      setDeprecatedLoading(false);
+      setIsProcessing(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -449,7 +534,7 @@ export default function FlashLoanDepositWithdrawHandler({
         if (!wrapResult) {
           setIsWrapping(false);
           setIsProcessing(false);
-          return; // Error already set by wrapEthToWstEth, finally will handle processing state
+          return;
         }
 
         // Refresh balances to get updated wstETH balance
@@ -468,7 +553,6 @@ export default function FlashLoanDepositWithdrawHandler({
       console.error('Error in handling flash loan submit:', err);
     } finally {
       setIsProcessing(false);
-      // Safety check to ensure isWrapping is also disabled if something failed during wrap
       setIsWrapping(false);
     }
   };
@@ -479,10 +563,15 @@ export default function FlashLoanDepositWithdrawHandler({
     const { formattedValue } = processInput(value);
 
     setInputValue(formattedValue);
-    flashLoan.reset();
 
-    setWrapError('');
-    setWrapSuccess('');
+    if (isVaultDeleveraged) {
+      setDeprecatedError('');
+      setDeprecatedSuccess('');
+    } else {
+      flashLoan.reset();
+      setWrapError('');
+      setWrapSuccess('');
+    }
   };
 
   const handleSetMax = () => {
@@ -516,12 +605,20 @@ export default function FlashLoanDepositWithdrawHandler({
     flashLoanLoading: flashLoan.loading
   });
 
+  const isDeprecated = isVaultDeleveraged === true;
+  const deprecatedParsedInput = isDeprecated && !isZeroOrNan(inputValue) ? parseUnits(inputValue, Number(sharesDecimals)) : 0n;
+  const deprecatedParsedMax = isDeprecated && maxAmount ? parseUnits(maxAmount, Number(sharesDecimals)) : 0n;
+  const deprecatedIsOverMax = isDeprecated && !isZeroOrNan(inputValue) && deprecatedParsedInput > deprecatedParsedMax;
+
+  const isLoading = isDeprecated ? deprecatedLoading : flashLoan.loading;
+  const formSymbol = isDeprecated ? formatTokenSymbol(sharesSymbol) : inputSymbol;
+
   return (
     <div>
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form onSubmit={isDeprecated ? handleDeprecatedRedeem : handleSubmit} className="space-y-3">
         <div>
           <label htmlFor="flash-loan-action-amount" className="block text-sm font-medium text-gray-700 mb-2">
-            Amount to {actionType === 'deposit' ? 'Deposit' : 'Withdraw'}
+            {isDeprecated ? 'Shares to Redeem' : `Amount to ${actionType === 'deposit' ? 'Deposit' : 'Withdraw'}`}
           </label>
           <div className="relative rounded-md shadow-sm">
             <input
@@ -533,18 +630,18 @@ export default function FlashLoanDepositWithdrawHandler({
               autoComplete="off"
               className="block w-full pr-24 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
               placeholder="0.0"
-              disabled={flashLoan.loading}
+              disabled={isLoading}
             />
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
               <button
                 type="button"
                 onClick={handleSetMax}
                 className="bg-transparent text-sm text-indigo-600 hover:text-indigo-500 mr-2"
-                disabled={flashLoan.loading || !maxAmount}
+                disabled={isLoading || !maxAmount}
               >
                 MAX
               </button>
-              <span className="text-gray-500 sm:text-sm">{inputSymbol}</span>
+              <span className="text-gray-500 sm:text-sm">{formSymbol}</span>
             </div>
           </div>
           <div className="flex gap-2 mt-2">
@@ -554,7 +651,7 @@ export default function FlashLoanDepositWithdrawHandler({
                 type="button"
                 onClick={() => handlePercentage(BigInt(percentage))}
                 className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 disabled:opacity-50"
-                disabled={flashLoan.loading || !maxAmount}
+                disabled={isLoading || !maxAmount}
               >
                 {percentage}%
               </button>
@@ -568,33 +665,37 @@ export default function FlashLoanDepositWithdrawHandler({
             <span>
               <NumberDisplay value={maxAmount} />
               {' '}
-              {inputSymbol}
+              {formSymbol}
             </span>
           </TransitionLoader>
-          <TransitionLoader isLoading={maxAmountUsd === null}>
-            <div className="ml-2">
-              ({formatUsdValue(maxAmountUsd)})
-            </div>
-          </TransitionLoader>
+          {!isDeprecated && (
+            <TransitionLoader isLoading={maxAmountUsd === null}>
+              <div className="ml-2">
+                ({formatUsdValue(maxAmountUsd)})
+              </div>
+            </TransitionLoader>
+          )}
         </div>
 
-        <div className="flex gap-1 mt-1 text-sm text-gray-500">
-          <span>Min Available:</span>
-          <TransitionLoader isLoading={!minDeposit || !minWithdraw}>
-            {actionType === "deposit" ?
-              <>
-                <NumberDisplay value={minDeposit} />
-                {' '}ETH
-              </> :
-              <>
-                <NumberDisplay value={minWithdraw} />
-                {' '}{formatTokenSymbol(borrowTokenSymbol)}
-              </>
-            }
-          </TransitionLoader>
-        </div>
+        {!isDeprecated && (
+          <div className="flex gap-1 mt-1 text-sm text-gray-500">
+            <span>Min Available:</span>
+            <TransitionLoader isLoading={!minDeposit || !minWithdraw}>
+              {actionType === "deposit" ?
+                <>
+                  <NumberDisplay value={minDeposit} />
+                  {' '}ETH
+                </> :
+                <>
+                  <NumberDisplay value={minWithdraw} />
+                  {' '}{formatTokenSymbol(borrowTokenSymbol)}
+                </>
+              }
+            </TransitionLoader>
+          </div>
+        )}
 
-        {isWstETHVault && actionType === 'deposit' && (
+        {!isDeprecated && isWstETHVault && actionType === 'deposit' && (
           <>
             {useEthWrapToWSTETH && (
               <div>
@@ -611,86 +712,87 @@ export default function FlashLoanDepositWithdrawHandler({
           </>
         )}
 
-        {isInputZeroOrNaN ? null :
-          isInputMoreThanMax && !flashLoan.loading && !isWrapping ?
-            (
-              <WarningMessage
-                text="Entered amount higher than max"
-              />
-            ) : (isAmountLessThanMin || invalidRebalanceMode || showWarning) && !flashLoan.loading ? (
-              <WarningMessage
-                text={`Not available to ${actionType} this amount right now, try again later`}
-              />
-            ) : hasInsufficientBalance && !flashLoan.loading && !isWrapping ? (
-              <ErrorMessage
-                text={`Insufficient ${userBalanceToken} balance. You have ${userBalance} ${userBalanceToken}.`}
-              />
-            ) : isErrorLoadingPreview ? (
-              <ErrorMessage text="Error loading preview." />
-            ) : estimatedShares !== null && estimatedShares > 0n && previewData && !isInputZeroOrNaN ? (
+        {isDeprecated ? (
+          <>
+            {!isZeroOrNan(inputValue) && deprecatedIsOverMax && !deprecatedLoading && (
+              <WarningMessage text="Entered amount higher than max" />
+            )}
+            {!isZeroOrNan(inputValue) && !deprecatedIsOverMax && deprecatedPreviewCollateral && deprecatedPreviewCollateral > 0n && (
               <PreviewBox
-                receive={receive}
-                provide={provide}
+                provide={[{ amount: deprecatedParsedInput, tokenType: 'shares' as const }]}
+                receive={[{ amount: deprecatedPreviewCollateral, tokenType: 'collateral' as const }]}
                 title="Transaction Preview"
               />
-            ) : null}
+            )}
+          </>
+        ) : (
+          <>
+            {isInputZeroOrNaN ? null :
+              isInputMoreThanMax && !flashLoan.loading && !isWrapping ?
+                (
+                  <WarningMessage
+                    text="Entered amount higher than max"
+                  />
+                ) : (isAmountLessThanMin || invalidRebalanceMode || showWarning) && !flashLoan.loading ? (
+                  <WarningMessage
+                    text={`Not available to ${actionType} this amount right now, try again later`}
+                  />
+                ) : hasInsufficientBalance && !flashLoan.loading && !isWrapping ? (
+                  <ErrorMessage
+                    text={`Insufficient ${userBalanceToken} balance. You have ${userBalance} ${userBalanceToken}.`}
+                  />
+                ) : isErrorLoadingPreview ? (
+                  <ErrorMessage text="Error loading preview." />
+                ) : estimatedShares !== null && estimatedShares > 0n && previewData && !isInputZeroOrNaN ? (
+                  <PreviewBox
+                    receive={receive}
+                    provide={provide}
+                    title="Transaction Preview"
+                  />
+                ) : null}
+          </>
+        )}
 
         <button
           type="submit"
-          disabled={
-            flashLoan.loading ||
-            !estimatedShares ||
-            estimatedShares <= 0n ||
-            flashLoan.isApproving ||
-            isWrapping ||
-            hasInsufficientBalance ||
-            isErrorLoadingPreview ||
-            invalidRebalanceMode ||
-            isInputMoreThanMax ||
-            isMinMoreThanMax ||
-            isAmountLessThanMin ||
-            !previewData ||
-            isInputZeroOrNaN
+          disabled={isDeprecated
+            ? (deprecatedLoading || isZeroOrNan(inputValue) || deprecatedIsOverMax || !vault || !address || !deprecatedPreviewCollateral)
+            : (flashLoan.loading || !estimatedShares || estimatedShares <= 0n || flashLoan.isApproving || isWrapping || hasInsufficientBalance || isErrorLoadingPreview || invalidRebalanceMode || isInputMoreThanMax || isMinMoreThanMax || isAmountLessThanMin || !previewData || isInputZeroOrNaN)
           }
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isWrapping
-            ? 'Wrapping ETH to wstETH...'
-            : flashLoan.isApproving
-              ? 'Approving Tokens...'
-              : flashLoan.loading
-                ? 'Processing...'
-                : hasInsufficientBalance
-                  ? 'Insufficient Balance'
-                  : `${actionType === 'deposit' ? 'Deposit' : 'Withdraw'}`}
+          {isDeprecated
+            ? (deprecatedLoading ? 'Processing...' : 'Redeem')
+            : (isWrapping
+              ? 'Wrapping ETH to wstETH...'
+              : flashLoan.isApproving
+                ? 'Approving Tokens...'
+                : flashLoan.loading
+                  ? 'Processing...'
+                  : hasInsufficientBalance
+                    ? 'Insufficient Balance'
+                    : `${actionType === 'deposit' ? 'Deposit' : 'Withdraw'}`)
+          }
         </button>
-        {/*
-          Error messages - priority:
-          1. flashLoan.approvalError
-          2. flashLoan.error
-          3. wrapError
-        */}
-        {(flashLoan.approvalError || flashLoan.error || wrapError) && (
-          <ErrorMessage
-            text={
-              flashLoan.approvalError
-                ? flashLoan.approvalError
-                : flashLoan.error
-                  ? flashLoan.error
-                  : wrapError
-            }
-          />
-        )}
-        {/*
-          Success messages - show only if there are no errors
-          Priority:
-          1. wrapSuccess
-          2. flashLoan.success
-        */}
-        {!(flashLoan.approvalError || flashLoan.error || wrapError) && (wrapSuccess || flashLoan.success) && (
-          <SuccessMessage
-            text={flashLoan.success ? flashLoan.success : wrapSuccess}
-          />
+
+        {isDeprecated ? (
+          <>
+            {deprecatedError && <ErrorMessage text={deprecatedError} />}
+            {!deprecatedError && deprecatedSuccess && <SuccessMessage text={deprecatedSuccess} />}
+          </>
+        ) : (
+          <>
+            {(flashLoan.approvalError || flashLoan.error || wrapError) && (
+              <ErrorMessage
+                text={flashLoan.approvalError ? flashLoan.approvalError : flashLoan.error ? flashLoan.error : wrapError}
+              />
+            )}
+            {!(flashLoan.approvalError || flashLoan.error || wrapError) && (wrapSuccess || flashLoan.success) && (
+              <SuccessMessage
+                text={flashLoan.success ? flashLoan.success : wrapSuccess}
+              />
+            )}
+          </>
         )}
       </form>
     </div>

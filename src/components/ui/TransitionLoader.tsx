@@ -7,19 +7,24 @@ interface TransitionLoaderProps {
   loaderClassName?: string;
   className?: string;
   isFailedToLoad?: boolean;
+  errorFallback?: ReactNode;
 }
 
-export const TransitionLoader = ({ 
-  isLoading, 
-  children, 
+export const TransitionLoader = ({
+  isLoading,
+  children,
   loaderClassName,
   className = "",
-  isFailedToLoad = false
+  isFailedToLoad = false,
+  errorFallback
 }: TransitionLoaderProps) => {
   if (isFailedToLoad) {
+    if (errorFallback) {
+      return <>{errorFallback}</>;
+    }
     return <span className="text-red-500 italic">Failed to load</span>
   }
- 
+
   return (
     <div className={`transition-opacity duration-200 ease-in-out ${className}`}>
       {isLoading ? <Loader className={loaderClassName} /> : children}

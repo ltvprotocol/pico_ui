@@ -12,14 +12,12 @@ export interface PreviewItem {
 interface PreviewBoxProps {
   receive: PreviewItem[];
   provide: PreviewItem[];
-  isLoading: boolean;
   title?: string;
 }
 
 export const PreviewBox: React.FC<PreviewBoxProps> = ({
   receive,
   provide,
-  isLoading,
   title = 'Preview'
 }) => {
   const {
@@ -61,7 +59,6 @@ export const PreviewBox: React.FC<PreviewBoxProps> = ({
       <div className="flex items-center space-x-2">
         <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
         <h4 className="text-sm font-semibold text-gray-900">{title}</h4>
-        <span className="text-sm text-gray-500">{isLoading && " (Loading...)"}</span>
       </div>
       <div className="space-y-4">
         {provide.length > 0 && (

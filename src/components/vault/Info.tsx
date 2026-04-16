@@ -8,7 +8,8 @@ import {
   formatTokenSymbol,
   formatApy,
   ApyPeriod,
-  formatUsdValue
+  formatUsdValue,
+  formatPoints
 } from '@/utils';
 import { NumberDisplay, TransitionLoader, SymbolWithTooltip } from '@/components/ui';
 
@@ -30,7 +31,8 @@ export default function Info() {
     isRefreshingBalances,
     borrowTokenPrice: tokenPrice,
     collateralTokenPrice,
-    hasNft
+    hasNft,
+    isVaultDeleveraged
   } = useVaultContext();
 
   const { isMainnet, address, publicProvider } = useAppContext();
@@ -97,24 +99,6 @@ export default function Info() {
       );
     }
   }, [pointsRate, hasNft]);
-
-  function formatPointsApprox(
-    value: number,
-    decimals = 24,
-    fractionDigits = 2
-  ): string {
-    if (!Number.isFinite(value)) return '0';
-
-    const human = value / 10 ** decimals;
-    const factor = 10 ** fractionDigits;
-
-    const floored = Math.floor(human * factor) / factor;
-
-    return new Intl.NumberFormat('en-US', {
-      minimumFractionDigits: fractionDigits,
-      maximumFractionDigits: fractionDigits,
-    }).format(floored);
-  }
 
   const [positionInBorrowTokens, setPositionInBorrowTokens] = useState<string | null>(null);
   const [isLoadingPosition, setIsLoadingPosition] = useState<boolean>(false);
@@ -258,108 +242,114 @@ export default function Info() {
           )}
         </div>
       </div>
-      <div className="w-full flex justify-between items-start text-sm mb-2">
-        <div className="font-medium text-gray-700">APY:</div>
-        <div className="flex gap-1 min-w-[60px] min-h-[16px] text-right">
-          <span className="text-gray-500">7 day:</span>
-          <TransitionLoader isLoading={!apy} isFailedToLoad={apyLoadFailed}>
-            {formatApy(apy, ApyPeriod.SevenDays)}
-          </TransitionLoader>
-          <span className="text-gray-500 ml-2">30 day:</span>
-          <TransitionLoader isLoading={!apy} isFailedToLoad={apyLoadFailed}>
-            {formatApy(apy, ApyPeriod.ThirtyDays)}
-          </TransitionLoader>
-        </div>
-      </div>
-      {isMainnet && address && (
+      {!isVaultDeleveraged && (
         <>
           <div className="w-full flex justify-between items-start text-sm mb-2">
-            <div className="font-medium text-gray-700">Your points:</div>
-            <div className="min-w-[60px] text-right">
-              <TransitionLoader isLoading={isLoadingPointsData}>
-                {isLp ? (
-                  <span className="text-gray-900">
-                    {`private LP ${(userPoints !== null && userPoints > 0) ? 
-                      `+ ${formatPointsApprox(userPoints)} Points` : ''}`}
-                  </span>
-                ) : (
-                  <span className="text-gray-900">
-                    {userPoints !== null ? `${formatPointsApprox(userPoints)} Points` : '0 Points'}
-                  </span>
-                )}
+            <div className="font-medium text-gray-700">APY:</div>
+            <div className="flex gap-1 min-w-[60px] min-h-[16px] text-right">
+              <span className="text-gray-500">7 day:</span>
+              <TransitionLoader isLoading={!apy} isFailedToLoad={apyLoadFailed}>
+                {formatApy(apy, ApyPeriod.SevenDays)}
+              </TransitionLoader>
+              <span className="text-gray-500 ml-2">30 day:</span>
+              <TransitionLoader isLoading={!apy} isFailedToLoad={apyLoadFailed}>
+                {formatApy(apy, ApyPeriod.ThirtyDays)}
               </TransitionLoader>
             </div>
           </div>
-          {(!isLp || (userPoints !== null && userPoints > 0)) && (
+          {isMainnet && address && (
+            <>
+              <div className="w-full flex justify-between items-start text-sm mb-2">
+                <div className="font-medium text-gray-700">Your points:</div>
+                <div className="min-w-[60px] text-right">
+                  <TransitionLoader isLoading={isLoadingPointsData}>
+                    {isLp ? (
+                      <span className="text-gray-900">
+                        {`private LP ${(userPoints !== null && userPoints > 0) ?
+                          `+ ${formatPoints(userPoints)} Points` : ''}`}
+                      </span>
+                    ) : (
+                      <span className="text-gray-900">
+                        {userPoints !== null ? `${formatPoints(userPoints)} Points` : '0 Points'}
+                      </span>
+                    )}
+                  </TransitionLoader>
+                </div>
+              </div>
+              {(!isLp || (userPoints !== null && userPoints > 0)) && (
+                <div className="w-full flex justify-between items-start text-sm mb-2">
+                  <div className="font-medium text-gray-700">Points rate:</div>
+                  <div className="min-w-[60px] text-right">
+                    <TransitionLoader isLoading={!pointsRate}>
+                      {pointsRateDisplay}
+                    </TransitionLoader>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+          {tvl && (
             <div className="w-full flex justify-between items-start text-sm mb-2">
-              <div className="font-medium text-gray-700">Points rate:</div>
+              <div className="font-medium text-gray-700">Leveraged TVL:</div>
               <div className="min-w-[60px] text-right">
-                <TransitionLoader isLoading={!pointsRate}>
-                  {pointsRateDisplay}
-                </TransitionLoader>
+                <div className="flex flex-col items-end">
+                  <div className="flex">
+                    <div className="mr-2 min-w-[60px] text-right">
+                      <TransitionLoader isLoading={!tvl}>
+                        <NumberDisplay value={tvl} />
+                      </TransitionLoader>
+                    </div>
+                    <div className="font-medium text-gray-700">
+                      <TransitionLoader isLoading={!collateralTokenSymbol}>
+                        {formatTokenSymbol(collateralTokenSymbol)}
+                      </TransitionLoader>
+                    </div>
+                  </div>
+                  {isMainnet && (
+                    <div className="text-gray-700 text-xs mt-0.5">
+                      <TransitionLoader isLoading={!collateralTokenPrice}>
+                        {formatUsdValue(tvlUsdValue)}
+                      </TransitionLoader>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
+          <div className="w-full flex justify-between items-start text-sm mb-2">
+            <div className="font-medium text-gray-700">Deposited TVL:</div>
+            <div className="min-w-[60px] text-right">
+              <div className="flex flex-col items-end">
+                <div className="flex">
+                  <div className="mr-2 min-w-[60px] text-right">
+                    <TransitionLoader isLoading={!totalAssets}>
+                      <NumberDisplay value={totalAssets} />
+                    </TransitionLoader>
+                  </div>
+                  <div className="font-medium text-gray-700">
+                    <TransitionLoader isLoading={!borrowTokenSymbol}>
+                      {formatTokenSymbol(borrowTokenSymbol)}
+                    </TransitionLoader>
+                  </div>
+                </div>
+                {isMainnet && (
+                  <div className="text-gray-700 text-xs mt-0.5">
+                    <TransitionLoader isLoading={!tokenPrice}>
+                      {formatUsdValue(usdValue)}
+                    </TransitionLoader>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </>
       )}
-      {tvl && (
-        <div className="w-full flex justify-between items-start text-sm mb-2">
-          <div className="font-medium text-gray-700">Leveraged TVL:</div>
-          <div className="min-w-[60px] text-right">
-            <div className="flex flex-col items-end">
-              <div className="flex">
-                <div className="mr-2 min-w-[60px] text-right">
-                  <TransitionLoader isLoading={!tvl}>
-                    <NumberDisplay value={tvl} />
-                  </TransitionLoader>
-                </div>
-                <div className="font-medium text-gray-700">
-                  <TransitionLoader isLoading={!collateralTokenSymbol}>
-                    {formatTokenSymbol(collateralTokenSymbol)}
-                  </TransitionLoader>
-                </div>
-              </div>
-              {isMainnet && (
-                <div className="text-gray-700 text-xs mt-0.5">
-                  <TransitionLoader isLoading={!collateralTokenPrice}>
-                    {formatUsdValue(tvlUsdValue)}
-                  </TransitionLoader>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-      <div className="w-full flex justify-between items-start text-sm mb-2">
-        <div className="font-medium text-gray-700">Deposited TVL:</div>
-        <div className="min-w-[60px] text-right">
-          <div className="flex flex-col items-end">
-            <div className="flex">
-              <div className="mr-2 min-w-[60px] text-right">
-                <TransitionLoader isLoading={!totalAssets}>
-                  <NumberDisplay value={totalAssets} />
-                </TransitionLoader>
-              </div>
-              <div className="font-medium text-gray-700">
-                <TransitionLoader isLoading={!borrowTokenSymbol}>
-                  {formatTokenSymbol(borrowTokenSymbol)}
-                </TransitionLoader>
-              </div>
-            </div>
-            {isMainnet && (
-              <div className="text-gray-700 text-xs mt-0.5">
-                <TransitionLoader isLoading={!tokenPrice}>
-                  {formatUsdValue(usdValue)}
-                </TransitionLoader>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
       <div className="w-full text-sm mt-6">
         <div className="font-medium text-gray-700 mb-2">Description</div>
         <p className="text-gray-700 max-w-[380px]">
-          {description || "No description available for this vault."}
+          {isVaultDeleveraged
+            ? "LTV Pilot Vault (wstETH/ETH on Aave v3) has been deprecated. The Deleverage & Withdraw function has been executed. Please withdraw your funds. Withdrawals are currently available exclusively in wstETH. Deposits have been disabled. The vault is currently being unwound and will distribute assets solely in wstETH."
+            : (description || "No description available for this vault.")}
         </p>
       </div>
     </div>

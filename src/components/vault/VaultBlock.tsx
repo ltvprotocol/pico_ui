@@ -2,12 +2,13 @@ import { useEffect, useState, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { formatUnits, ZeroAddress } from "ethers";
 import { useAppContext } from "@/contexts";
-import { formatTokenSymbol, formatApy, ApyPeriod, ltvToLeverage } from "@/utils";
+import { formatTokenSymbol, formatApy, ApyPeriod, ltvToLeverage, loadTVL } from "@/utils";
 import { useAdaptiveInterval, useVaultApy, useVaultPointsRate } from "@/hooks";
 import { Vault__factory, ERC20__factory, WhitelistRegistry__factory } from "@/typechain-types";
-import { NumberDisplay, TransitionLoader } from "@/components/ui";
+import { TransitionLoader } from "@/components/ui";
+import CompactNumber from "../ui/CompactNumber";
+import VaultStat from "./VaultStat";
 import vaultsConfig from "../../../vaults.config.json";
-import signaturesConfig from "../../../signatures.config.json";
 
 interface VaultBlockProps {
   address: string;
@@ -19,15 +20,17 @@ interface StaticVaultData {
   maxLeverage: string | null;
   lendingName: string | null;
   isWhitelistActivated: boolean | null;
+  collateralTokenAddress: string | null;
+  lendingConnectorAddress: string | null;
 }
 
 interface WhitelistData {
   isWhitelisted: boolean | null;
-  hasSignature: boolean;
 }
 
 interface DynamicVaultData {
   deposits: bigint | null;
+  leveragedTvl: bigint | null;
 }
 
 interface VaultDecimals {
@@ -54,10 +57,13 @@ export default function VaultBlock({ address }: VaultBlockProps) {
     maxLeverage: null,
     lendingName: null,
     isWhitelistActivated: null,
+    collateralTokenAddress: null,
+    lendingConnectorAddress: null,
   });
 
   const [dynamicData, setDynamicData] = useState<DynamicVaultData>({
     deposits: null,
+    leveragedTvl: null,
   });
 
   const { apy: apyData, isLoadingApy, apyLoadFailed, loadApy } = useVaultApy();
@@ -82,11 +88,9 @@ export default function VaultBlock({ address }: VaultBlockProps) {
 
   const [whitelistData, setWhitelistData] = useState<WhitelistData>({
     isWhitelisted: null,
-    hasSignature: false,
   });
 
-  const { publicProvider, currentNetwork, address: userAddress, isConnected } = useAppContext();
-
+  const { publicProvider, currentNetwork, address: userAddress, isConnected, isMainnet } = useAppContext();
 
   const vaultConfig = useMemo(() => {
     if (!currentNetwork) return;
@@ -120,25 +124,33 @@ export default function VaultBlock({ address }: VaultBlockProps) {
           borrowTokenSymbol: vaultConfig.borrowTokenSymbol || null,
           maxLeverage: vaultConfig.leverage || null,
           lendingName: vaultConfig.lendingName || null,
+          collateralTokenAddress: vaultConfig.collateralTokenAddress || null,
         }));
       }
     }
   }, [vaultConfig]);
 
   const loadCollateralTokenSymbol = useCallback(async () => {
-    if (!vaultContract || !publicProvider || vaultConfig?.collateralTokenSymbol) return;
+    if (!vaultContract || !publicProvider) return;
 
     try {
       let symbol: string;
+      let tokenAddress: string;
+
       if (vaultConfig?.collateralTokenAddress) {
-        const contract = ERC20__factory.connect(vaultConfig.collateralTokenAddress, publicProvider);
-        symbol = await contract.symbol();
+        tokenAddress = vaultConfig.collateralTokenAddress;
       } else {
-        const tokenAddress = await vaultContract.collateralToken();
+        tokenAddress = await vaultContract.collateralToken();
+      }
+
+      if (!vaultConfig?.collateralTokenSymbol) {
         const contract = ERC20__factory.connect(tokenAddress, publicProvider);
         symbol = await contract.symbol();
+        setStaticData(prev => ({ ...prev, collateralTokenSymbol: symbol, collateralTokenAddress: tokenAddress }));
+      } else {
+        setStaticData(prev => ({ ...prev, collateralTokenAddress: tokenAddress }));
       }
-      setStaticData(prev => ({ ...prev, collateralTokenSymbol: symbol }));
+
       setLoadingState(prev => ({ ...prev, hasLoadedTokens: true, isLoadingTokens: false }));
     } catch (err) {
       console.error('Error loading collateral token symbol:', err);
@@ -146,16 +158,17 @@ export default function VaultBlock({ address }: VaultBlockProps) {
   }, [vaultContract, vaultConfig, publicProvider]);
 
   const loadBorrowTokenSymbol = useCallback(async () => {
-    if (!vaultContract || !publicProvider || vaultConfig?.borrowTokenSymbol) return;
+    if (!vaultContract || !publicProvider) return;
 
     try {
       let symbol: string;
+      if (vaultConfig?.borrowTokenSymbol) return;
+
       if (vaultConfig?.borrowTokenAddress) {
         const contract = ERC20__factory.connect(vaultConfig.borrowTokenAddress, publicProvider);
         symbol = await contract.symbol();
       } else {
         const tokenAddress = await vaultContract.borrowToken();
-        console.log('tokenAddress', tokenAddress);
         const contract = ERC20__factory.connect(tokenAddress, publicProvider);
         symbol = await contract.symbol();
       }
@@ -201,6 +214,16 @@ export default function VaultBlock({ address }: VaultBlockProps) {
     }
   }, [vaultContract]);
 
+  const loadLendingConnector = useCallback(async () => {
+    if (!vaultContract) return;
+    try {
+      const connector = await vaultContract.lendingConnector();
+      setStaticData(prev => ({ ...prev, lendingConnectorAddress: connector }));
+    } catch (err) {
+      console.error('Error loading lending connector:', err);
+    }
+  }, [vaultContract]);
+
   const loadWhitelistActivation = useCallback(async () => {
     if (!vaultContract) return;
 
@@ -212,27 +235,6 @@ export default function VaultBlock({ address }: VaultBlockProps) {
       setStaticData(prev => ({ ...prev, isWhitelistActivated: null }));
     }
   }, [vaultContract]);
-
-  const checkUserSignature = useCallback(() => {
-    if (!userAddress || !currentNetwork) {
-      setWhitelistData(prev => ({ ...prev, hasSignature: false }));
-      return;
-    }
-
-    const networkSignatures = (signaturesConfig as any)[currentNetwork];
-    const vaultSignatures = networkSignatures?.vaults?.[address.toLowerCase()];
-    const signaturesMap = vaultSignatures?.signatures;
-
-    if (!signaturesMap) {
-      setWhitelistData(prev => ({ ...prev, hasSignature: false }));
-      return;
-    }
-
-    const addressLower = userAddress.toLowerCase();
-    const hasSignature = !!signaturesMap[addressLower];
-
-    setWhitelistData(prev => ({ ...prev, hasSignature }));
-  }, [userAddress, currentNetwork, address]);
 
   const checkUserWhitelist = useCallback(async () => {
     if (!vaultContract || !userAddress || !isConnected || staticData.isWhitelistActivated === null) {
@@ -262,20 +264,14 @@ export default function VaultBlock({ address }: VaultBlockProps) {
   }, [vaultContract, userAddress, isConnected, staticData.isWhitelistActivated, publicProvider]);
 
   useEffect(() => {
-    if (vaultContract && publicProvider && !vaultConfig?.collateralTokenSymbol) {
+    if (vaultContract && publicProvider) {
       loadCollateralTokenSymbol();
-    } else if (vaultConfig?.collateralTokenSymbol) {
-      setLoadingState(prev => ({ ...prev, isLoadingTokens: false, hasLoadedTokens: true }));
-    }
-  }, [vaultContract, publicProvider, vaultConfig, loadCollateralTokenSymbol]);
-
-  useEffect(() => {
-    if (vaultContract && publicProvider && !vaultConfig?.borrowTokenSymbol) {
       loadBorrowTokenSymbol();
-    } else if (vaultConfig?.borrowTokenSymbol) {
-      setLoadingState(prev => ({ ...prev, isLoadingTokens: false, hasLoadedTokens: true }));
+      loadDecimals();
+      loadWhitelistActivation();
+      loadLendingConnector();
     }
-  }, [vaultContract, publicProvider, vaultConfig, loadBorrowTokenSymbol]);
+  }, [vaultContract, publicProvider, loadCollateralTokenSymbol, loadBorrowTokenSymbol, loadDecimals, loadWhitelistActivation, loadLendingConnector]);
 
   useEffect(() => {
     if (vaultContract && !vaultConfig?.leverage) {
@@ -285,22 +281,9 @@ export default function VaultBlock({ address }: VaultBlockProps) {
     }
   }, [vaultContract, vaultConfig, loadMaxLeverage]);
 
-  useEffect(() => {
-    if (vaultContract) {
-      loadDecimals();
-    }
-  }, [vaultContract, loadDecimals]);
-
-  useEffect(() => {
-    if (vaultContract) {
-      loadWhitelistActivation();
-    }
-  }, [vaultContract, loadWhitelistActivation]);
 
   // Check user signature when address or network changes
-  useEffect(() => {
-    checkUserSignature();
-  }, [address, currentNetwork, checkUserSignature]);
+
 
   // Check user whitelist status when whitelist activation status is known
   useEffect(() => {
@@ -322,15 +305,44 @@ export default function VaultBlock({ address }: VaultBlockProps) {
     }
   }, [vaultContract]);
 
+  const loadLeveragedTvl = useCallback(async () => {
+    if (!publicProvider || !staticData.collateralTokenAddress || !staticData.lendingConnectorAddress || !staticData.lendingName) return;
+
+    try {
+      const tvl = await loadTVL(
+        address,
+        staticData.collateralTokenAddress,
+        staticData.lendingConnectorAddress,
+        staticData.lendingName,
+        publicProvider,
+        currentNetwork
+      );
+      if (tvl !== null) {
+        setDynamicData(prev => ({ ...prev, leveragedTvl: tvl }));
+      }
+    } catch (err) {
+      console.error("Error loading leveraged TVL", err);
+    }
+  }, [publicProvider, staticData.collateralTokenAddress, staticData.lendingConnectorAddress, staticData.lendingName, currentNetwork, address]);
+
   useEffect(() => {
     if (vaultContract) {
       loadDeposits();
     }
   }, [vaultContract, loadDeposits]);
 
+  useEffect(() => {
+    loadLeveragedTvl();
+  }, [loadLeveragedTvl]);
+
   useAdaptiveInterval(loadDeposits, {
     initialDelay: 12000,
     enabled: !!vaultContract
+  });
+
+  useAdaptiveInterval(loadLeveragedTvl, {
+    initialDelay: 15000,
+    enabled: !!(staticData.collateralTokenAddress && staticData.lendingConnectorAddress)
   });
 
   useEffect(() => {
@@ -348,14 +360,19 @@ export default function VaultBlock({ address }: VaultBlockProps) {
     return formatUnits(dynamicData.deposits, vaultDecimals.borrowTokenDecimals);
   }, [dynamicData.deposits, vaultDecimals.borrowTokenDecimals]);
 
+  const formattedLeveragedTvl = useMemo(() => {
+    if (!dynamicData.leveragedTvl) return null;
+    return formatUnits(dynamicData.leveragedTvl, vaultDecimals.collateralTokenDecimals);
+  }, [dynamicData.leveragedTvl, vaultDecimals.collateralTokenDecimals]);
+
   useEffect(() => {
-    setDynamicData({ deposits: null });
+    setDynamicData({ deposits: null, leveragedTvl: null });
     setLoadingState(prev => ({ ...prev, isLoadingAssets: true, hasLoadedAssets: false }));
   }, [currentNetwork, address]);
 
   const tokenPairDisplay = useMemo(() => {
     if (staticData.collateralTokenSymbol && staticData.borrowTokenSymbol) {
-      return `${formatTokenSymbol(staticData.collateralTokenSymbol)}/${formatTokenSymbol(staticData.borrowTokenSymbol)}`;
+      return `${formatTokenSymbol(staticData.collateralTokenSymbol)} / ${formatTokenSymbol(staticData.borrowTokenSymbol)}`;
     }
     return null;
   }, [staticData.collateralTokenSymbol, staticData.borrowTokenSymbol]);
@@ -371,74 +388,76 @@ export default function VaultBlock({ address }: VaultBlockProps) {
         apy: apyData,
         pointsRate,
         isWhitelistActivated: staticData.isWhitelistActivated,
-        isWhitelisted: whitelistData.isWhitelisted,
-        hasSignature: whitelistData.hasSignature
+        isWhitelisted: whitelistData.isWhitelisted
       }}
-      className="wrapper block w-full bg-gray-50 transition-colors border border-gray-50 rounded-lg mb-4 last:mb-0 p-3">
-      <div className="w-full">
-        <div className="w-full flex flex-row justify-between mb-2">
-          <div className="flex items-center text-base font-medium text-gray-900">
-            <div className="mr-2 min-w-[60px]">
-              <TransitionLoader isLoading={loadingState.isLoadingTokens && !loadingState.hasLoadedTokens}>
-                {tokenPairDisplay}
-              </TransitionLoader>
-            </div>
-            <div className="mr-2 font-normal">
-              <TransitionLoader isLoading={loadingState.isLoadingLeverage && !loadingState.hasLoadedLeverage}>
-                {staticData.maxLeverage ? `x${staticData.maxLeverage}` : null}
-              </TransitionLoader>
-            </div>
-            <div className="font-normal">{staticData.lendingName || "Lending"}</div>
-          </div>
+      className="flex flex-col xl:flex-row xl:justify-start xl:items-center p-5 sm:p-6 wrapper block w-full bg-white border border-gray-200 transition-colors rounded-lg last:mb-0 gap-4 xl:gap-6"
+    >
+      <div
+        className="flex flex-row items-center flex-wrap xl:flex-nowrap xl:items-start xl:flex-col gap-2 xl:w-[220px] xl:shrink-0 text-base">
+        <div className="font-medium text-gray-900 leading-none">
+          <TransitionLoader isLoading={loadingState.isLoadingTokens && !loadingState.hasLoadedTokens}>
+            {tokenPairDisplay}
+          </TransitionLoader>
+        </div>
+        <div className="text-gray-500 font-light">
+          <TransitionLoader isLoading={loadingState.isLoadingLeverage && !loadingState.hasLoadedLeverage}>
+            {staticData.maxLeverage ? `x${staticData.maxLeverage}` : ''} on {staticData.lendingName || "Lending"}
+          </TransitionLoader>
         </div>
       </div>
-      <div className="flex justify-between text-sm">
-        <div className="font-medium text-gray-700">Deposited TVL: </div>
-        <div className="font-normal text-gray-700 min-w-[100px] text-right">
+
+      <div className="flex flex-wrap gap-x-8 gap-y-4 xl:grid xl:grid-cols-[10rem_10rem_5rem_auto] xl:gap-x-4 xl:mr-auto items-center">
+        <VaultStat label="Deposited TVL">
           <TransitionLoader
             isLoading={
               (loadingState.isLoadingAssets && !loadingState.hasLoadedAssets) ||
               (loadingState.isLoadingTokens && !loadingState.hasLoadedTokens)
             }>
-            {formattedDeposits && staticData.borrowTokenSymbol ? (
-              <div className="flex justify-end">
-                <div className="font-normal text-gray-700 mr-2">
-                  <NumberDisplay value={formattedDeposits} />
-                </div>
-                <div className="font-medium text-gray-700">{formatTokenSymbol(staticData.borrowTokenSymbol)}</div>
+            <div className="text-[1rem] font-light text-gray-700 leading-none flex gap-1">
+              <CompactNumber value={formattedDeposits} />
+              <span className="font-medium">{formatTokenSymbol(staticData.borrowTokenSymbol)}</span>
+            </div>
+          </TransitionLoader>
+        </VaultStat>
+
+        <VaultStat label="Levereged TVL">
+          <TransitionLoader isLoading={!dynamicData.leveragedTvl && isMainnet}>
+            {isMainnet ? (
+              <div className="text-[1rem] font-light text-gray-700 leading-none flex gap-1">
+                <CompactNumber value={formattedLeveragedTvl} />
+                <span className="font-medium">{formatTokenSymbol(staticData.collateralTokenSymbol)}</span>
               </div>
-            ) : null}
+            ) : (
+              <span className="text-red-500 italic font-light">Unknown</span>
+            )}
           </TransitionLoader>
-        </div>
-      </div>
-      <div className="flex justify-between text-sm">
-        <div className="font-medium text-gray-700">APY: </div>
-        <div className="flex gap-1 font-normal text-gray-700 min-w-[60px] text-right">
-          <span className="text-gray-500">7 day:</span>
+        </VaultStat>
+
+        <VaultStat label="30d APY" valueClassName="font-medium text-gray-700">
           <TransitionLoader
             isLoading={isLoadingApy}
             isFailedToLoad={apyLoadFailed}
-          >
-            {formatApy(apyData, ApyPeriod.SevenDays)}
-          </TransitionLoader>
-          <span className="text-gray-500 ml-2">30 day:</span>
-          <TransitionLoader
-            isLoading={isLoadingApy}
-            isFailedToLoad={apyLoadFailed}
+            errorFallback={<span className="text-red-500 italic font-light">Unknown</span>}
           >
             {formatApy(apyData, ApyPeriod.ThirtyDays)}
           </TransitionLoader>
-        </div>
-      </div>
-      <div className="flex justify-between text-sm">
-        <div className="font-medium text-gray-700">Points Rate: </div>
-        <div className="font-normal text-gray-700 min-w-[60px] text-right">
+        </VaultStat>
+
+        <VaultStat label="Points Rate" valueClassName="font-normal text-gray-500 whitespace-nowrap">
           <TransitionLoader
             isLoading={isLoadingPointsRate}
             isFailedToLoad={pointsRateLoadFailed}
+            errorFallback={<span className="text-red-500 italic font-light">Unknown</span>}
           >
             {pointsRate ? `~${pointsRate} per 1 token / day` : ''}
           </TransitionLoader>
+        </VaultStat>
+      </div>
+      <div className="flex xl:justify-end xl:ml-auto">
+        <div
+          className="wrapper text-gray-800 border border-gray-400 px-6 py-2.5 rounded-lg font-semibold text-sm transition-opacity hover:opacity-80 w-full xl:w-auto text-center whitespace-nowrap"
+        >
+          Open &gt;
         </div>
       </div>
     </Link>

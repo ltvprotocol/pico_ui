@@ -5,10 +5,14 @@ export default {
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      screens: {
+        'md': '800px',
+      },
+    },
   },
   plugins: [
     require('@tailwindcss/forms'),
     require('@tailwindcss/container-queries'),
   ],
-} 
+}

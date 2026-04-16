@@ -50,6 +50,7 @@ interface AppContextType {
   isTermsBlockingUI: boolean;
   checkTermsStatus: () => Promise<void>;
   signTermsOfUse: () => Promise<void>;
+  refreshPublicProvider: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -93,27 +94,27 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
   const getNetworkFromUrl = useCallback(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const networkParam = urlParams.get('network');
-    
+
     if (!networkParam) {
       setUnrecognizedNetworkParam(false);
       return null;
     }
-    
+
     const recognizedNetwork = URL_PARAM_TO_CHAIN_ID[networkParam as keyof typeof URL_PARAM_TO_CHAIN_ID];
-    
+
     if (!recognizedNetwork) {
       console.warn(`Unrecognized network parameter: "${networkParam}".`);
       setUnrecognizedNetworkParam(true);
       return null;
     }
-    
+
     setUnrecognizedNetworkParam(false);
     return recognizedNetwork;
   }, []);
 
   const getDefaultNetwork = useCallback(() => {
     const urlNetwork = getNetworkFromUrl();
-    return urlNetwork ?? '11155111';
+    return urlNetwork ?? '1';
   }, [getNetworkFromUrl]);
 
   useEffect(() => {
@@ -184,21 +185,37 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [currentNetwork, signer]);
 
+  const createPublicProvider = useCallback((networkId: string): JsonRpcProvider | null => {
+    const config = NETWORK_CONFIGS[networkId];
+    if (!config) return null;
+
+    const customRpc = localStorage.getItem(`custom_rpc_${networkId}`);
+    const rpcUrl = customRpc || config.rpcUrls[0];
+    return new JsonRpcProvider(rpcUrl);
+  }, []);
+
+  const refreshPublicProvider = useCallback(async () => {
+    const networkId = currentNetwork || getDefaultNetwork();
+    const newProvider = createPublicProvider(networkId);
+    if (newProvider) {
+      setPublicProvider(newProvider);
+    }
+  }, [currentNetwork, getDefaultNetwork, createPublicProvider]);
+
   useEffect(() => {
     const defaultNetwork = getDefaultNetwork();
-    const networkConfig = (NETWORK_CONFIGS as any)[defaultNetwork];
-    if (networkConfig) {
-      const newPublicProvider = new JsonRpcProvider(networkConfig.rpcUrls[0]);
-      setPublicProvider(newPublicProvider);
+    const newProvider = createPublicProvider(defaultNetwork);
+    if (newProvider) {
+      setPublicProvider(newProvider);
       setCurrentNetwork(defaultNetwork);
     } else {
       setPublicProvider(null);
       setCurrentNetwork(null);
     }
-  }, [getDefaultNetwork]);
+  }, [getDefaultNetwork, createPublicProvider]);
 
   const switchToNetwork = useCallback(async (chainId: string) => {
-    const networkConfig = (NETWORK_CONFIGS as any)[chainId];
+    const networkConfig = NETWORK_CONFIGS[chainId];
     if (!networkConfig) {
       console.error('Unknown network chain ID:', chainId);
       return;
@@ -207,15 +224,17 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     const urlParam = Object.keys(URL_PARAM_TO_CHAIN_ID).find(
       key => URL_PARAM_TO_CHAIN_ID[key as keyof typeof URL_PARAM_TO_CHAIN_ID] === chainId
     );
-    
+
     if (urlParam) {
       const url = new URL(window.location.href);
       url.searchParams.set('network', urlParam);
       window.history.pushState({}, '', url.toString());
     }
 
-    const newPublicProvider = new JsonRpcProvider(networkConfig.rpcUrls[0]);
-    setPublicProvider(newPublicProvider);
+    const newPublicProvider = createPublicProvider(chainId);
+    if (newPublicProvider) {
+      setPublicProvider(newPublicProvider);
+    }
     setCurrentNetwork(chainId);
 
     if (provider) {
@@ -237,18 +256,18 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
         }
       }
     }
-  }, [provider]);
+  }, [provider, createPublicProvider]);
 
   useEffect(() => {
     const autoSwitchToUrlNetwork = async () => {
       if (!isConnected || !provider) return;
-      
+
       const urlNetwork = getNetworkFromUrl();
       if (!urlNetwork) return;
-      
+
       const currentChainId = chainId?.toString();
       if (currentChainId === urlNetwork) return;
-      
+
       try {
         await switchToNetwork(urlNetwork);
       } catch (error) {
@@ -303,9 +322,8 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
       // Only do this if there's no URL network param, or if it matches
       const urlNetwork = getNetworkFromUrl();
       if (!urlNetwork || urlNetwork === chainIdString) {
-        const networkConfig = (NETWORK_CONFIGS as any)[chainIdString];
-        if (networkConfig) {
-          const newPublicProvider = new JsonRpcProvider(networkConfig.rpcUrls[0]);
+        const newPublicProvider = createPublicProvider(chainIdString);
+        if (newPublicProvider) {
           setPublicProvider(newPublicProvider);
         }
       }
@@ -327,7 +345,7 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
       const tempProvider = new BrowserProvider(wallet.provider);
       const tempSigner = await tempProvider.getSigner();
       const currentAddress = await tempSigner.getAddress();
-      
+
       if (expectedAddress && expectedAddress.toLowerCase() !== currentAddress.toLowerCase()) {
         console.warn("Address mismatch, user selected another account");
       }
@@ -340,7 +358,7 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
         const urlParam = Object.keys(URL_PARAM_TO_CHAIN_ID).find(
           key => URL_PARAM_TO_CHAIN_ID[key as keyof typeof URL_PARAM_TO_CHAIN_ID] === chainIdString
         );
-        
+
         if (urlParam) {
           const url = new URL(window.location.href);
           url.searchParams.set('network', urlParam);
@@ -413,9 +431,9 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     const eip1193Provider = rawProvider as unknown as {
       on: (event: string, listener: (...args: any[]) => void) => void;
       removeListener?: (event: string, listener: (...args: any[]) => void) => void;
-    }; 
+    };
 
-    if (eip1193Provider && typeof eip1193Provider.on === 'function') { 
+    if (eip1193Provider && typeof eip1193Provider.on === 'function') {
       const onAccountsChangedHandler = async (accounts: string[]) => {
         if (accounts.length > 0 && provider) {
           const signer = await provider.getSigner();
@@ -434,12 +452,12 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
         const chainIdString = chainIdBigInt.toString();
 
         // Update URL parameter to match the new network
-        const networkConfig = (NETWORK_CONFIGS as any)[chainIdString];
+        const networkConfig = NETWORK_CONFIGS[chainIdString];
         if (networkConfig) {
           const urlParam = Object.keys(URL_PARAM_TO_CHAIN_ID).find(
             key => URL_PARAM_TO_CHAIN_ID[key as keyof typeof URL_PARAM_TO_CHAIN_ID] === chainIdString
           );
-          
+
           if (urlParam) {
             const url = new URL(window.location.href);
             url.searchParams.set('network', urlParam);
@@ -447,8 +465,10 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
           }
 
           // Update publicProvider to match the new network
-          const newPublicProvider = new JsonRpcProvider(networkConfig.rpcUrls[0]);
-          setPublicProvider(newPublicProvider);
+          const newPublicProvider = createPublicProvider(chainIdString);
+          if (newPublicProvider) {
+            setPublicProvider(newPublicProvider);
+          }
         }
 
         // Update all wallet connection state (this also sets currentNetwork, chainId, etc.)
@@ -532,7 +552,7 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       const signature = await signer.signMessage(termsText);
-      
+
       const result = await submitTermsOfUseSignature(address, signature, currentNetwork);
       if (result && result.success) {
         setIsTermsSigned(true);
@@ -665,6 +685,7 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
     isTermsBlockingUI,
     checkTermsStatus,
     signTermsOfUse,
+    refreshPublicProvider
   };
 
   return <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>;

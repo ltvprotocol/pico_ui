@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { parseUnits, parseEther, formatUnits } from 'ethers';
 import { useAppContext, useVaultContext } from '@/contexts';
 import {
@@ -9,7 +9,9 @@ import {
   formatUsdValue,
   wrapEthToWstEth,
   calculateEthWrapForFlashLoan,
-  processInput
+  processInput,
+  isShowWrapPreview,
+  isZeroOrNan
 } from '@/utils';
 import {
   PreviewBox,
@@ -36,6 +38,7 @@ type HelperType = 'mint' | 'redeem';
 
 interface FlashLoanHelperHandlerProps {
   helperType: HelperType;
+  setIsProcessing: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const GAS_RESERVE_MULTIPLIER = 3n;
@@ -47,7 +50,10 @@ const MINT_MAX_SLIPPAGE_DIVIDER = 1000000;
 const MINT_SLIPPAGE_DIVIDEND = 1000001;
 const MINT_SLIPPAGE_DIVIDER = 1000000;
 
-export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHandlerProps) {
+export default function FlashLoanHelperHandler({
+  helperType,
+  setIsProcessing
+}: FlashLoanHelperHandlerProps) {
   const [inputValue, setInputValue] = useState('');
   const [sharesToProcess, setSharesToProcess] = useState<bigint | null>(null);
   const [wrapError, setWrapError] = useState<string>('');
@@ -68,8 +74,8 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
   const {
     vaultLens,
     vaultAddress,
-    flashLoanMintHelper,
-    flashLoanRedeemHelper,
+    flashLoanMintHelperLens,
+    flashLoanRedeemHelperLens,
     flashLoanMintHelperAddress,
     flashLoanRedeemHelperAddress,
     collateralToken,
@@ -89,23 +95,20 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
   const helperAddress = helperType === 'mint' ? flashLoanMintHelperAddress : flashLoanRedeemHelperAddress;
 
   // Check if this is a wstETH vault that supports ETH input
-  const isWstETHVault = helperType === 'mint' && collateralToken && isWstETHAddress(collateralTokenAddress || '');
+  const isWstETHVault = collateralToken && isWstETHAddress(collateralTokenAddress || '');
 
   const {
-    isLoadingPreview,
     previewData,
     receive,
     provide,
     isErrorLoadingPreview,
     invalidRebalanceMode
   } = useFlashLoanPreview({
-    sharesToProcess,
     helperType,
-    mintHelper: flashLoanMintHelper,
-    redeemHelper: flashLoanRedeemHelper,
-    collateralTokenDecimals,
+    sharesToProcess,
     sharesBalance,
-    sharesDecimals,
+    mintHelperLens: flashLoanMintHelperLens,
+    redeemHelperLens: flashLoanRedeemHelperLens
   });
 
   const maxAmountUsd = useMaxAmountUsd({
@@ -125,13 +128,16 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     setPreviewedWstEthAmount(null);
     setEthToWrapValue('');
     setEffectiveCollateralBalance('');
-    setUseEthWrapToWSTETH(true);
 
     setHasInsufficientBalance(false);
+
+    setUseEthWrapToWSTETH(helperType !== 'redeem');
 
     setWrapError('');
     setWrapSuccess('');
   }, [helperType]);
+
+  const isInputZeroOrNaN = isZeroOrNan(inputValue);
 
   const isInputMoreThanMax = useIsAmountMoreThanMax({
     amount: inputValue,
@@ -197,7 +203,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
     setMaxAmount(sharesBalance);
   }
 
-  const loadMinAvailable = async () => {
+  const loadMinAvailable = useCallback(async () => {
     if (!vaultLens || !publicProvider || !vaultAddress || !sharesDecimals) return;
 
     const [, deltaShares] = await vaultLens.previewLowLevelRebalanceBorrow(0);
@@ -230,7 +236,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
       setMinMint('0');
       setMinRedeem('0');
     }
-  };
+  }, [vaultLens, publicProvider, vaultAddress, sharesDecimals]);
 
   useAdaptiveInterval(loadMinAvailable, {
     initialDelay: 12000,
@@ -325,7 +331,6 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
   }, [
     previewData,
     sharesToProcess,
-    helperType,
     useEthWrapToWSTETH,
     isWstETHVault,
     collateralTokenBalance,
@@ -359,37 +364,46 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
 
     setWrapError('');
     setWrapSuccess('');
+    setIsProcessing(true);
 
-    // If using ETH input for wstETH vault, wrap ETH to wstETH first
-    if (useEthWrapToWSTETH && isWstETHVault && ethToWrapValue && provider && signer) {
-      setIsWrapping(true);
-      const ethAmount = parseEther(ethToWrapValue);
+    try {
+      // If using ETH input for wstETH vault, wrap ETH to wstETH first
+      if (useEthWrapToWSTETH && isWstETHVault && ethToWrapValue && provider && signer) {
+        setIsWrapping(true);
+        const ethAmount = parseEther(ethToWrapValue);
 
-      const wrapResult = await wrapEthToWstEth(
-        provider,
-        signer,
-        ethAmount,
-        address,
-        setWrapSuccess,
-        setWrapError
-      );
+        const wrapResult = await wrapEthToWstEth(
+          provider,
+          signer,
+          ethAmount,
+          address,
+          setWrapSuccess,
+          setWrapError
+        );
 
-      setIsWrapping(false);
+        if (!wrapResult) {
+          setIsWrapping(false);
+          setIsProcessing(false);
+          return; // Error already set by wrapEthToWstEth, finally will handle processing state
+        }
 
-      if (!wrapResult) {
-        return; // Error already set by wrapEthToWstEth
+        // Refresh balances to get updated wstETH balance
+        await refreshBalances();
+        setIsWrapping(false);
       }
 
-      // Refresh balances to get updated wstETH balance
-      await refreshBalances();
-    }
-
-    const success = await flashLoan.execute();
-
-    if (success) {
-      setInputValue('');
-      setSharesToProcess(null);
-      setEthToWrapValue('');
+      const success = await flashLoan.execute();
+      
+      if (success) {
+        setInputValue('');
+        setSharesToProcess(null);
+        setEthToWrapValue('');
+      }
+    } catch (err) {
+      console.error('Error in handling flash loan helper submit:', err);
+    } finally {
+      setIsProcessing(false);
+      setIsWrapping(false);
     }
   };
 
@@ -412,6 +426,17 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
 
   const userBalance = helperType === 'mint' ? effectiveCollateralBalance : sharesBalance;
   const userBalanceToken = helperType === 'mint' ? formatTokenSymbol(collateralTokenSymbol) : sharesSymbol;
+
+  const shouldShowWrapPreview  = isShowWrapPreview({
+    inputValue,
+    isInputMoreThanMax,
+    isAmountLessThanMin,
+    invalidRebalanceMode,
+    hasInsufficientBalance,
+    isErrorLoadingPreview,
+    isWrapping,
+    flashLoanLoading: flashLoan.loading
+  });
 
   return (
     <div>
@@ -480,7 +505,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
                 <p className="mt-1 text-xs text-gray-500">
                   ETH will be wrapped to wstETH before the flash loan mint
                 </p>
-                {previewedWstEthAmount && ethToWrapValue && (
+                {previewedWstEthAmount && ethToWrapValue && shouldShowWrapPreview && (
                   <p className="mt-1 text-xs text-green-600">
                     → Will receive ~<NumberDisplay value={formatUnits(previewedWstEthAmount, collateralTokenDecimals)} /> wstETH from wrapping and use ~<NumberDisplay value={collateralTokenBalance} /> from balance
                   </p>
@@ -490,7 +515,7 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
           </>
         )}
 
-        {!inputValue ? null : isInputMoreThanMax && !flashLoan.loading ? (
+        {isInputZeroOrNaN ? null : isInputMoreThanMax && !flashLoan.loading ? (
           <WarningMessage
             text="Entered amount higher than max"
           />
@@ -508,7 +533,6 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
           <PreviewBox
             receive={receive}
             provide={provide}
-            isLoading={isLoadingPreview}
             title="Transaction Preview"
           />
         ) : null}
@@ -519,14 +543,15 @@ export default function FlashLoanHelperHandler({ helperType }: FlashLoanHelperHa
             flashLoan.loading ||
             flashLoan.isApproving ||
             isWrapping ||
-            !inputValue ||
             !sharesToProcess ||
             hasInsufficientBalance ||
             isErrorLoadingPreview ||
             invalidRebalanceMode ||
             isMinMoreThanMax ||
             isInputMoreThanMax ||
-            isAmountLessThanMin
+            isAmountLessThanMin ||
+            !previewData ||
+            isInputZeroOrNaN
           }
           className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >

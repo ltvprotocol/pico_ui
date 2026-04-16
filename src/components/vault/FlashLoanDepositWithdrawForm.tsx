@@ -1,16 +1,22 @@
 import { useState } from 'react';
 import Tabs from '@/components/ui/Tabs';
 import FlashLoanDepositWithdrawHandler from './FlashLoanDepositWithdrawHandler';
+import { useVaultContext } from '@/contexts';
 
 type ActionType = 'deposit' | 'withdraw';
 
 export default function FlashLoanDepositWithdrawForm() {
-  const tabs : { value: ActionType; label: string }[] = [
-    { value: 'deposit', label: 'Deposit' },
-    { value: 'withdraw', label: 'Withdraw' }
-  ]
+  const { isVaultDeleveraged } = useVaultContext();
+
+  const tabs : { value: ActionType; label: string }[] = isVaultDeleveraged
+    ? [{ value: 'withdraw', label: 'Withdraw' }]
+    : [
+        { value: 'deposit', label: 'Deposit' },
+        { value: 'withdraw', label: 'Withdraw' }
+      ];
 
   const [activeTab, setActiveTab] = useState<ActionType>(tabs[0]?.value || 'deposit');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   return (
     <div className="relative rounded-lg bg-gray-50 mb-4">
@@ -19,10 +25,18 @@ export default function FlashLoanDepositWithdrawForm() {
       >
         {tabs.length > 1 && (
           <div className="mb-3">
-            <Tabs activeTab={activeTab} setActiveTab={setActiveTab} tabs={tabs} />
+            <Tabs
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              tabs={tabs}
+              isProcessing={isProcessing}
+            />
           </div>
         )}
-        <FlashLoanDepositWithdrawHandler actionType={activeTab} />
+        <FlashLoanDepositWithdrawHandler
+          actionType={isVaultDeleveraged ? 'withdraw' : activeTab}
+          setIsProcessing={setIsProcessing}
+        />
       </div>
     </div>
   );

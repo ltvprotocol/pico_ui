@@ -81,7 +81,7 @@ export const useActionPreview = ({
     }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [amount, actionType, tokenType]);
+  }, [amount, actionType, tokenType, vaultLens, displayDecimals, isBorrow]);
 
   // Reset preview data when action/token changes
   useEffect(() => {
@@ -136,4 +136,3 @@ export const useActionPreview = ({
     provide,
   };
 };
-

@@ -3,12 +3,13 @@ import Tabs from '@/components/ui/Tabs';
 import ActionWrapper from '@/components/actions/ActionWrapper';
 import { ActionType } from '@/types/actions';
 import DexLink from './DexLink';
+import { ACTIONS_TABS } from '@/constants';
 
 interface ActionsProps {
   isSafe?: boolean;
 }
 
-export default function ActionsDropdown({ isSafe = false } : ActionsProps ) {
+export default function ActionsDropdown({ isSafe = false }: ActionsProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<ActionType>('deposit');
 
@@ -33,22 +34,10 @@ export default function ActionsDropdown({ isSafe = false } : ActionsProps ) {
         className={`transition-all duration-200 overflow-hidden ${isOpen ? 'max-h-[2000px] opacity-100 p-3' : 'max-h-0 opacity-0 pb-0'
           }`}
       >
-        <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />
+        <Tabs activeTab={activeTab} setActiveTab={setActiveTab} tabs={ACTIONS_TABS} />
         <ActionWrapper actionType={activeTab} isSafe={isSafe} />
         <DexLink />
       </div>
-    </div>
-  );
-}
-
-export function Actions({ isSafe = false }: ActionsProps) {
-  const [activeTab, setActiveTab] = useState<ActionType>('deposit');
-
-  return (
-    <div className="bg-gray-50 rounded-lg p-4">
-      <Tabs activeTab={activeTab} setActiveTab={setActiveTab} />
-      <ActionWrapper actionType={activeTab} isSafe={isSafe} />
-      <DexLink />
     </div>
   );
 }

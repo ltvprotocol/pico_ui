@@ -69,6 +69,8 @@ interface VaultContextType {
   // Flash loan helpers
   flashLoanMintHelper: FlashLoanMintHelper | null;
   flashLoanRedeemHelper: FlashLoanRedeemHelper | null;
+  flashLoanMintHelperLens: FlashLoanMintHelper | null;
+  flashLoanRedeemHelperLens: FlashLoanRedeemHelper | null;
   flashLoanMintHelperAddress: string | null;
   flashLoanRedeemHelperAddress: string | null;
   // Vault existence
@@ -89,6 +91,7 @@ interface VaultContextType {
   vaultMaxMintCollateral: string;
   vaultMaxWithdrawCollateral: string;
   totalAssets: string;
+  maxTotalAssetsInUnderlying: string;
   tvl: string | null;
   // User max values
   maxDeposit: string;
@@ -124,6 +127,8 @@ interface VaultContextType {
   hasNft: boolean;
   isWhitelistedToMintNft: boolean;
   nftTotalSupply: number;
+  // Deleveraged state
+  isVaultDeleveraged: boolean | null;
 };
 
 interface Params {
@@ -135,7 +140,6 @@ interface Params {
   pointsRate: number | null,
   isWhitelistActivated: boolean | null,
   isWhitelisted: boolean | null,
-  hasSignature: boolean | undefined
 }
 
 const VaultContext = createContext<VaultContextType | undefined>(undefined);
@@ -162,6 +166,8 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   const [vaultLens, setVaultLens] = useState<Vault | null>(null);
   const [borrowTokenLens, setBorrowTokenLens] = useState<ERC20 | WETH | null>(null);
   const [collateralTokenLens, setCollateralTokenLens] = useState<ERC20 | WETH | null>(null);
+  const [flashLoanMintHelperLens, setFlashLoanMintHelperLens] = useState<FlashLoanMintHelper | null>(null);
+  const [flashLoanRedeemHelperLens, setFlashLoanRedeemHelperLens] = useState<FlashLoanRedeemHelper | null>(null);
   const [sharesDecimals, setSharesDecimals] = useState<bigint>(18n);
   const [borrowTokenDecimals, setBorrowTokenDecimals] = useState<bigint>(18n);
   const [collateralTokenDecimals, setCollateralTokenDecimals] = useState<bigint>(18n);
@@ -185,6 +191,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   const [vaultMaxMintCollateral, setVaultMaxMintCollateral] = useState('');
   const [vaultMaxWithdrawCollateral, setVaultMaxWithdrawCollateral] = useState('');
   const [totalAssets, setTotalAssets] = useState('');
+  const [maxTotalAssetsInUnderlying, setMaxTotalAssetsInUnderlying] = useState('');
   const [tvl, setTvl] = useState<string | null>(null);
   const hasLoadedTvlOnce = useRef<boolean>(false);
 
@@ -211,7 +218,6 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   const [isCheckingWhitelist, setIsCheckingWhitelist] = useState<boolean>(false);
   const [isActivatingWhitelist, setIsActivatingWhitelist] = useState<boolean>(false);
   const [whitelistError, setWhitelistError] = useState<string | null>(null);
-  const [lastCheckedAddressForSignature, setLastCheckedAddressForSignature] = useState<string | null>(null);
   const [hasUsedInitialWhitelistParams, setHasUsedInitialWhitelistParams] = useState<boolean>(false);
   const [isRefreshingBalances, setIsRefreshingBalances] = useState<boolean>(false);
   const [borrowTokenPrice, setBorrowTokenPrice] = useState<number | null>(null);
@@ -221,6 +227,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   const [hasNft, setHasNft] = useState<boolean>(false);
   const [isWhitelistedToMintNft, setIsWhitelistedToMintNft] = useState<boolean>(false);
   const [nftTotalSupply, setNftTotalSupply] = useState<number>(0);
+  const [isVaultDeleveraged, setIsVaultDeleveraged] = useState<boolean | null>(null);
 
   const { publicProvider, signer, isConnected, address, currentNetwork, isMainnet } = useAppContext();
 
@@ -323,6 +330,19 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         }
       }
 
+      // Initialize lens helpers (always, using publicProvider)
+      if (vaultConfig?.flashLoanMintHelperAddress && vaultConfig.flashLoanMintHelperAddress !== '') {
+        setFlashLoanMintHelperLens(FlashLoanMintHelper__factory.connect(vaultConfig.flashLoanMintHelperAddress, publicProvider));
+      } else {
+        setFlashLoanMintHelperLens(null);
+      }
+
+      if (vaultConfig?.flashLoanRedeemHelperAddress && vaultConfig.flashLoanRedeemHelperAddress !== '') {
+        setFlashLoanRedeemHelperLens(FlashLoanRedeemHelper__factory.connect(vaultConfig.flashLoanRedeemHelperAddress, publicProvider));
+      } else {
+        setFlashLoanRedeemHelperLens(null);
+      }
+
       if (!vaultConfig?.sharesSymbol) {
         const symbol = await vaultLensInstance.symbol();
         setSharesSymbol(symbol);
@@ -402,7 +422,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
       const [
         rawVaultMaxDeposit, rawVaultMaxRedeem, rawVaultMaxMint, rawVaultMaxWithdraw,
         rawVaultMaxDepositCollateral, rawVaultMaxRedeemCollateral, rawVaultMaxMintCollateral, rawVaultMaxWithdrawCollateral,
-        rawMaxLowLevelRebalanceShares, rawTotalAssets
+        rawMaxLowLevelRebalanceShares, rawTotalAssets, rawMaxTotalAssetsInUnderlying
       ] = await Promise.all([
         vaultLens.maxDeposit(address),
         vaultLens.maxRedeem(address),
@@ -413,7 +433,8 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         vaultLens.maxMintCollateral(address),
         vaultLens.maxWithdrawCollateral(address),
         vaultLens.maxLowLevelRebalanceShares(),
-        vaultLens["totalAssets()"]()
+        vaultLens["totalAssets()"](),
+        vaultLens.maxTotalAssetsInUnderlying()
       ]);
 
       setVaultMaxDeposit(formatUnits(rawVaultMaxDeposit, borrowTokenDecimals));
@@ -426,6 +447,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
       setVaultMaxWithdrawCollateral(formatUnits(rawVaultMaxWithdrawCollateral, collateralTokenDecimals));
       setMaxLowLevelRebalanceShares(formatUnits(rawMaxLowLevelRebalanceShares, sharesDecimals));
       setTotalAssets(formatUnits(rawTotalAssets, borrowTokenDecimals));
+      setMaxTotalAssetsInUnderlying(formatUnits(rawMaxTotalAssetsInUnderlying, 18));
     } catch (err) {
       console.error('Error loading vault limits:', err);
     }
@@ -670,6 +692,17 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
     enabled: isMainnet && (!!borrowTokenSymbol || !!collateralTokenSymbol)
   });
 
+  const checkIsVaultDeleveraged = useCallback(async () => {
+    if (!vaultLens) return;
+    try {
+      const deleveraged = await vaultLens.isVaultDeleveraged();
+      setIsVaultDeleveraged(deleveraged);
+    } catch (err) {
+      console.error('Error checking vault deleveraged status:', err);
+      setIsVaultDeleveraged(null);
+    }
+  }, [vaultLens]);
+
   // Check whitelist activation status
   const checkWhitelistActivation = useCallback(async () => {
     if (!vaultLens || params.isWhitelistActivated !== null) {
@@ -686,69 +719,33 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   }, [vaultLens, params.isWhitelistActivated]);
 
   // Check if user has signature and load signature data
+  const getSignatureData = useCallback((userAddress: string) => {
+    if (!currentNetwork || !vaultAddress) return null;
+
+    const networkSignatures = (signaturesConfig as any)[currentNetwork];
+    const vaultSignatures = networkSignatures?.vaults?.[vaultAddress.toLowerCase()];
+    const signaturesMap = vaultSignatures?.signatures;
+
+    if (!signaturesMap) return null;
+    return signaturesMap[userAddress.toLowerCase()];
+  }, [currentNetwork, vaultAddress]);
+
   useEffect(() => {
-    if (!address || !currentNetwork || !vaultAddress) {
+    if (!address) {
       setHasSignature(false);
       setSignature(null);
-      setLastCheckedAddressForSignature(null);
       return;
     }
 
-    // If we have params and haven't checked any address yet, use params
-    if (!lastCheckedAddressForSignature && params.hasSignature !== undefined) {
-      setHasSignature(params.hasSignature);
-      setLastCheckedAddressForSignature(address);
-
-      // If params say user has signature, load the signature data
-      if (params.hasSignature) {
-        const networkSignatures = (signaturesConfig as any)[currentNetwork];
-        const vaultSignatures = networkSignatures?.vaults?.[vaultAddress.toLowerCase()];
-        const signaturesMap = vaultSignatures?.signatures;
-        const addressLower = address.toLowerCase();
-        const signatureData = signaturesMap?.[addressLower];
-
-        if (signatureData) {
-          setSignature({
-            v: signatureData.v,
-            r: signatureData.r,
-            s: signatureData.s
-          });
-        }
-      }
-      return;
+    const data = getSignatureData(address);
+    if (data) {
+      setHasSignature(true);
+      setSignature({ v: data.v, r: data.r, s: data.s });
+    } else {
+      setHasSignature(false);
+      setSignature(null);
     }
-
-    // If address changed or no params were provided, check signature
-    if (address !== lastCheckedAddressForSignature) {
-      const networkSignatures = (signaturesConfig as any)[currentNetwork];
-      const vaultSignatures = networkSignatures?.vaults?.[vaultAddress.toLowerCase()];
-      const signaturesMap = vaultSignatures?.signatures;
-
-      if (!signaturesMap) {
-        setHasSignature(false);
-        setSignature(null);
-        setLastCheckedAddressForSignature(address);
-        return;
-      }
-
-      const addressLower = address.toLowerCase();
-      const signatureData = signaturesMap[addressLower];
-
-      if (signatureData) {
-        setHasSignature(true);
-        setSignature({
-          v: signatureData.v,
-          r: signatureData.r,
-          s: signatureData.s
-        });
-      } else {
-        setHasSignature(false);
-        setSignature(null);
-      }
-
-      setLastCheckedAddressForSignature(address);
-    }
-  }, [address, currentNetwork, vaultAddress, params.hasSignature, lastCheckedAddressForSignature]);
+  }, [address, getSignatureData]);
 
   // NFT Logic
   useEffect(() => {
@@ -900,6 +897,12 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   }, [address, currentNetwork, vaultLens, checkWhitelistActivation]);
 
   useEffect(() => {
+    if (vaultLens) {
+      checkIsVaultDeleveraged();
+    }
+  }, [vaultLens, checkIsVaultDeleveraged]);
+
+  useEffect(() => {
     checkWhitelistStatus();
   }, [address, currentNetwork, checkWhitelistStatus]);
 
@@ -1022,6 +1025,8 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         description,
         flashLoanMintHelper,
         flashLoanRedeemHelper,
+        flashLoanMintHelperLens,
+        flashLoanRedeemHelperLens,
         flashLoanMintHelperAddress,
         flashLoanRedeemHelperAddress,
         vaultExists,
@@ -1039,6 +1044,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         vaultMaxMintCollateral,
         vaultMaxWithdrawCollateral,
         totalAssets,
+        maxTotalAssetsInUnderlying,
         tvl,
         maxDeposit,
         maxRedeem,
@@ -1069,7 +1075,8 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
         collateralTokenPrice,
         hasNft,
         isWhitelistedToMintNft,
-        nftTotalSupply
+        nftTotalSupply,
+        isVaultDeleveraged
       }}
     >
       {children}

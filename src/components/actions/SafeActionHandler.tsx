@@ -105,7 +105,7 @@ export default function SafeActionHandler({ actionType, tokenType }: SafeActionH
   const displayTokenSymbol = config.usesShares ? sharesSymbol : formatTokenSymbol(tokenSymbol);
   const displayDecimals = config.usesShares ? sharesDecimals : tokenDecimals;
 
-  const { isLoadingPreview, previewData, receive, provide } = useActionPreview({
+  const { previewData, receive, provide } = useActionPreview({
     amount,
     actionType,
     tokenType,
@@ -458,7 +458,6 @@ export default function SafeActionHandler({ actionType, tokenType }: SafeActionH
           <PreviewBox
             receive={receive}
             provide={provide}
-            isLoading={isLoadingPreview}
             title="Transaction Preview"
           />
         ) : undefined

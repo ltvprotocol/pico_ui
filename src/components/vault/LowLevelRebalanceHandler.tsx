@@ -19,7 +19,6 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [isLoadingMax, setIsLoadingMax] = useState(false);
 
   const [previewData, setPreviewData] = useState<{
@@ -118,8 +117,6 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
       return;
     }
 
-    setIsLoadingPreview(true);
-
     try {
       let result: any;
 
@@ -145,8 +142,6 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
     } catch (err) {
       console.error('Error loading preview:', err);
       setPreviewData(null);
-    } finally {
-      setIsLoadingPreview(false);
     }
   };
 
@@ -469,7 +464,6 @@ export default function LowLevelRebalanceHandler({ rebalanceType, actionType }: 
             <PreviewBox
               receive={receive}
               provide={provide}
-              isLoading={isLoadingPreview}
               title="Changes Preview"
             />
           );

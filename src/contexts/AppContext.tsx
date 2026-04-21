@@ -5,6 +5,9 @@ import { Safe4626Helper, Safe4626CollateralHelper } from '@/typechain-types';
 import { Safe4626Helper__factory, Safe4626CollateralHelper__factory } from '@/typechain-types/factories';
 import { isUserRejected, checkTermsOfUseStatus, fetchTermsOfUseText, submitTermsOfUseSignature } from '@/utils';
 
+/** When false, terms are not fetched or verified and the UI is never blocked on them. */
+const TERMS_OF_USE_ENFORCED = false;
+
 type DiscoveredWallet = {
   info: {
     uuid: string;
@@ -518,6 +521,12 @@ export const AppContextProvider = ({ children }: { children: ReactNode }) => {
   }, [currentNetwork]);
 
   const checkTermsStatus = useCallback(async () => {
+
+    if (!TERMS_OF_USE_ENFORCED) {
+      setIsTermsSigned(true);
+      return;
+    }
+
     if (!address || !currentNetwork) {
       setIsTermsSigned(null);
       return;

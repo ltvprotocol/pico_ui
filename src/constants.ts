@@ -138,3 +138,15 @@ export const ACTIONS_TABS: { value: ActionType; label: string }[] = [
   { value: 'mint', label: 'Mint' },
   { value: 'withdraw', label: 'Withdraw' },
 ];
+
+export interface ChainlinkPriceFeeds {
+  [key: string]: string;
+}
+
+export const CHAINLINK_PRICE_FEEDS: Record<string, ChainlinkPriceFeeds> = {
+  [MAINNET_CHAIN_ID_STRING]: {
+    'ETH': '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419',
+    'WETH': '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419',
+    'WSTETH': '0x8B6851156023f4f5A66F68BEA80851c3D905Ac93'
+  }
+};

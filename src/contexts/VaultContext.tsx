@@ -13,7 +13,8 @@ import { ltvToLeverage, getLendingProtocolAddress, isVaultExists, isUserRejected
 import { ApyData, isAddressWhitelistedToMint, refreshTokenHolders } from '@/utils/api';
 import { isWETHAddress, GAS_RESERVE_WEI, SEPOLIA_CHAIN_ID_STRING, SEPOLIA_MORPHO_MARKET_ID, CONNECTOR_ADDRESSES } from '@/constants';
 import { useAdaptiveInterval, useVaultApy, useVaultPointsRate } from '@/hooks';
-import { loadGhostLtv, loadAaveLtv, loadMorphoLtv, fetchTokenPrice } from '@/utils';
+import { loadGhostLtv, loadAaveLtv, loadMorphoLtv } from '@/utils';
+import { getAssetPrice } from '@/utils/getAssetPrice';
 import vaultsConfig from '../../vaults.config.json';
 import signaturesConfig from '../../signatures.config.json';
 
@@ -664,7 +665,7 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
   }, [publicProvider, vaultLens, lendingAddress, vaultAddress, borrowTokenDecimals, currentNetwork, vaultConfig]);
 
   const loadPrices = useCallback(async () => {
-    if (!isMainnet) {
+    if (!isMainnet || !publicProvider || !currentNetwork) {
       setBorrowTokenPrice(null);
       setCollateralTokenPrice(null);
       return;
@@ -672,18 +673,26 @@ export const VaultContextProvider = ({ children, vaultAddress, params }: { child
 
     try {
       if (borrowTokenSymbol) {
-        const price = await fetchTokenPrice(borrowTokenSymbol);
+        const price = await getAssetPrice(
+          borrowTokenSymbol.toUpperCase(),
+          currentNetwork,
+          publicProvider
+        );
         setBorrowTokenPrice(price);
       }
 
       if (collateralTokenSymbol) {
-        const price = await fetchTokenPrice(collateralTokenSymbol);
+        const price = await getAssetPrice(
+          collateralTokenSymbol.toUpperCase(),
+          currentNetwork,
+          publicProvider
+        );
         setCollateralTokenPrice(price);
       }
     } catch (err) {
       console.error('Error loading token prices:', err);
     }
-  }, [isMainnet, borrowTokenSymbol, collateralTokenSymbol]);
+  }, [isMainnet, borrowTokenSymbol, collateralTokenSymbol, publicProvider, currentNetwork]);
 
   useAdaptiveInterval(loadPrices, {
     initialDelay: 60000,
